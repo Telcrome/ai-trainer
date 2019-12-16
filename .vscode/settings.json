@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/opt/conda/bin/python",
+    "python.pythonPath": "C:\\Users\\rapha\\Desktop\\ai-trainer\\envs\\python.exe",
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
