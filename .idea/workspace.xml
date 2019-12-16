@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6ccb2d79-2802-470a-9304-3bb1b8dafd28" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../sample_data/demo_dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/../sample_data/demo_dataset.py" afterDir="false" />
-    </list>
+    <list default="true" id="6ccb2d79-2802-470a-9304-3bb1b8dafd28" name="Default Changelist" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -431,7 +429,7 @@
       <workItem from="1576506693672" duration="3500000" />
       <workItem from="1576519061834" duration="4615000" />
       <workItem from="1576524387547" duration="1632000" />
-      <workItem from="1576536504611" duration="1538000" />
+      <workItem from="1576536504611" duration="1818000" />
     </task>
     <servers />
   </component>

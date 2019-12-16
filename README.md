@@ -33,6 +33,7 @@ This allows for easier experimentation and the IDE expects it this way.
 
 ```bash
 conda env create --prefix ./envs -f environment.yml
+conda activate .\envs\.
 ```
 
 # Using Docker
