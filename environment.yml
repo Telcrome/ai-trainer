@@ -1,4 +1,4 @@
-name: anno_env_v2
+name: trainer_env_tf
 dependencies:
   - python=3.7
   - anaconda
