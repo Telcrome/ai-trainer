@@ -1,0 +1,12 @@
+name: anno_env_v2
+dependencies:
+  - python=3.7
+  - anaconda
+  - pip
+  - cudatoolkit=10.0
+  - cudnn=7.6.0=cuda10.0_0
+  - pip:
+    - tensorflow-gpu
+    - opencv-python
+    - PySimpleGui
+    - pydicom
