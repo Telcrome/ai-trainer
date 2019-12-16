@@ -13,6 +13,8 @@ from trainer.ml import Subject, Dataset, ClassType
 from trainer.bib import load_grayscale_from_disk, standalone_foldergrab, create_identifier
 from trainer.bib import MaskType
 
+US_BONE_DATASET = ("https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download", "crucial_ligament_diagnosis")
+
 
 def build_example_te(name: str) -> Subject:
     test_im_path = "./example_image.png"
