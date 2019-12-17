@@ -14,6 +14,7 @@ from tqdm import tqdm
 from typing import Callable, List, Dict, Set
 
 import PySimpleGUI as sg
+import numpy as np
 
 from trainer.bib import JsonClass, download_and_extract, standalone_foldergrab, create_identifier
 from trainer.bib import MaskType, BinaryType, ClassType
