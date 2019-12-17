@@ -1,0 +1,7 @@
+.ipynb_checkpoints
+*.pyc
+.ropeproject
+data
+envs
+vsc/node_modules
+vsc/out

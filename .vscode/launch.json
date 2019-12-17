@@ -1,0 +1,61 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "ai dataset annotate",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/gui/tools.py",
+            "console": "integratedTerminal",
+            "args": ["dataset", "annotate", "-p", "./data/demo"],
+            "env": {
+                "PYTHONPATH": "."
+            }
+        },
+        {
+            "name": "ai dataset gui",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/gui/tools.py",
+            "console": "integratedTerminal",
+            "args": ["dataset", "gui", "-p", "./data/demo"],
+            "env": {
+                "PYTHONPATH": "."
+            }
+        },
+        {
+            "name": "ai dataset train",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/gui/tools.py",
+            "console": "integratedTerminal",
+            "args": ["dataset", "train", "-p", "./data/demo"],
+            "env": {
+                "PYTHONPATH": "."
+            }
+        },
+        {
+            "name": "Start Main Application",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/gui/ControlPanel.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "."
+            }
+        },
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "."
+            }
+        }
+    ]
+}
