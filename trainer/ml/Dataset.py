@@ -39,23 +39,6 @@ class Subject(JsonClass):
         })
         return res
 
-    def set_quality(self, v: float) -> None:
-        """
-        Sets the quality of the whole subject.
-        :param v: Takes a value between 0. and 1.
-        :return:
-        """
-        if 0. <= v <= 1.:
-            self._json_model["quality"] = v
-        else:
-            print("Invalid quality, please pick a value between 0. and 1.")
-
-    def get_quality(self):
-        if "quality" in self._json_model:
-            return self._json_model["quality"]
-        else:
-            return None
-
     def set_class(self, class_name: str, value: str, for_dataset: Dataset = None, for_binary=""):
         """
         Set a class to true. Classes are stored by their unique string.

@@ -145,13 +145,6 @@ class AnnotationGui(TWindow):
         self.frame_controller = FrameController(self.change_frame)
         self.content_grid.add_tool(self.frame_controller)
 
-        # Quality slider
-        self.content_grid.add_tool(QtWidgets.QLabel("Quality Slider:"))
-        self.slider_feature_quality = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-        self.slider_feature_quality.setMaximum(100)
-        self.slider_feature_quality.sliderReleased.connect(self.slider_feature_quality_changed)
-        self.content_grid.add_tool(self.slider_feature_quality)
-
         # Class selector
         self.class_selector = TClassSelector()
         self.class_selector.configure_selection(self.d)
@@ -269,9 +262,6 @@ class AnnotationGui(TWindow):
         else:
             os.startfile(self.current_subject.get_working_directory())
 
-    def slider_feature_quality_changed(self):
-        self.current_subject.set_quality(self.slider_feature_quality.value() / 100)
-
     def lst_src_binaries_changed(self, item, auto_save=True):
         if item is not None:
             src_item = item.text()
@@ -301,10 +291,6 @@ class AnnotationGui(TWindow):
             for b in src_names:
                 self.lst_source_binaries.addItem(str(b))
             self.select_source_binary(src_names[0])
-
-        # Set subject quality if known
-        if self.current_subject.get_quality() is not None:
-            self.slider_feature_quality.setValue(s.get_quality())
 
         self.update()
 

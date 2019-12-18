@@ -12,7 +12,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://git.rwth-aachen.de/medical_us_ai/annotator",
-    packages=setuptools.find_packages(where='./trainer/'),
+    packages=setuptools.find_packages(where='./trainer'),
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
