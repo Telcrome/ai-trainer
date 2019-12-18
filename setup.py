@@ -21,6 +21,6 @@ setuptools.setup(
     python_requires='>=3.7',
     entry_points='''
         [console_scripts]
-        ai=trainer.tools:ai
+        trainer=trainer.tools:trainer
     '''
 )
