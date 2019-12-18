@@ -1,6 +1,6 @@
 # The Mission
 
-TODO
+Need to write this out, but trust me, its thought through...
 
 # Installation for User
 

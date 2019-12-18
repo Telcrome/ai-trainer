@@ -9,16 +9,15 @@ import numpy as np
 import tensorflow as tf
 import PySimpleGUI as sg
 
-from trainer.ml import Subject, Dataset, ClassType
-from trainer.bib import load_grayscale_from_disk, standalone_foldergrab, create_identifier
-from trainer.bib import MaskType
+from trainer.ml import Subject, Dataset
+from trainer.bib import load_grayscale_from_disk, standalone_foldergrab, create_identifier, MaskType, ClassType
 
 US_BONE_DATASET = ("https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download", "crucial_ligament_diagnosis")
 
 
 def build_example_te(name: str) -> Subject:
-    test_im_path = "./example_image.png"
-    test_gt_path = "./example_gt.png"
+    test_im_path = "../../sample_data/example_image.png"
+    test_gt_path = "../../sample_data/example_gt.png"
     te = Subject.build_empty(name)
 
     im = load_grayscale_from_disk(test_im_path)
@@ -33,7 +32,7 @@ def build_example_te(name: str) -> Subject:
     return te
 
 
-def create_mnist(p: str, n: str = 'mnist', n_patients=10):
+def create_mnist(p: str, n: str = 'mnist', n_subjects=10):
     """
     Mimics a patient database by solving a classification issue with 10 classes and multiple images per patient.
 
@@ -52,7 +51,7 @@ def create_mnist(p: str, n: str = 'mnist', n_patients=10):
     class_names = ['TShirtOrTop', 'Trouser', 'Pullover', 'Dress', 'Coat',
                    'Sandal', 'Shirt', 'Sneaker', 'Bag', 'AnkleBoot']
 
-    class_name = "diagnosis"
+    class_name = "fashion_type"
     d.add_class(class_name, ClassType.Nominal, values=class_names)
 
     def get_sample_of_class(class_value: str):
@@ -60,8 +59,9 @@ def create_mnist(p: str, n: str = 'mnist', n_patients=10):
         sample_index = label_indices[random.randint(0, label_indices.shape[0]), 0]
         return train_images[sample_index, :, :]
 
-    for p_i in range(n_patients):
+    for p_i in range(n_subjects):
         sbjct = Subject.build_empty(f"patient{p_i}")
+        d.save_subject(sbjct)
         class_sample = random.choice(class_names)
         for i_i in range(random.randint(1, 3)):
             one_im = get_sample_of_class(class_sample)
@@ -71,10 +71,9 @@ def create_mnist(p: str, n: str = 'mnist', n_patients=10):
             sbjct.add_source_image_by_arr(one_im, b_name, structures=seg_structs)
             sbjct.set_class(class_name, class_sample, for_dataset=d, for_binary=b_name)
         sbjct.set_class(class_name, class_sample, for_dataset=d)
-        sg.OneLineProgressMeter('Creating patient', p_i + 1, n_patients, 'key',
+        sg.OneLineProgressMeter('Creating patient', p_i + 1, n_subjects, 'key',
                                 f'Subject: {sbjct.name} of class {class_sample}')
-        d.save_subject(sbjct)
-
+        sbjct.to_disk()
     d.to_disk()
 
 
@@ -96,7 +95,7 @@ if __name__ == '__main__':
     if os.path.exists(d_path):
         Dataset.from_disk(d_path).delete_on_disk()
     if input_keys['ds_type'] == 'Fashion Mnist':
-        create_mnist(parent_path, dataset_name, n_patients=int(N))
+        create_mnist(parent_path, dataset_name, n_subjects=int(N))
     elif input_keys['ds_type'] == 'Ultrasound':
         print('Create Ultrasound')
         raise NotImplementedError()
