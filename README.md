@@ -1,6 +1,6 @@
 # Installation for User
 
-Open anaconda powershell, navigate into the annotator repo and execute:
+Open anaconda powershell, navigate into the trainer repo and execute:
 
 ```bash
 pip install git+https://github.com/Telcrome/ai-trainer@master
