@@ -1,3 +1,3 @@
-from trainer.bib.JsonClass import BinaryType
-
+from trainer.bib import *
+from trainer.ml import *
 VERSION = "1.0"
