@@ -1,3 +1,7 @@
+# The Mission
+
+TODO
+
 # Installation for User
 
 Open anaconda powershell, navigate into the trainer repo and execute:
@@ -6,7 +10,7 @@ Open anaconda powershell, navigate into the trainer repo and execute:
 pip install git+https://github.com/Telcrome/ai-trainer@master
 ```
 
-For dependencies please see ```environment.yml``` in the root of the project.
+For dependencies please see the file ```environment.yml```.
 
 # Getting started
 
@@ -38,5 +42,5 @@ conda activate .\envs\.
 
 # Using Docker
 
-Docker and the provided DOCKERFILE support is currently experimental as it proved to slow down the GUI too much.
+Docker and the provided DOCKERFILE support is currently experimental as it proved to slow down the annotation GUI too much.
 When the transition to a web GUI is completed docker will be supported again.
