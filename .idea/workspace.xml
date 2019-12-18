@@ -2,10 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6ccb2d79-2802-470a-9304-3bb1b8dafd28" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/../../trainer/bib/misc.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/bib/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/bib/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../setup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../tutorials/Usage Example.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../../tutorials/Usage Example.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -436,7 +434,7 @@
       <workItem from="1576519061834" duration="4615000" />
       <workItem from="1576524387547" duration="1632000" />
       <workItem from="1576536504611" duration="4055000" />
-      <workItem from="1576665686527" duration="5112000" />
+      <workItem from="1576665686527" duration="5655000" />
     </task>
     <servers />
   </component>
@@ -544,10 +542,10 @@
     </state>
     <state x="659" y="309" key="com.intellij.ide.util.TipDialog/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576536527396" />
     <state x="2622" y="333" key="com.intellij.ide.util.TipDialog/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576361287406" />
-    <state x="1914" y="0" width="1037" height="1118" key="dock-window-1" timestamp="1576674136252">
+    <state x="1914" y="0" width="1037" height="1118" key="dock-window-1" timestamp="1576675556075">
       <screen x="1920" y="0" width="2048" height="1112" />
     </state>
-    <state x="1914" y="0" width="1037" height="1118" key="dock-window-1/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576674136252" />
+    <state x="1914" y="0" width="1037" height="1118" key="dock-window-1/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576675556075" />
     <state x="104" y="-19" width="1731" height="696" maximized="true" key="dock-window-1/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1575838540557" />
     <state x="2938" y="0" width="1037" height="1118" key="dock-window-2" timestamp="1576674184506">
       <screen x="1920" y="0" width="2048" height="1112" />
@@ -558,10 +556,10 @@
     </state>
     <state x="674" y="151" width="607" height="738" key="find.popup/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576366646861" />
     <state x="2639" y="161" width="609" height="789" key="find.popup/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1575838404589" />
-    <state x="3118" y="248" width="672" height="678" key="search.everywhere.popup" timestamp="1576536777668">
+    <state x="3118" y="248" width="672" height="678" key="search.everywhere.popup" timestamp="1576675511758">
       <screen x="1920" y="0" width="2048" height="1112" />
     </state>
-    <state x="3118" y="248" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576536777668" />
+    <state x="3118" y="248" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576675511758" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
