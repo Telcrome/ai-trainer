@@ -21,6 +21,14 @@ def trainer():
     pass
 
 
+@trainer.group()
+def ds():
+    """"
+    Command line tools concerned with one dataset that is currently on pwd
+    """
+    pass
+
+
 @trainer.command(name='init-ds')
 @click.option('--parent-path', '-p', default=os.getcwd, help='Directory that the dataset will appear in')
 @click.option('--name', '-n', prompt=True, help='Name of the dataset created')
@@ -39,7 +47,7 @@ def dataset_init(parent_path, name):
     click.echo(f"For working with the dataset {name}, please switch into the directory")
 
 
-@trainer.command(name="annotate")
+@ds.command(name="annotate")
 @click.option('--dataset-path', '-p', default=os.getcwd, help='Path to a dataset')
 @click.option('--subject-name', '-s', default='', help='If provided, opens the given subject from the dataset')
 def dataset_annotate(dataset_path: str, subject_name: str):
@@ -53,7 +61,7 @@ def dataset_annotate(dataset_path: str, subject_name: str):
     run_window(AnnotationGui, os.path.join(dataset_path, subject_name), dataset_path)
 
 
-@trainer.command(name="server")
+@ds.command(name="server")
 @click.option('--dataset-path', '-p', default=os.getcwd, help='Path to a dataset')
 def dataset_serve(dataset_path: str):
     print(dataset_path)
@@ -61,7 +69,7 @@ def dataset_serve(dataset_path: str):
     app.run()
 
 
-@trainer.command(name="train")
+@ds.command(name="train")
 @click.option('--dataset-path', '-p', default=os.getcwd, help='The path to the directory where the dataset lives')
 def dataset_train(dataset_path: str):
     """
@@ -86,7 +94,7 @@ def dataset_train(dataset_path: str):
         compile_and_train(d, str_name)
 
 
-@trainer.command(name='visualize')
+@ds.command(name='visualize')
 @click.option('--dataset-path', '-p', default=os.getcwd)
 @click.option('--subject-name', '-s', default='')
 def dataset_visualize(dataset_path: str, subject_name: str):
@@ -100,7 +108,7 @@ def dataset_visualize(dataset_path: str, subject_name: str):
         raise NotImplementedError()
 
 
-@trainer.command(name='add-image-folder')
+@ds.command(name='add-image-folder')
 @click.option('--dataset-path', '-p', default=os.getcwd)
 @click.option('--folder-path', '-ip', default='')
 @click.option('--structure-tpl', '-st', default='')
