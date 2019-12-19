@@ -44,10 +44,15 @@ def random_subject_generator(ds: Dataset, split=None):
         yield te
 
 
-def random_struct_generator(ds: Dataset, struct_name: str):
+def random_struct_generator(ds: Dataset, struct_name: str, split=None):
+    if split is None:
+        subjects = ds._json_model["subjects"]
+    else:
+        subjects = ds._json_model["splits"][split]
+
     # Compute the annotated examples for each subject
     annotations: Dict[str, Dict] = {}
-    for s_name in ds.filter_subjects(lambda _: True):
+    for s_name in subjects:
         s = ds.get_subject_by_name(s_name)
         s_annos = s.get_manual_struct_segmentations(struct_name)
         if s_annos:
