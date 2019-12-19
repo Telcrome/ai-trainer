@@ -538,11 +538,14 @@ class Dataset(JsonClass):
         self.filter_subjects(lambda x: te_filterer(x))
         return seg_structs
 
-    def __len__(self, split=None):
+    def get_subject_count(self, split=None):
         if split is None:
             return len(self._json_model["subjects"])
         else:
             return len(self._json_model["splits"][split])
+
+    def __len__(self):
+        return self.get_subject_count()
 
     def __getitem__(self, item):
         return self.get_subject_by_name(item)
@@ -550,6 +553,7 @@ class Dataset(JsonClass):
     def __iter__(self):
         from trainer.ml.data_loading import get_subject_gen
         return get_subject_gen(self)
+
 
 if __name__ == '__main__':
     ds_path = download_and_extract(
