@@ -2,14 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="6ccb2d79-2802-470a-9304-3bb1b8dafd28" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../../.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/ml/Dataset.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/ml/data_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/ml/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/ml/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/ml/generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/ml/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/ml/models/deeplab.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/ml/models/deeplab.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/ml/models/unet_mod.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/ml/models/unet_mod.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/tools/AnnotationGui.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/tools/AnnotationGui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../trainer/tools/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/../../trainer/tools/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../../tutorials/Usage Example.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/../../tutorials/Usage Example.ipynb" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -498,7 +490,7 @@
       <workItem from="1576709603922" duration="64000" />
       <workItem from="1576709675843" duration="5082000" />
       <workItem from="1576716239249" duration="103000" />
-      <workItem from="1576716952287" duration="276000" />
+      <workItem from="1576716952287" duration="577000" />
     </task>
     <servers />
   </component>
@@ -552,45 +544,45 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="739" y="274" key="FileChooserDialogImpl/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717103893" />
-    <state width="1877" height="266" key="GridCell.Tab.0.bottom" timestamp="1576717330552">
+    <state width="1877" height="266" key="GridCell.Tab.0.bottom" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330552" />
+    <state width="1877" height="266" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.0.bottom/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757937" />
-    <state width="1877" height="266" key="GridCell.Tab.0.center" timestamp="1576717330552">
+    <state width="1877" height="266" key="GridCell.Tab.0.center" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.0.center/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330552" />
+    <state width="1877" height="266" key="GridCell.Tab.0.center/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.0.center/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757937" />
-    <state width="1877" height="266" key="GridCell.Tab.0.left" timestamp="1576717330552">
+    <state width="1877" height="266" key="GridCell.Tab.0.left" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.0.left/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330552" />
+    <state width="1877" height="266" key="GridCell.Tab.0.left/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.0.left/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757937" />
-    <state width="1877" height="266" key="GridCell.Tab.0.right" timestamp="1576717330552">
+    <state width="1877" height="266" key="GridCell.Tab.0.right" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.0.right/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330552" />
+    <state width="1877" height="266" key="GridCell.Tab.0.right/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.0.right/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757937" />
-    <state width="1877" height="266" key="GridCell.Tab.1.bottom" timestamp="1576717330481">
+    <state width="1877" height="266" key="GridCell.Tab.1.bottom" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.1.bottom/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330481" />
+    <state width="1877" height="266" key="GridCell.Tab.1.bottom/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.1.bottom/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757857" />
-    <state width="1877" height="266" key="GridCell.Tab.1.center" timestamp="1576717330481">
+    <state width="1877" height="266" key="GridCell.Tab.1.center" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.1.center/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330481" />
+    <state width="1877" height="266" key="GridCell.Tab.1.center/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.1.center/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757857" />
-    <state width="1877" height="266" key="GridCell.Tab.1.left" timestamp="1576717330481">
+    <state width="1877" height="266" key="GridCell.Tab.1.left" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.1.left/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330481" />
+    <state width="1877" height="266" key="GridCell.Tab.1.left/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.1.left/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757857" />
-    <state width="1877" height="266" key="GridCell.Tab.1.right" timestamp="1576717330481">
+    <state width="1877" height="266" key="GridCell.Tab.1.right" timestamp="1576717528754">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="1877" height="266" key="GridCell.Tab.1.right/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717330481" />
+    <state width="1877" height="266" key="GridCell.Tab.1.right/0.0.1920.1040/1920.0.2048.1112@0.0.1920.1040" timestamp="1576717528754" />
     <state width="2005" height="266" key="GridCell.Tab.1.right/0.0.1920.1040/1920.0.2048.1112@1920.0.2048.1112" timestamp="1576522757857" />
     <state x="461" y="162" key="SettingsEditor" timestamp="1576717119449">
       <screen x="0" y="0" width="1920" height="1040" />
@@ -627,18 +619,6 @@
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/../../trainer/ml/data_model.py</url>
-          <line>547</line>
-          <option name="timeStamp" value="5" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/../../trainer/ml/data_model.py</url>
-          <line>550</line>
-          <option name="timeStamp" value="6" />
-        </line-breakpoint>
-      </breakpoints>
       <default-breakpoints>
         <breakpoint type="python-exception">
           <properties notifyOnTerminate="true" exception="BaseException">
