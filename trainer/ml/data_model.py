@@ -1,4 +1,7 @@
 """
+The data model aims to simplify machine learning on complex data structures.
+For example classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.
+
 A dataset contains
 - Subjects (Which are the training examples)
 - Model Weights
@@ -7,7 +10,6 @@ A dataset contains
 
 from __future__ import annotations
 
-import random
 import os
 import itertools
 from tqdm import tqdm
@@ -134,7 +136,9 @@ class Subject(JsonClass):
         """
         file_ending = os.path.splitext(file_path)[1]
         if file_ending in ['']:
-            append_dicom_to_te(self.get_working_directory(), file_path, binary_name=binary_name, seg_structs=structures)
+            from trainer.ml import append_dicom_to_subject
+            append_dicom_to_subject(self.get_working_directory(), file_path, binary_name=binary_name,
+                                    seg_structs=structures)
         elif file_ending in ['.mp4']:
             print('Video!')
         else:
@@ -238,36 +242,6 @@ class Subject(JsonClass):
         return res
 
 
-def append_dicom_to_te(te_path: str,
-                       dicom_path: str,
-                       binary_name: str = '',
-                       seg_structs: Dict[str, str] = None,
-                       auto_save=True) -> Subject:
-    """
-
-    :param te_path: directory path to the subject
-    :param dicom_path: filepath to the dicom containing the image data
-    :param binary_name: Name of the binary, if not provided a name is chosen.
-    :param seg_structs: Structures that can be segmented in the image data
-    :param auto_save: The new state of the subject is automatically saved to disk
-    :return: The subject containing the new data
-    """
-    te = Subject.from_disk(te_path)
-
-    if not binary_name:
-        binary_name = create_identifier(hint='DICOM')
-
-    from trainer.bib.dicom_utils import import_dicom
-
-    img_data, meta = import_dicom(dicom_path)
-    te.add_source_image_by_arr(img_data, binary_name, structures=seg_structs, extra_info=meta)
-
-    if auto_save:
-        te.to_disk(te.get_parent_directory())
-
-    return te
-
-
 class Dataset(JsonClass):
 
     @classmethod
@@ -355,6 +329,9 @@ class Dataset(JsonClass):
         if auto_save:
             self.to_disk(self._last_used_parent_dir)
 
+    def get_subject_name_list(self) -> List[str]:
+        return self._json_model["subjects"]
+
     def append_subject_to_split(self, s: Subject, split: str):
         # Create the split if it does not exist
         if split not in self._json_model["splits"]:
@@ -392,18 +369,6 @@ class Dataset(JsonClass):
         self.to_disk(self._last_used_parent_dir)
         return copied
 
-    def iterate_over_samples(self, f: Callable[[Subject], Subject]):
-        """
-        Applies a function on every subject in this dataset.
-        :param f: f takes a subject and can modify it. The result is automatically saved
-        :return:
-        """
-        for te_name in self._json_model["subjects"]:
-            te_p = os.path.join(self.get_working_directory(), te_name)
-            te = Subject.from_disk(te_p)
-            te = f(te)
-            te.to_disk()
-
     def add_image_folder(self, parent_folder: str, structures: Dict[str, str], split=None, progress=True):
         """
         Iterates through a folder.
@@ -438,7 +403,7 @@ class Dataset(JsonClass):
                     from trainer.bib import slugify
                     p_id = meta['PatientID']
                     p_id_clean = slugify(p_id)
-                    if p_id_clean in self.list_subjects():
+                    if p_id_clean in self.get_subject_name_list():
                         print("load patient")
                         s = Subject.from_disk(os.path.join(self.get_working_directory(), p_id_clean))
                     else:
@@ -496,9 +461,6 @@ class Dataset(JsonClass):
 
         self.to_disk()
 
-    def list_subjects(self) -> List[str]:
-        return self._json_model["subjects"]
-
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """
         Returns a list with the names of subjects of interest.
@@ -517,33 +479,20 @@ class Dataset(JsonClass):
                                         f'Subject: {te.name}')
         return res
 
-    def delete_training_examples(self, del_ls: List[Subject]) -> None:
+    def delete_subjects(self, del_ls: List[Subject]) -> None:
         """
         Deletes a list of subjects
         :param del_ls: List of instances of subjects
         :return:
         """
-        for te in tqdm(del_ls, desc="Deleting subjects"):
-            del_name = te.name
-            te.delete_on_disk()
+        for s in tqdm(del_ls, desc="Deleting subjects"):
+            del_name = s.name
+            s.delete_on_disk()
             self._json_model["subjects"].remove(del_name)
             for split in self._json_model["splits"]:
                 if del_name in self._json_model["splits"][split]:
                     self._json_model["splits"][split].remove(del_name)
         self.to_disk(self._last_used_parent_dir)
-
-    def get_subject_gen(self, split: str = None):
-        """
-        Iterates once through the dataset. Intended for custom exporting, not machine learning.
-        :param split: If provided, only the split is yielded
-        """
-        if split is None:
-            subjects = self._json_model["subjects"]
-        else:
-            subjects = self._json_model["splits"][split]
-
-        for te_name in subjects:
-            yield self.get_subject_by_name(te_name)
 
     def get_subject_by_name(self, te_name: str):
         if te_name not in self._json_model['subjects']:
@@ -551,49 +500,11 @@ class Dataset(JsonClass):
         res = Subject.from_disk(os.path.join(self.get_working_directory(), te_name))
         return res
 
-    def random_struct_generator(self, struct_name: str):
-        # Compute the annotated examples for each subject
-        annotations: Dict[str, Dict] = {}
-        for s_name in self.filter_subjects(lambda _: True):
-            s = self.get_subject_by_name(s_name)
-            s_annos = s.get_manual_struct_segmentations(struct_name)
-            if s_annos:
-                annotations[s_name] = s_annos
-        print(annotations)
-
-        for s_name in itertools.cycle(annotations.keys()):
-            s = self.get_subject_by_name(s_name)
-            # Randomly pick the frame that will be trained with
-            a = annotations[s_name]
-            b_name = random.choice(list(annotations[s_name].keys()))
-            m_name = random.choice(annotations[s_name][b_name])
-            # Build the training example with context
-            struct_index = list(s.get_binary_model(b_name)["meta_data"]["structures"].keys()).index(struct_name)
-            yield s.get_binary(b_name), s.get_binary(m_name)[:, :, struct_index], \
-                  s.get_binary_model(m_name)["meta_data"]['frame_number']
-
-    def random_subject_generator(self, split=None):
-        if split is None:
-            te_names = self._json_model["subjects"]
-        else:
-            te_names = self._json_model["splits"][split]
-        random.shuffle(te_names)
-
-        for te_name in itertools.cycle(te_names):
-            te = self.get_subject_by_name(te_name)
-            yield te
-
-    def get_number_of_samples(self, split=None):
-        if split is None:
-            return len(self._json_model["subjects"])
-        else:
-            return len(self._json_model["splits"][split])
-
     def get_summary(self) -> str:
         split_summary = ""
         for split in self._json_model["splits"]:
-            split_summary += f"""{split}: {self.get_number_of_samples(split=split)}\n"""
-        return f"Saved at {self.get_working_directory()}\nN: {self.get_number_of_samples()}\n{split_summary}"
+            split_summary += f"""{split}: {self.__len__(split=split)}\n"""
+        return f"Saved at {self.get_working_directory()}\nN: {len(self)}\n{split_summary}"
 
     def compute_segmentation_structures(self) -> Dict[str, Set[str]]:
         """
@@ -627,42 +538,23 @@ class Dataset(JsonClass):
         self.filter_subjects(lambda x: te_filterer(x))
         return seg_structs
 
-    def select_for_struct_annotation(self, struct_name="") -> Subject:
-        """
-        Currently randomly picks a subject for annotation without annotation for that mask.
-
-        Planned: Pick the subject that needs annotation the most.
-        :return:
-        """
-        if struct_name:
-            # TODO
-            raise NotImplementedError()
+    def __len__(self, split=None):
+        if split is None:
+            return len(self._json_model["subjects"])
         else:
-            return random.choice(self._json_model['subjects'])
+            return len(self._json_model["splits"][split])
 
+    def __getitem__(self, item):
+        return self.get_subject_by_name(item)
+
+    def __iter__(self):
+        from trainer.ml.data_loading import get_subject_gen
+        return get_subject_gen(self)
 
 if __name__ == '__main__':
-    desktop_path = "C:\\Users\\rapha\\Desktop\\dataset_folder\\Combined_v1"
-    d = Dataset.from_disk(desktop_path)
-
-
-    def f(te: Subject) -> Subject:
-        # gtm = te.get_binary_model('gt_im_0')
-        # gtm["meta_data"]["structures"] = ['bone']
-        return te
-
-
-    d.iterate_over_samples(f)
-if __name__ == '__main__':
-    # p_te = "C:/Users/rapha/Desktop/dataset_folder/Stuff/full"
-    # dicom_p = "C:/Users/rapha/sciebo/Datasets/US Classification/raw_example/DICOM/IM_0003"
-    p_te, _ = standalone_foldergrab(folder_not_file=True, title="Pick subject")
-    dicom_p, _ = standalone_foldergrab(folder_not_file=False, title="Pick dicom path")
-    seg_structs = {
-        "bone": MaskType.Line.value,
-        "cartilage": MaskType.Blob.value
-    }
-
-    print(append_dicom_to_te(p_te, dicom_p, seg_structs=seg_structs))
-    print(p_te)
-    print(dicom_p)
+    ds_path = download_and_extract(
+        online_url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
+        parent_dir='./data',  # Your local data folder
+        dir_name='crucial_ligament_diagnosis'  # Name of the dataset
+    )
+    ds = Dataset.from_disk(ds_path)

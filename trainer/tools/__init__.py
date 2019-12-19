@@ -7,7 +7,7 @@ import click
 import os
 from typing import List, Tuple, Callable, Dict
 
-from trainer.ml.Dataset import Dataset
+from trainer.ml.data_model import Dataset
 from trainer.bib import standalone_foldergrab
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
 from trainer.bib.JsonClass import dir_is_json_class

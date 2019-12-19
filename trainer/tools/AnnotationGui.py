@@ -198,7 +198,7 @@ class AnnotationGui(TWindow):
         main_layout = [
             [sg.Text(text="Pick subject for annotation", size=(50, 1), key='lbl')],
             [sg.Listbox(key='ls_s',
-                        values=[te_name for te_name in self.d.list_subjects()],
+                        values=[te_name for te_name in self.d.get_subject_name_list()],
                         size=(60, 20)),
              sg.Column(tools)]
         ]
@@ -247,11 +247,11 @@ class AnnotationGui(TWindow):
                                                                   self.d.get_structure_templates_names())],
                                                title="Select DICOM file")
         if dicom_path:
-            from trainer.ml import append_dicom_to_te
+            from trainer.ml import append_dicom_to_subject
             tpl_name = ks['struct_tpl']
             if tpl_name in self.d.get_structure_templates_names():
                 seg_structs = self.d.get_structure_template_by_name(tpl_name)
-                append_dicom_to_te(self.current_subject.get_working_directory(), dicom_path, seg_structs=seg_structs)
+                append_dicom_to_subject(self.current_subject.get_working_directory(), dicom_path, seg_structs=seg_structs)
                 print(ks['binary_name'])
                 print(dicom_path)
                 self.set_current_subject(Subject.from_disk(self.current_subject.get_working_directory()))

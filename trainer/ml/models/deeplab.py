@@ -39,7 +39,7 @@ from tensorflow.python.keras.activations import relu
 from tensorflow.python.keras.applications.imagenet_utils import preprocess_input
 
 from trainer.ml import Dataset
-from trainer.ml.generator import batcherize, resize, normalize_im
+from trainer.ml.utils import batcherize, resize, normalize_im
 from trainer.ml.losses import focal_loss
 
 WEIGHTS_PATH_X = "https://github.com/bonlime/keras-deeplab-v3-plus/releases/download/1.1/deeplabv3_xception_tf_dim_ordering_tf_kernels.h5"

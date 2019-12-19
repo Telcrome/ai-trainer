@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Generator, Tuple, Iterable
+from typing import Generator, Tuple, Iterable, Dict
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,12 +7,42 @@ import seaborn as sns
 import cv2
 from scipy.ndimage.morphology import distance_transform_edt as dist_trans
 
-from trainer.ml.Dataset import Dataset
-from trainer.ml import Subject
+from trainer.ml import Subject, Dataset
+from trainer.bib import create_identifier
 
 
 class ImageNormalizations(Enum):
     UnitRange = 1
+
+
+def append_dicom_to_subject(te_path: str,
+                            dicom_path: str,
+                            binary_name: str = '',
+                            seg_structs: Dict[str, str] = None,
+                            auto_save=True) -> Subject:
+    """
+
+    :param te_path: directory path to the subject
+    :param dicom_path: filepath to the dicom containing the image data
+    :param binary_name: Name of the binary, if not provided a name is chosen.
+    :param seg_structs: Structures that can be segmented in the image data
+    :param auto_save: The new state of the subject is automatically saved to disk
+    :return: The subject containing the new data
+    """
+    s = Subject.from_disk(te_path)
+
+    if not binary_name:
+        binary_name = create_identifier(hint='DICOM')
+
+    from trainer.bib.dicom_utils import import_dicom
+
+    img_data, meta = import_dicom(dicom_path)
+    s.add_source_image_by_arr(img_data, binary_name, structures=seg_structs, extra_info=meta)
+
+    if auto_save:
+        s.to_disk(s.get_parent_directory())
+
+    return s
 
 
 def normalize_im(im: np.ndarray, norm_type=ImageNormalizations.UnitRange):
@@ -101,6 +131,7 @@ if __name__ == '__main__':
 
     g = d.random_subject_generator(split="train")
     g = extract_segmentation_pair(g)
+
     g = pair_augmentation(g, [
         iaa.Crop(px=(1, 16), keep_size=False),
         iaa.Fliplr(0.5),

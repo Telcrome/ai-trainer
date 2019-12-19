@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import tensorflow_datasets as tfds
 import numpy as np
 import tensorflow as tf
-from trainer.ml.generator import resize, batcherize, normalize_im
+from trainer.ml.utils import resize, batcherize, normalize_im
 from trainer.ml.models import pix2pix
 
 from trainer.ml import Dataset
