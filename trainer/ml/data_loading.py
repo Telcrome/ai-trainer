@@ -6,17 +6,17 @@ from typing import Dict, Callable
 from trainer.ml import Dataset, Subject
 
 
-def iterate_over_samples(self, f: Callable[[Subject], Subject]):
+def iterate_over_samples(ds: Dataset, f: Callable[[Subject], Subject]):
     """
     Applies a function on every subject in this dataset.
+    :param ds: The dataset to be modified
     :param f: f takes a subject and can modify it. The result is automatically saved
     :return:
     """
-    for te_name in self._json_model["subjects"]:
-        te_p = os.path.join(self.get_working_directory(), te_name)
-        te = Subject.from_disk(te_p)
-        te = f(te)
-        te.to_disk()
+    for te_name in ds.get_subject_name_list():
+        s = ds.get_subject_by_name(te_name)
+        s = f(s)
+        s.to_disk()
 
 
 def get_subject_gen(ds: Dataset, split: str = None):
