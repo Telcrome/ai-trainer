@@ -2,6 +2,11 @@
 *.pyc
 .ropeproject
 data
-envs
 vsc/node_modules
 vsc/out
+
+# PyCharm
+workspace.xml
+
+# Project
+envs
