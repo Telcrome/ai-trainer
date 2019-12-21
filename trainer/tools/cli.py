@@ -56,8 +56,8 @@ def dataset_annotate(dataset_path: str, subject_name: str):
     """
     if not subject_name:
         # Subject name needs to be picked
-        ds = Dataset.from_disk(dataset_path)
-        subject_name = ds.get_subject_name_list()[0]  # Just pick the first subject
+        d = Dataset.from_disk(dataset_path)
+        subject_name = d.get_subject_name_list()[0]  # Just pick the first subject
     run_window(AnnotationGui, os.path.join(dataset_path, subject_name), dataset_path)
 
 
