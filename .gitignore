@@ -10,3 +10,7 @@ workspace.xml
 
 # Project
 envs
+
+# PyPi
+dist
+*.egg-info
