@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ai-trainer",
-    version="0.0.1",
+    version="0.0.2",
     author="Raphael Schaefer",
     author_email="raphaelschaefer1@outlook.com",
     description="AI Trainer",
@@ -23,5 +23,12 @@ setuptools.setup(
     entry_points='''
         [console_scripts]
         trainer=trainer.tools:trainer
-    '''
+    ''',
+    install_requires=[
+        'numpy',
+        'opencv-python',
+        'PyQt5',
+        'pydicom',
+        'PySimpleGui',
+    ],
 )
