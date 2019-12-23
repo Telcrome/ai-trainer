@@ -19,15 +19,14 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.7',
-    download_url='https://github.com/Telcrome/ai-trainer/archive/0.0.1.tar.gz',
+    download_url='https://github.com/Telcrome/ai-trainer/archive/0.0.2.tar.gz',
     entry_points='''
         [console_scripts]
-        trainer=trainer.tools:trainer
+        trainer=trainer.tools.cli:trainer
     ''',
     install_requires=[
         'numpy',
         'opencv-python',
-        'PyQt5',
         'pydicom',
         'PySimpleGui',
     ],

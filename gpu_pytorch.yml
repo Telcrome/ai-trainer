@@ -1,12 +1,14 @@
-name: trainer_env_tf
+name: gpu_torch
+channels:
+  - pytorch
 dependencies:
   - python=3.7
   - anaconda
   - pip
-  - cudatoolkit=10.0
-  - cudnn=7.6.0=cuda10.0_0
+  - pytorch 
+  - torchvision
+  - cudatoolkit=10.1
   - pip:
-    - tensorflow-gpu
     - opencv-python
     - PySimpleGui
     - pydicom
