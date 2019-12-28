@@ -21,15 +21,20 @@ def trainer():
     pass
 
 
-@trainer.group()
-def ds():
-    """"
-    Command line tools concerned with one dataset that is currently on pwd
-    """
-    pass
+@trainer.command(name='download')
+@click.option('--parent-path', '-p', default=os.getcwd, help='Directory that the dataset will appear in')
+@click.option('--name', '-n', help='If provided, the dataset will not be redownloaded everytime')
+@click.option('--url', '-u', help='Needs to point to a zip file')
+def dataset_download(parent_path, name, url):
+    from trainer.bib import download_and_extract
+    local_path = download_and_extract(online_url=url,
+                                      parent_dir=parent_path,
+                                      dir_name=name)
+    output = f'The directory is saved to {local_path}'
+    click.echo(output)
 
 
-@trainer.command(name='init-ds')
+@trainer.command(name='init')
 @click.option('--parent-path', '-p', default=os.getcwd, help='Directory that the dataset will appear in')
 @click.option('--name', '-n', prompt=True, help='Name of the dataset created')
 def dataset_init(parent_path, name):
@@ -45,6 +50,14 @@ def dataset_init(parent_path, name):
         d = Dataset.build_new(name, parent_path)
         d.to_disk(parent_path)
     click.echo(f"For working with the dataset {name}, please switch into the directory")
+
+
+@trainer.group()
+def ds():
+    """"
+    Command line tools concerned with one dataset that is currently on pwd
+    """
+    pass
 
 
 @ds.command(name="annotate")
