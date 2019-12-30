@@ -13,8 +13,8 @@ def iterate_over_samples(ds: Dataset, f: Callable[[Subject], Subject]):
     :param f: f takes a subject and can modify it. The result is automatically saved
     :return:
     """
-    for te_name in ds.get_subject_name_list():
-        s = ds.get_subject_by_name(te_name)
+    for s_name in ds.get_subject_name_list():
+        s = ds.get_subject_by_name(s_name)
         s = f(s)
         s.to_disk()
 
@@ -39,8 +39,8 @@ def random_subject_generator(ds: Dataset, split=None):
         te_names = ds._json_model["splits"][split]
     random.shuffle(te_names)
 
-    for te_name in itertools.cycle(te_names):
-        te = ds.get_subject_by_name(te_name)
+    for s_name in itertools.cycle(te_names):
+        te = ds.get_subject_by_name(s_name)
         yield te
 
 

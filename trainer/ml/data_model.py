@@ -359,13 +359,13 @@ class Dataset(JsonClass):
         # Add the subjects
         copied = []
         if source_split is None:
-            for te_name in tqdm(d._json_model["subjects"], desc=f"Adding {d.name}"):
-                copied.append(te_name)
-                self.save_subject(d.get_subject_by_name(te_name), split=target_split, auto_save=False)
+            for s_name in tqdm(d._json_model["subjects"], desc=f"Adding {d.name}"):
+                copied.append(s_name)
+                self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
         else:
-            for te_name in tqdm(d._json_model["splits"][source_split], desc=f"Adding {d.name}"):
-                copied.append(te_name)
-                self.save_subject(d.get_subject_by_name(te_name), split=target_split, auto_save=False)
+            for s_name in tqdm(d._json_model["splits"][source_split], desc=f"Adding {d.name}"):
+                copied.append(s_name)
+                self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
         self.to_disk(self._last_used_parent_dir)
         return copied
 
@@ -468,8 +468,8 @@ class Dataset(JsonClass):
         :return: The list of subjects of interest
         """
         res: List[str] = []
-        for i, te_name in enumerate(self._json_model["subjects"]):
-            te = self.get_subject_by_name(te_name)
+        for i, s_name in enumerate(self._json_model["subjects"]):
+            te = self.get_subject_by_name(s_name)
             if filterer(te):
                 res.append(te.name)
             if viz:
