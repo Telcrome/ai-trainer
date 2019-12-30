@@ -54,17 +54,26 @@ their configurations provided in ```.vscode``` and ```.idea```
 
 ## Recommended environments
 
-For development we recommend to install the environment in a local folder.
+For development we recommend to install the conda environment into a subfolder of the repo.
 This allows for easier experimentation and the IDE expects it this way.
 
 ```bash
-conda env create --prefix ./envs -f gpu_pytorch.yml
+conda env create --prefix ./envs -f environment.yml
 conda activate .\envs\.
+```
+
+Now install a deep learning backend.
+PyTorch provides well-working [conda install commands](https://pytorch.org/get-started/locally/).
+
+For Tensorflow with GPU:
+```bash
+conda install cudatoolkit=10.0 cudnn=7.6.0=cuda10.0_0
+pip install tensorflow-gpu
 ```
 
 ### Testing Development for pip and cli tools
 
-Installing the folder directly using pip does not work due to the large amount of files inside the repo,
+Installing the folder directly using pip does not work due to the large amount of files inside the local development folder,
 especially because in the local development setup the environment is expected to be a subfolder of the repo.
 ```bash
 pip install -e .
