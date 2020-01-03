@@ -43,9 +43,9 @@ class JsonClass:
         self._binaries_dir_path = None
 
         if model is not None:
-            self._json_model = model
+            self.json_model = model
         else:
-            self._json_model = {}
+            self.json_model = {}
 
         if b_model is not None:
             self._binaries_model = b_model
@@ -92,7 +92,7 @@ class JsonClass:
         # Write the json model file
         with open(file_name, 'w+') as f:
             save_json = {
-                "payload": self._json_model,
+                "payload": self.json_model,
                 "binaries": self._binaries_model
             }
             if properly_formatted:
@@ -205,7 +205,7 @@ class JsonClass:
         for binary in self._binaries.keys():
             res += f"{binary}: shape: {self._binaries[binary].shape} (type: {self._binaries[binary].dtype})\n"
             res += f"{json.dumps(self._binaries_model[binary], indent=4)}\n"
-        res += json.dumps(self._json_model, indent=4)
+        res += json.dumps(self.json_model, indent=4)
         return res
 
     def __repr__(self):
@@ -219,8 +219,8 @@ if __name__ == '__main__':
         example_class = JsonClass.from_disk(os.path.join(parent_folder, "jsonclass_example"))
     else:
         example_class = JsonClass("jsonclass_example", {})
-        example_class._json_model["test_number"] = 4
-        example_class._json_model["test_list"] = [1, 2, 3]
-        example_class._json_model["test_dict"] = {"1": "3", "4": "8"}
+        example_class.json_model["test_number"] = 4
+        example_class.json_model["test_list"] = [1, 2, 3]
+        example_class.json_model["test_dict"] = {"1": "3", "4": "8"}
         example_class.add_binary("test_image", np.ones((100, 100)))
         example_class.to_disk(parent_folder, prompt_user=True)

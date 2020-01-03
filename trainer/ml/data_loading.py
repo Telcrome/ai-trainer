@@ -23,32 +23,20 @@ def get_subject_gen(ds: Dataset, split: str = None):
     """
     Iterates once through the dataset. Intended for custom exporting, not machine learning.
     """
-    if split is None:
-        subjects = ds._json_model["subjects"]
-    else:
-        subjects = ds._json_model["splits"][split]
-
-    for s_name in subjects:
+    for s_name in ds.get_subject_name_list(split=split):
         yield ds.get_subject_by_name(s_name)
 
 
 def random_subject_generator(ds: Dataset, split=None):
-    if split is None:
-        te_names = ds._json_model["subjects"]
-    else:
-        te_names = ds._json_model["splits"][split]
-    random.shuffle(te_names)
-
-    for s_name in itertools.cycle(te_names):
+    subjects = ds.get_subject_name_list(split=split)
+    random.shuffle(subjects)
+    for s_name in itertools.cycle(subjects):
         te = ds.get_subject_by_name(s_name)
         yield te
 
 
 def random_struct_generator(ds: Dataset, struct_name: str, split=None):
-    if split is None:
-        subjects = ds._json_model["subjects"]
-    else:
-        subjects = ds._json_model["splits"][split]
+    subjects = ds.get_subject_name_list(split=split)
 
     # Compute the annotated examples for each subject
     annotations: Dict[str, Dict] = {}

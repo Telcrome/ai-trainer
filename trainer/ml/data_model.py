@@ -69,7 +69,7 @@ class Subject(JsonClass):
                 self._binaries_model[for_binary]["meta_data"]["classes"] = {}
             self._binaries_model[for_binary]["meta_data"]["classes"][class_name] = value
         else:
-            self._json_model['classes'][class_name] = value
+            self.json_model['classes'][class_name] = value
 
     def get_class_value(self, class_name: str, for_binary=''):
         if for_binary:
@@ -78,15 +78,15 @@ class Subject(JsonClass):
             if class_name in self._binaries_model[for_binary]["meta_data"]["classes"]:
                 return self._binaries_model[for_binary]["meta_data"]["classes"][class_name]
         else:
-            if class_name in self._json_model['classes']:
-                return self._json_model['classes'][class_name]
+            if class_name in self.json_model['classes']:
+                return self.json_model['classes'][class_name]
         return "--Removed--"
 
     def remove_class(self, class_name: str, for_binary=''):
         if for_binary:
             self._binaries_model[for_binary]["meta_data"]["classes"].pop(class_name)
         else:
-            self._json_model['classes'].pop(class_name)
+            self.json_model['classes'].pop(class_name)
 
     def add_source_image_by_arr(self,
                                 src_im,
@@ -284,41 +284,41 @@ class Dataset(JsonClass):
             "class_type": class_type.value,
             "values": values
         }
-        self._json_model['classes'][class_name] = obj
+        self.json_model['classes'][class_name] = obj
 
     def get_class_names(self):
-        return list(self._json_model['classes'].keys())
+        return list(self.json_model['classes'].keys())
 
     def get_class(self, class_name: str) -> Dict:
-        if class_name in self._json_model['classes']:
-            return self._json_model['classes'][class_name]
+        if class_name in self.json_model['classes']:
+            return self.json_model['classes'][class_name]
         else:
             return None
 
     def remove_class(self, class_name: str):
-        self._json_model['classes'].pop(class_name)
+        self.json_model['classes'].pop(class_name)
 
     def save_into(self, dir_path: str, properly_formatted=True, prompt_user=False, vis=True) -> None:
         old_working_dir = self.get_working_directory()
         super().to_disk(dir_path, properly_formatted=properly_formatted, prompt_user=prompt_user)
-        for i, te_key in enumerate(self._json_model["subjects"]):
+        for i, te_key in enumerate(self.json_model["subjects"]):
             te_path = os.path.join(old_working_dir, te_key)
             te = Subject.from_disk(te_path)
             te.to_disk(self.get_working_directory())
             if vis:
-                sg.OneLineProgressMeter('My Meter', i + 1, len(self._json_model['subjects']), 'key',
+                sg.OneLineProgressMeter('My Meter', i + 1, len(self.json_model['subjects']), 'key',
                                         f'Subject: {te.name}')
 
     def get_structure_templates_names(self):
-        return list(self._json_model["structure_templates"].keys())
+        return list(self.json_model["structure_templates"].keys())
 
     def get_structure_template_by_name(self, tpl_name):
-        return self._json_model["structure_templates"][tpl_name]
+        return self.json_model["structure_templates"][tpl_name]
 
     def save_subject(self, te: Subject, split=None, auto_save=True):
         # Add the name of the subject into the model
-        if te.name not in self._json_model["subjects"]:
-            self._json_model["subjects"].append(te.name)
+        if te.name not in self.json_model["subjects"]:
+            self.json_model["subjects"].append(te.name)
 
         # Save it as a child directory to this dataset
         te.to_disk(self.get_working_directory())
@@ -329,15 +329,19 @@ class Dataset(JsonClass):
         if auto_save:
             self.to_disk(self._last_used_parent_dir)
 
-    def get_subject_name_list(self) -> List[str]:
-        return self._json_model["subjects"]
+    def get_subject_name_list(self, split=None) -> List[str]:
+        if split is None:
+            subjects = self.json_model["subjects"]
+        else:
+            subjects = self.json_model["splits"][split]
+        return subjects
 
     def append_subject_to_split(self, s: Subject, split: str):
         # Create the split if it does not exist
-        if split not in self._json_model["splits"]:
-            self._json_model["splits"][split] = []
+        if split not in self.json_model["splits"]:
+            self.json_model["splits"][split] = []
 
-        self._json_model["splits"][split].append(s.name)
+        self.json_model["splits"][split].append(s.name)
 
     def append_dataset(self, d_path: str, source_split: str = None, target_split: str = None) -> List:
         """
@@ -468,13 +472,13 @@ class Dataset(JsonClass):
         :return: The list of subjects of interest
         """
         res: List[str] = []
-        for i, s_name in enumerate(self._json_model["subjects"]):
+        for i, s_name in enumerate(self.json_model["subjects"]):
             te = self.get_subject_by_name(s_name)
             if filterer(te):
                 res.append(te.name)
             if viz:
                 sg.OneLineProgressMeter("Filtering subjects", i + 1,
-                                        len(self._json_model['subjects']),
+                                        len(self.json_model['subjects']),
                                         'key',
                                         f'Subject: {te.name}')
         return res
@@ -488,21 +492,21 @@ class Dataset(JsonClass):
         for s in tqdm(del_ls, desc="Deleting subjects"):
             del_name = s.name
             s.delete_on_disk()
-            self._json_model["subjects"].remove(del_name)
-            for split in self._json_model["splits"]:
-                if del_name in self._json_model["splits"][split]:
-                    self._json_model["splits"][split].remove(del_name)
+            self.json_model["subjects"].remove(del_name)
+            for split in self.json_model["splits"]:
+                if del_name in self.json_model["splits"][split]:
+                    self.json_model["splits"][split].remove(del_name)
         self.to_disk(self._last_used_parent_dir)
 
     def get_subject_by_name(self, te_name: str):
-        if te_name not in self._json_model['subjects']:
+        if te_name not in self.json_model['subjects']:
             raise Exception('This dataset does not contain a subject with this name')
         res = Subject.from_disk(os.path.join(self.get_working_directory(), te_name))
         return res
 
     def get_summary(self) -> str:
         split_summary = ""
-        for split in self._json_model["splits"]:
+        for split in self.json_model["splits"]:
             split_summary += f"""{split}: {self.__len__(split=split)}\n"""
         return f"Saved at {self.get_working_directory()}\nN: {len(self)}\n{split_summary}"
 
@@ -540,9 +544,9 @@ class Dataset(JsonClass):
 
     def get_subject_count(self, split=None):
         if split is None:
-            return len(self._json_model["subjects"])
+            return len(self.json_model["subjects"])
         else:
-            return len(self._json_model["splits"][split])
+            return len(self.json_model["splits"][split])
 
     def __len__(self):
         return self.get_subject_count()
