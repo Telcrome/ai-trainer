@@ -29,5 +29,6 @@ setuptools.setup(
         'opencv-python',
         'pydicom',
         'PySimpleGui',
+        'tensorflow'
     ],
 )
