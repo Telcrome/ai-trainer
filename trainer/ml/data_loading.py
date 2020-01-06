@@ -3,6 +3,7 @@ import os
 import random
 from typing import Dict, Callable
 
+from trainer import BinaryType
 from trainer.ml import Dataset, Subject
 
 
@@ -33,6 +34,30 @@ def random_subject_generator(ds: Dataset, split=None):
     for s_name in itertools.cycle(subjects):
         te = ds.get_subject_by_name(s_name)
         yield te
+
+
+def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_number=-1):
+    """
+    Returns an (image, mask) pair for a specified frame.
+
+    For a single image no frame has to be specified.
+    If no valid frame is specified for a video, an exception is raised.
+    If
+    """
+    frame = s.get_binary(binary_name)[frame_number]
+
+    struct_index = list(s.get_binary_model(binary_name)["meta_data"]["structures"].keys()).index(struct_name)
+
+    def mask_condition(binary_model):
+        if binary_model['binary_type'] == BinaryType.ImageMask.value:
+            if binary_model['meta_data']['mask_of'] == binary_name:
+                if binary_model['meta_data']['frame_number'] == frame_number:
+                    return True
+        return False
+
+    mask_names = s.get_binary_list_filtered(mask_condition)[0]
+    mask = s.get_binary(mask_names)[:, :, struct_index]
+    return frame, mask
 
 
 def random_struct_generator(ds: Dataset, struct_name: str, split=None):
