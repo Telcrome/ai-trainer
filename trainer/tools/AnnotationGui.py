@@ -440,7 +440,7 @@ class AnnotationGui(TWindow):
 
     def find_annotations(self):
         struct_name = self.seg_structs[self._struct_index]
-        annos = self.current_subject.get_manual_struct_segmentations(struct_name)
+        annos, _ = self.current_subject.get_manual_struct_segmentations(struct_name)
         if self._selected_source_binary in annos:
             bs = annos[self._selected_source_binary]
             res = f"{struct_name} is segmented in {len(bs)} frames:\n"

@@ -62,17 +62,21 @@ def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_numb
     return frame, None
 
 
-def random_struct_generator(ds: Dataset, struct_name: str, split=None):
+def random_struct_generator(ds: Dataset, struct_name: str, split=None, verbose=True):
     subjects = ds.get_subject_name_list(split=split)
+    N = 0
 
     # Compute the annotated examples for each subject
     annotations: Dict[str, Dict] = {}
     for s_name in subjects:
         s = ds.get_subject_by_name(s_name)
-        s_annos = s.get_manual_struct_segmentations(struct_name)
+        s_annos, n_s = s.get_manual_struct_segmentations(struct_name)
+        N += n_s
         if s_annos:
             annotations[s_name] = s_annos
-    print(annotations)
+
+    if verbose:
+        print(f"{len(subjects)} subjects contain {N} frames with masks")
 
     for s_name in itertools.cycle(annotations.keys()):
         s = ds.get_subject_by_name(s_name)

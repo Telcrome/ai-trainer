@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 import itertools
 from tqdm import tqdm
-from typing import Callable, List, Dict, Set
+from typing import Callable, List, Dict, Set, Tuple
 
 import PySimpleGUI as sg
 import numpy as np
@@ -221,8 +221,8 @@ class Subject(JsonClass):
         training_output = self.stack_gts(src_name)
         return training_input[0, :, :, 0].astype(np.float32), training_output.astype(np.float32)
 
-    def get_manual_struct_segmentations(self, struct_name: str) -> Dict[str, List[int]]:
-        res = {}
+    def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
+        res, N = {}, 0
 
         def filter_imgstack_structs(x: Dict):
             is_img_stack = x['binary_type'] == BinaryType.ImageStack.value
@@ -236,10 +236,12 @@ class Subject(JsonClass):
             for m_name in self.get_binary_list_filtered(
                     lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
                 bs.append(m_name)
+                N += 1
 
             if bs:
                 res[b_name] = bs
-        return res
+
+        return res, N
 
 
 class Dataset(JsonClass):
