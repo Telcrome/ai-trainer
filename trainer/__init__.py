@@ -1,3 +1,3 @@
 from trainer.bib import *
 from trainer.ml import *
-VERSION = "1.0"
+VERSION = "0.0.3"

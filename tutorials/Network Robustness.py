@@ -1,69 +1,15 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# Adapted from https://pytorch.org/tutorials/beginner/fgsm_tutorial.html
 import os
 import random
 import torch
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-from torchvision import datasets, transforms
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer.bib import create_identifier
-
-IDENTIFIER = create_identifier()
+from trainer.ml.torch_utils import instantiate_model, TorchModel, fgsm_attack, train_model, load_testset, TestSet
 
 
-def normalize_mnist(x):
-    return x * 2 - 1
-
-
-# MNIST Test dataset and dataloader declaration
-train_loader = torch.utils.data.DataLoader(
-    datasets.MNIST('./data', train=True, download=True, transform=transforms.Compose([
-        transforms.ToTensor(),
-        normalize_mnist
-    ])),
-    batch_size=32, shuffle=True)
-
-test_loader = torch.utils.data.DataLoader(
-    datasets.MNIST('./data', train=False, download=True, transform=transforms.Compose([
-        transforms.ToTensor(),
-        normalize_mnist
-    ])),
-    batch_size=1, shuffle=True)
-
-
-def visualize_one_input():
-    _, (images, labels) = next(enumerate(train_loader, 0))
-    text_index = 0
-    im, label = images[text_index, 0, :, :].numpy(), labels[text_index].item()
-    plt.title(f"True Label: {label}")
-    sns.heatmap(im)
-    plt.savefig("MNIST_Example.png")
-
-
-# get some random training images
-dataiter = iter(train_loader)
-images, labels = dataiter.next()
-
-
-# create grid of images
-
-
-class NamedModel(nn.Module):
-    def __init__(self, model_name: str):
-        super(NamedModel, self).__init__()
-        self.name = model_name
-
-
-class ConvNet(NamedModel):
+class ConvNet(TorchModel):
     def __init__(self):
         super(ConvNet, self).__init__(model_name="convnet")
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
@@ -81,7 +27,7 @@ class ConvNet(NamedModel):
         return F.log_softmax(x, dim=1)
 
 
-class FCNet(NamedModel):
+class FCNet(TorchModel):
     def __init__(self):
         super(FCNet, self).__init__(model_name='fcnet')
         self.fc1 = nn.Linear(28 * 28, 28 * 14)
@@ -96,51 +42,7 @@ class FCNet(NamedModel):
         return F.log_softmax(x, dim=1)
 
 
-device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
-
-# Initialize the network
-models = [FCNet().to(device), ConvNet().to(device)]
-
-
-def train_model(model: NamedModel, writer: SummaryWriter):
-    img_grid = torchvision.utils.make_grid(images)
-    writer.add_image(f'Input for {model.name}', img_grid)
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-
-    EPOCHS = 5
-
-    for epoch in range(EPOCHS):
-
-        running_loss, print_loss = 0.0, "-1."
-
-        for batch_id, data in enumerate(train_loader, 0):
-
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
-            optimizer.zero_grad()
-
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-
-            optimizer.step()
-
-            running_loss += loss.item()
-
-            if batch_id > 0:
-                writer.add_scalar(f'Loss/train{epoch}', running_loss / batch_id, batch_id)
-
-
-def fgsm_attack(image: torch.Tensor, epsilon: float, data_grad: torch.Tensor):
-    sign_data_grad = data_grad.sign()
-    perturbed_image = image + epsilon * sign_data_grad
-    perturbed_image = torch.clamp(perturbed_image, 0, 1)
-    return perturbed_image
-
-
-def test(model: NamedModel, device: torch.device, test_loader: torch.utils.data.DataLoader, epsilon: float, writer):
+def test(model: TorchModel, device: torch.device, test_loader: torch.utils.data.DataLoader, epsilon: float, writer):
     wrong, correct, adv_success = 0, 0, 0
     adv_examples = []
 
@@ -197,43 +99,24 @@ def run_adv_attacks(model):
         print(f"Accuracy for epsilon={epsilon}: {acc}")
 
 
-def visualize_model_weights():
-    W = model.state_dict()
-
-    for key in W.keys():
-        print(key)
-
-    arr = W['conv2.weight'].cpu().numpy()
-    print(arr.shape)
-    return W
-
-
-def vis_conv_weights(arr: np.ndarray):
-    plt.title(f"Convolutional Weights")
-
-    fig_width = 12.  # inches
-    fig_height = 12.
-
-    cmaps = ['Greens', 'plasma']
-
-    f, axarr = plt.subplots(arr.shape[0], arr.shape[1], figsize=(fig_width, fig_height))
-    for depth in range(arr.shape[0]):
-        for channel in range(arr.shape[1]):
-            plot_index = 1 + depth * arr.shape[1] + channel
-            # print(f"ASDF: {plot_index}")
-            im = arr[depth, channel, :, :]
-            axarr[depth, channel].imshow(im, cmap=cmaps[depth % 2])
-            axarr[depth, channel].axis('off')
-
-            # plt.subplot(arr.shape[0], arr.shape[1], plot_index)
-            # plt.imshow(arr[depth, channel, : , :])
-    plt.savefig("weights.png")
-    plt.show()
-
-
 if __name__ == '__main__':
-    model = models[0]
-    writer = SummaryWriter(f'runs/{model.name}_{IDENTIFIER}')
-    writer.add_graph(model, images.to(device))
+    train_loader, test_loader = load_testset(TestSet.MNIST)
 
-    train_model(model, writer)
+    fc_net, fc_writer = instantiate_model(FCNet, weights_path='fc_net.pt', data_loader=train_loader)
+    conv_net, conv_writer = instantiate_model(ConvNet, weights_path='conv_net.pt', data_loader=train_loader)
+
+    from trainer.ml.torch_utils import visualize_input_batch, visualize_model_weights
+
+    visualize_input_batch(train_loader, fc_writer)
+
+    if not os.path.exists('fc_net.pt'):
+        fc_state = train_model(train_loader, fc_net, fc_writer)
+        torch.save(fc_state, 'fc_net.pt')
+
+    if not os.path.exists('conv_net.pt'):
+        conv_state = train_model(train_loader, conv_net, conv_writer)
+        torch.save(conv_state, 'conv_net.pt')
+
+    # Visualize model weights
+    # visualize_model_weights(fc_net, fc_writer)
+    visualize_model_weights(conv_net, conv_writer)

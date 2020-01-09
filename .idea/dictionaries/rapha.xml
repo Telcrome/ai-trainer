@@ -2,8 +2,11 @@
   <dictionary name="rapha">
     <words>
       <w>conv</w>
+      <w>cuda</w>
       <w>imagestacks</w>
       <w>matplot</w>
+      <w>mnist</w>
+      <w>testset</w>
     </words>
   </dictionary>
 </component>
