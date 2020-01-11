@@ -3,10 +3,13 @@
     <words>
       <w>conv</w>
       <w>cuda</w>
+      <w>fgsm</w>
       <w>imagestacks</w>
       <w>matplot</w>
       <w>mnist</w>
+      <w>tensorboard</w>
       <w>testset</w>
+      <w>visboard</w>
     </words>
   </dictionary>
 </component>
