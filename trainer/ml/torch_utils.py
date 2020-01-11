@@ -74,6 +74,17 @@ def instantiate_model(model_definition: TorchModel, weights_path='', data_loader
     return model, visboard
 
 
+def oneshot_attack(image: torch.Tensor, max_change_percentage: float, data_grad: torch.Tensor, data_range=(-1., 1.)):
+    """
+    Oneshot attack, takes one step against the gradient direction to increase the error.
+    """
+    # sign_data_grad = data_grad.sign()
+    epsilon = (((max_change_percentage * image) / data_grad).sum() / image.numel()).item()
+    perturbed_image = image + epsilon * data_grad
+    perturbed_image = torch.clamp(perturbed_image, data_range[0], data_range[1])
+    return perturbed_image
+
+
 def fgsm_attack(image: torch.Tensor, epsilon: float, data_grad: torch.Tensor, data_range=(-1., 1.)):
     """
     Fast gradient sign method attack as proposed by:
@@ -100,7 +111,7 @@ def visualize_input_batch(data_loader, visboard: VisBoard, name="Input Example")
         visboard.add_figure(fig, group_name=name)
 
 
-def train_model(train_loader, model: TorchModel, visboard: VisBoard, save_path='', verbose=True, test_loader=None,
+def train_model(train_loader, model: TorchModel, visboard: VisBoard, verbose=True, test_loader=None,
                 EPOCHS=20):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
