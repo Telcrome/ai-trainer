@@ -224,6 +224,8 @@ def perform_adversarial_testing(model: TorchModel, test_loader: torch.utils.data
 
                 fig, (ax1, ax2) = plt.subplots(1, 2)
 
+                fig.suptitle(f'Tested: {correct + wrong}; Adversarial successes: {adv_success}', fontsize=16)
+
                 ax1.set_title(f"Original: {target.item()}, Pred: {init_pred.item()}")
                 sns.heatmap(original_arr[0].squeeze(), ax=ax1)
 
