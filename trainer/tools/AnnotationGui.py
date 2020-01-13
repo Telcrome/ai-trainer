@@ -251,7 +251,8 @@ class AnnotationGui(TWindow):
             tpl_name = ks['struct_tpl']
             if tpl_name in self.d.get_structure_templates_names():
                 seg_structs = self.d.get_structure_template_by_name(tpl_name)
-                append_dicom_to_subject(self.current_subject.get_working_directory(), dicom_path, seg_structs=seg_structs)
+                append_dicom_to_subject(self.current_subject.get_working_directory(), dicom_path,
+                                        seg_structs=seg_structs)
                 print(ks['binary_name'])
                 print(dicom_path)
                 self.set_current_subject(Subject.from_disk(self.current_subject.get_working_directory()))
@@ -293,6 +294,7 @@ class AnnotationGui(TWindow):
             self.select_source_binary(src_names[0])
 
         self.update()
+        self.console.push_to_ipython({"current_subject": s})
 
     def select_source_binary(self, name: str, auto_save=True):
         if auto_save and self.mask_data is not None and self._made_changes:

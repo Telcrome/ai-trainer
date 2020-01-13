@@ -5,9 +5,11 @@ from typing import Tuple, Dict, Callable
 from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import Qt
 
+from trainer.bib.tgui.TConsole import TConsole
+
 
 class TContentGrid(QtWidgets.QWidget):
-    def __init__(self, main_widget: QtWidgets.QWidget):
+    def __init__(self, main_widget: QtWidgets.QWidget, console: TConsole):
         super(TContentGrid, self).__init__()
         layout = QtWidgets.QHBoxLayout()
 
@@ -36,7 +38,8 @@ class TContentGrid(QtWidgets.QWidget):
         logging_splitter = QtWidgets.QSplitter(Qt.Vertical)
         right_side_layout.addWidget(logging_splitter)
         logging_splitter.addWidget(self.main_content)
-        # logging_splitter.addWidget(self.logging_widget)
+
+        logging_splitter.addWidget(console)
         logging_splitter.setSizes([600, 200])
 
         right_side.setLayout(right_side_layout)
@@ -52,6 +55,10 @@ class TWindow(QtWidgets.QMainWindow):
 
     def __init__(self, main_widget: QtWidgets.QWidget = None, title="Window title", maximized=False):
         super(TWindow, self).__init__()
+
+        # Allow a debug console to be used
+        self.console = TConsole()
+
         if main_widget is not None:
             self.main_widget = main_widget
         else:
@@ -66,6 +73,7 @@ class TWindow(QtWidgets.QMainWindow):
         self.gui_initialized = False
         if maximized:
             self.showMaximized()
+        print('Process ID is:', os.getpid())
 
     def init_ui(self, actions: Dict = None):
         if self.gui_initialized:
@@ -76,7 +84,7 @@ class TWindow(QtWidgets.QMainWindow):
 
         self.statusBar()
         self.create_menu_bar()
-        self.content_grid = TContentGrid(self.main_widget)
+        self.content_grid = TContentGrid(self.main_widget, self.console)
         self.setCentralWidget(self.content_grid)
         self.gui_initialized = True
 
