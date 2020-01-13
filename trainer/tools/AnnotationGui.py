@@ -8,6 +8,7 @@ Everything else required should be stored in the subject.
 """
 
 import sys
+import random
 import os
 from typing import Tuple, List, Callable
 
@@ -164,6 +165,8 @@ class AnnotationGui(TWindow):
 
         self.set_current_subject(Subject.from_disk(te_path))
 
+        self.console.push_to_ipython({'gui': self, 'dataset': self.d})
+
     def ask_model(self):
         from trainer.ml.predictor import predict
         print("The model was consulted")
@@ -184,7 +187,7 @@ class AnnotationGui(TWindow):
     def select_next_subject(self):
         self.save_to_disk()
 
-        next_subject_name = self.d.select_for_struct_annotation()
+        next_subject_name = random.choice(self.d.get_subject_name_list())
         self.set_current_subject(Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
         print("Selecting next subject")
 

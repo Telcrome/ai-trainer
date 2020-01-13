@@ -18,11 +18,10 @@ class TConsole(RichJupyterWidget):
         self.kernel_client = kernel_client
 
         def stop():
-            kernel_client.stop_channels()
-            kernel_manager.shutdown_kernel()
-            self.exit()
+            print("This does not work yet")
 
         self.exit_requested.connect(stop)
 
     def push_to_ipython(self, x):
         self.kernel.shell.push(x)
+
