@@ -189,7 +189,7 @@ def perform_adversarial_testing(model: TorchModel, test_loader: torch.utils.data
     adv_examples = []
 
     for data, target in test_loader:
-        if wrong + correct >= test_number:
+        if wrong + correct > test_number:
             break
         data, target = data.to(device), target.to(device)
 
@@ -218,7 +218,7 @@ def perform_adversarial_testing(model: TorchModel, test_loader: torch.utils.data
             output = model(perturbed_data)
 
             adversarial_pred = output.max(1, keepdim=True)[1]  # max returns a tuple (values, indices)
-            if np.random.rand() > 0.9 or True:
+            if wrong + correct % 10 == 0:
                 original_arr = data.detach().cpu().numpy()
                 perturbed_arr = perturbed_data.detach().cpu().numpy()
 

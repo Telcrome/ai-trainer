@@ -77,7 +77,7 @@ def full_analysis(model_definition: TorchModel, weights_path):
 
     epsilons = [.1, .2, .3]
     for epsilon in epsilons:
-        perform_adversarial_testing(net, test_loader, epsilon, writer)
+        perform_adversarial_testing(net, test_loader, epsilon, writer, test_number=1000)
 
 
 if __name__ == '__main__':
