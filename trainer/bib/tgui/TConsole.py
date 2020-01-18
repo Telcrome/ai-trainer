@@ -24,4 +24,3 @@ class TConsole(RichJupyterWidget):
 
     def push_to_ipython(self, x):
         self.kernel.shell.push(x)
-

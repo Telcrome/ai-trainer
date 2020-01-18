@@ -18,12 +18,12 @@ from trainer.bib import create_identifier, get_img_from_fig
 from trainer.ml.visualization import VisBoard
 
 
-class TestSet(Enum):
+class TorchDataset(Enum):
     MNIST = "MNIST"
 
 
-def load_testset(dataset: TestSet, local_path='./data', batch_size=32):
-    if dataset == TestSet.MNIST:
+def load_torch_dataset(dataset: TorchDataset, local_path='./data', batch_size=32):
+    if dataset == TorchDataset.MNIST:
         def normalize_mnist(x):
             return x * 2 - 1
 
@@ -266,3 +266,7 @@ def compare_architectures(models: List[nn.Module], writer: VisBoard) -> List[int
 
     writer.add_figure(fig, group_name='Parameter Number')
     return params
+
+
+if __name__ == '__main__':
+    ds = load_torch_dataset(TorchDataset.MNIST)

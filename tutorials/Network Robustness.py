@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer.ml.torch_utils import instantiate_model, TorchModel, fgsm_attack, train_model, load_testset, TestSet
+from trainer.ml.torch_utils import instantiate_model, TorchModel, train_model, load_torch_dataset, TorchDataset
 from trainer.ml.torch_utils import visualize_input_batch, visualize_model_weights, perform_adversarial_testing
 
 
@@ -61,7 +61,7 @@ class FCNet(TorchModel):
 
 
 def full_analysis(model_definition: TorchModel, weights_path):
-    train_loader, test_loader = load_testset(TestSet.MNIST)
+    train_loader, test_loader = load_torch_dataset(TorchDataset.MNIST)
 
     net, writer = instantiate_model(model_definition, weights_path=weights_path, data_loader=train_loader)
 
@@ -73,7 +73,7 @@ def full_analysis(model_definition: TorchModel, weights_path):
 
     visualize_model_weights(net, writer)
 
-    train_loader, test_loader = load_testset(TestSet.MNIST, batch_size=1)
+    train_loader, test_loader = load_torch_dataset(TorchDataset.MNIST, batch_size=1)
 
     epsilons = [.1, .2, .3]
     for epsilon in epsilons:
