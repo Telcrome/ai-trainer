@@ -18,7 +18,7 @@ from typing import Callable, List, Dict, Set, Tuple
 import PySimpleGUI as sg
 import numpy as np
 
-from trainer.bib import JsonClass, download_and_extract, standalone_foldergrab, create_identifier
+from trainer.bib import JsonClass, download_and_extract, create_identifier
 from trainer.bib import MaskType, BinaryType, ClassType
 
 
@@ -311,7 +311,7 @@ class Dataset(JsonClass):
                 sg.OneLineProgressMeter('My Meter', i + 1, len(self.json_model['subjects']), 'key',
                                         f'Subject: {te.name}')
 
-    def get_structure_templates_names(self):
+    def get_structure_template_names(self):
         return list(self.json_model["structure_templates"].keys())
 
     def get_structure_template_by_name(self, tpl_name):

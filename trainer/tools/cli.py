@@ -131,7 +131,7 @@ def dataset_add_image_folder(dataset_path: str, folder_path: str, structure_tpl:
         folder_path, inputs_dict = standalone_foldergrab(
             folder_not_file=True,
             title='Pick Image folder',
-            optional_choices=[('Structure Template', 'str_tpl', ds.get_structure_templates_names())]
+            optional_choices=[('Structure Template', 'str_tpl', ds.get_structure_template_names())]
         )
         structure_tpl = inputs_dict['str_tpl']
     seg_structs = ds.get_structure_template_by_name(structure_tpl)

@@ -99,19 +99,14 @@ def batcherize(g: Iterable[Tuple[np.ndarray, np.ndarray]], batchsize=8) -> Itera
         gts.append(gt)
 
 
-def extract_segmentation_pair(g: Iterable[Subject], src_name: str) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
-    for te in g:
-        res = te.get_grayimage_training_tuple_raw(src_name)
-        yield res
-
-
 def pair_augmentation(g: Iterable[Tuple[np.ndarray, np.ndarray]], aug_ls) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
     import imgaug.augmenters as iaa
     seq = iaa.Sequential(aug_ls)
-    for im, gt in g:
-        images_aug = seq(images=[im], segmentation_maps=[gt.astype(np.bool)])
-        res = images_aug[0][0].astype(np.float32), images_aug[1][0][:, :, 0].astype(np.float32)
-        yield res
+    for im, gt, frame_number in g:
+        im_prep = im[frame_number] if im.shape[3] > 1 else im.squeeze()
+        gt_prep = np.expand_dims(gt, len(gt.shape))
+        images_aug = seq(images=[im_prep], segmentation_maps=[gt_prep])
+        yield images_aug[0][0].astype(np.float32), images_aug[1][0][:, :, 0].astype(np.float32), frame_number
 
 
 def visualize_batch(t: Tuple[np.ndarray, np.ndarray]) -> None:
@@ -124,22 +119,3 @@ def visualize_batch(t: Tuple[np.ndarray, np.ndarray]) -> None:
         plt.subplot(1, 2, 2)
         sns.heatmap(gts[i])
         plt.show()
-
-
-if __name__ == '__main__':
-    d = Dataset.from_disk("C:\\Users\\rapha\\Desktop\\dataset_folder\\all_manual_train")
-
-    g = d.random_subject_generator(split="train")
-    g = extract_segmentation_pair(g)
-
-    g = pair_augmentation(g, [
-        iaa.Crop(px=(1, 16), keep_size=False),
-        iaa.Fliplr(0.5),
-        iaa.GammaContrast((0.5, 1.5)),
-        iaa.Sometimes(0.5,
-                      iaa.GaussianBlur(sigma=(0, 3.0))
-                      ),
-    ])
-    g = resize(g, (384, 384))
-    g = append_dim(batcherize(g))
-    o = next(g)

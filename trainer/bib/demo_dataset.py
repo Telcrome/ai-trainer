@@ -18,18 +18,18 @@ US_BONE_DATASET = ("https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download", "
 def build_example_te(name: str) -> Subject:
     test_im_path = "../../sample_data/example_image.png"
     test_gt_path = "../../sample_data/example_gt.png"
-    te = Subject.build_empty(name)
+    s = Subject.build_empty(name)
 
     im = load_grayscale_from_disk(test_im_path)
-    te.add_source_image_by_arr(im, binary_name="src", structures={"bone": MaskType.Line})
+    s.add_source_image_by_arr(im, binary_name="src", structures={"bone": MaskType.Line})
 
     gt = load_grayscale_from_disk(test_gt_path).astype(np.bool)
-    te.add_new_gt_by_arr(gt, mask_of="src", structure_names=["bone"])
+    s.add_new_gt_by_arr(gt, mask_of="src", structure_names=["bone"])
 
     from skimage.data import astronaut
-    te.add_source_image_by_arr(src_im=astronaut(), binary_name="astronaut_image")
+    s.add_source_image_by_arr(src_im=astronaut(), binary_name="astronaut_image")
 
-    return te
+    return s
 
 
 def create_mnist(p: str, n: str = 'mnist', n_subjects=10):
