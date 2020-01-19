@@ -19,11 +19,19 @@ class VisBoard:
 
     def __init__(self, run_name='', dir_name='tb'):
         self.dir_name = dir_name
-        if not run_name:
+        self.run_name = run_name
+        if not self.run_name:
             self.run_name = create_identifier()
         self.writer = SummaryWriter(f'{self.dir_name}/{self.run_name}')
 
-    def add_figure(self, fig: plt.figure, group_name: str = "Default"):
+    def add_figure(self, fig: plt.Figure, group_name: str = "Default", close_figure: bool = True) -> None:
+        """
+        Logs a matplotlib.pyplot Figure.
+        @param fig: The figure to be logged
+        @param group_name: Multiple figures can be grouped by using an identical group name
+        @param close_figure: If the figure should not be closed specify False
+        """
         img = torch.from_numpy(get_img_from_fig(fig)).permute((2, 0, 1))
         self.writer.add_image(group_name, img)
-        plt.close(fig)
+        if close_figure:
+            plt.close(fig)

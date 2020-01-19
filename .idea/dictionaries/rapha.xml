@@ -2,11 +2,17 @@
   <dictionary name="rapha">
     <words>
       <w>conv</w>
+      <w>convolutional</w>
       <w>cuda</w>
       <w>fgsm</w>
       <w>imagestacks</w>
+      <w>logdir</w>
       <w>matplot</w>
+      <w>matplotlib</w>
       <w>mnist</w>
+      <w>oneshot</w>
+      <w>pretrain</w>
+      <w>pyplot</w>
       <w>tensorboard</w>
       <w>testset</w>
       <w>visboard</w>
