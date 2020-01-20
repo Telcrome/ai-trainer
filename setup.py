@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="ai-trainer",
-    version="0.0.3",
+    version="0.0.4",
     author="Raphael Schaefer",
     author_email="raphaelschaefer1@outlook.com",
     description="AI Trainer",
