@@ -2,7 +2,7 @@
 A server that is concerned with the manipulation of one dataset at a time.
 """
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, render_template
 
 from trainer import VERSION
 

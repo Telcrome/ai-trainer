@@ -7,20 +7,20 @@ enabling a conveyor belt like process.
 Everything else required should be stored in the subject.
 """
 
-import sys
-import random
 import os
+import random
+import sys
 from typing import Tuple, List, Callable
 
-import numpy as np
+import PySimpleGUI as sg
 import cv2
 import imageio
+import numpy as np
 from PyQt5 import QtWidgets, QtCore
-import PySimpleGUI as sg
 
-from trainer.bib.tgui import TClassSelector, TWindow, run_window, Brushes, SegToolController
+from trainer.lib import standalone_foldergrab
+from trainer.lib.tgui import TClassSelector, TWindow, run_window, Brushes, SegToolController
 from trainer.ml import Subject, Dataset
-from trainer.bib import standalone_foldergrab
 
 
 def binary_filter(x, for_name, frame_number):
@@ -168,21 +168,22 @@ class AnnotationGui(TWindow):
         self.console.push_to_ipython({'gui': self, 'dataset': self.d})
 
     def ask_model(self):
-        from trainer.ml.predictor import predict
-        print("The model was consulted")
-        channels = self.img_data.shape[-1]
-        if self.img_data.shape[-1] == 3:
-            gray_image = cv2.cvtColor(self.img_data[self.frame_number, :, :, :], cv2.COLOR_BGR2GRAY)
-        else:
-            gray_image = self.img_data[self.frame_number, :, :, :]
-        struct_name = self.seg_structs[self._struct_index]
-        res = predict(gray_image, self.d, struct_name)
-
-        # If no mask exists yet, create a new
-        self.create_new_mask()
-
-        self.mask_data[:, :, self._struct_index] = res > 0.3
-        self.update()
+        raise NotImplementedError()
+        # from trainer.ml.predictor import predict
+        # print("The model was consulted")
+        # channels = self.img_data.shape[-1]
+        # if self.img_data.shape[-1] == 3:
+        #     gray_image = cv2.cvtColor(self.img_data[self.frame_number, :, :, :], cv2.COLOR_BGR2GRAY)
+        # else:
+        #     gray_image = self.img_data[self.frame_number, :, :, :]
+        # struct_name = self.seg_structs[self._struct_index]
+        # res = predict(gray_image, self.d, struct_name)
+        #
+        # # If no mask exists yet, create a new
+        # self.create_new_mask()
+        #
+        # self.mask_data[:, :, self._struct_index] = res > 0.3
+        # self.update()
 
     def select_next_subject(self):
         self.save_to_disk()

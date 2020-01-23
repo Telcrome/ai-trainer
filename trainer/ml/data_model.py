@@ -11,15 +11,14 @@ A dataset contains
 from __future__ import annotations
 
 import os
-import itertools
-from tqdm import tqdm
 from typing import Callable, List, Dict, Set, Tuple
 
 import PySimpleGUI as sg
 import numpy as np
+from tqdm import tqdm
 
-from trainer.bib import JsonClass, download_and_extract, create_identifier
-from trainer.bib import MaskType, BinaryType, ClassType
+from trainer.lib import JsonClass, download_and_extract, create_identifier
+from trainer.lib import MaskType, BinaryType, ClassType
 
 
 class Subject(JsonClass):
@@ -404,9 +403,9 @@ class Dataset(JsonClass):
             else:  # Assume this is a file
                 file_ext = os.path.splitext(os.path.join(parent_folder, file_name))[1]
                 if file_ext in ['', '.dcm']:  # Most likely a dicom file
-                    from trainer.bib.dicom_utils import import_dicom
+                    from trainer.lib.dicom_utils import import_dicom
                     img_data, meta = import_dicom(os.path.join(parent_folder, file_name))
-                    from trainer.bib import slugify
+                    from trainer.lib import slugify
                     p_id = meta['PatientID']
                     p_id_clean = slugify(p_id)
                     if p_id_clean in self.get_subject_name_list():

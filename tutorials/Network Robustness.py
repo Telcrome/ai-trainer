@@ -1,10 +1,8 @@
 import os
-import random
+
 import torch
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.tensorboard import SummaryWriter
 
 from trainer.ml.torch_utils import instantiate_model, TorchModel, train_model, load_torch_dataset, TorchDataset
 from trainer.ml.torch_utils import visualize_input_batch, visualize_model_weights, perform_adversarial_testing

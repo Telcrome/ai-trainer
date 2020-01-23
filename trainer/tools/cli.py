@@ -3,14 +3,14 @@ This module contains the tooling for:
 - CLI tools for training and long file/import/export operations.
 """
 
-import click
 import os
-from typing import List, Tuple, Callable, Dict
 
+import click
+
+from trainer.lib import standalone_foldergrab
+from trainer.lib.JsonClass import dir_is_json_class
 from trainer.ml.data_model import Dataset
-from trainer.bib import standalone_foldergrab
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
-from trainer.bib.JsonClass import dir_is_json_class
 
 
 @click.group()
@@ -26,7 +26,7 @@ def trainer():
 @click.option('--name', '-n', help='If provided, the dataset will not be redownloaded everytime')
 @click.option('--url', '-u', help='Needs to point to a zip file')
 def dataset_download(parent_path, name, url):
-    from trainer.bib import download_and_extract
+    from trainer.lib import download_and_extract
     local_path = download_and_extract(online_url=url,
                                       parent_dir=parent_path,
                                       dir_name=name)

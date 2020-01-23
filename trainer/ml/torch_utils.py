@@ -1,12 +1,10 @@
 import os
-import random
 from enum import Enum
 from typing import Tuple, List
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,7 +12,7 @@ import torch.optim as optim
 import torchvision
 from torchvision import datasets, transforms
 
-from trainer.bib import create_identifier, get_img_from_fig
+from trainer.lib import create_identifier
 from trainer.ml.visualization import VisBoard
 
 
@@ -218,7 +216,7 @@ def perform_adversarial_testing(model: TorchModel, test_loader: torch.utils.data
             output = model(perturbed_data)
 
             adversarial_pred = output.max(1, keepdim=True)[1]  # max returns a tuple (values, indices)
-            if wrong + correct % 10 == 0:
+            if wrong + correct == test_number:  # wrong + correct % 10 == 0:
                 original_arr = data.detach().cpu().numpy()
                 perturbed_arr = perturbed_data.detach().cpu().numpy()
 

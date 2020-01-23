@@ -1,8 +1,8 @@
+import matplotlib.pyplot as plt
 import torch
 from torch.utils.tensorboard import SummaryWriter
-import matplotlib.pyplot as plt
 
-from trainer.bib import get_img_from_fig, create_identifier
+from trainer.lib import get_img_from_fig, create_identifier
 
 
 class VisBoard:

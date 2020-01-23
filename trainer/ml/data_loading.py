@@ -1,10 +1,9 @@
 import itertools
-import os
 import random
 from typing import Dict, Callable
 
-import trainer
-from trainer.ml import Dataset, Subject
+import trainer.lib
+from trainer.ml.data_model import Dataset, Subject
 
 
 def iterate_over_samples(ds: Dataset, f: Callable[[Subject], Subject]):
@@ -49,7 +48,7 @@ def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_numb
     struct_index = list(s.get_binary_model(binary_name)["meta_data"]["structures"].keys()).index(struct_name)
 
     def mask_condition(binary_model):
-        if binary_model['binary_type'] == trainer.bib.BinaryType.ImageMask.value:
+        if binary_model['binary_type'] == trainer.lib.BinaryType.ImageMask.value:
             if binary_model['meta_data']['mask_of'] == binary_name:
                 if binary_model['meta_data']['frame_number'] == frame_number:
                     return True

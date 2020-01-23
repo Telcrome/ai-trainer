@@ -1,14 +1,14 @@
 from enum import Enum
 from typing import Generator, Tuple, Iterable, Dict
 
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 from scipy.ndimage.morphology import distance_transform_edt as dist_trans
 
-from trainer.ml import Subject, Dataset
-from trainer.bib import create_identifier
+from trainer.lib import create_identifier
+from trainer.ml import Subject
 
 
 class ImageNormalizations(Enum):
@@ -34,7 +34,7 @@ def append_dicom_to_subject(te_path: str,
     if not binary_name:
         binary_name = create_identifier(hint='DICOM')
 
-    from trainer.bib.dicom_utils import import_dicom
+    from trainer.lib.dicom_utils import import_dicom
 
     img_data, meta = import_dicom(dicom_path)
     s.add_source_image_by_arr(img_data, binary_name, structures=seg_structs, extra_info=meta)
