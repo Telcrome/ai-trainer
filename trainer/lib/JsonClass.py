@@ -33,8 +33,8 @@ def dir_is_json_class(dir_name: str, json_checker: Callable[[str], bool] = None)
 
 class JsonClass:
     """
-    Intended to be subclassed by classes which should to_disk their state
-    in the form of numpy binaries (Video, images...) and json metadata (name, example quality...).
+    Intended to be subclassed by classes which need to persist their state
+    in the form of numpy binaries (Video, images...) and json metadata (name, attributes...).
     """
 
     def __init__(self, name: str, model: Dict = None, b_model: Dict = None):
