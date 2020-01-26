@@ -4,6 +4,7 @@
       <w>conv</w>
       <w>convolutional</w>
       <w>cuda</w>
+      <w>datasets</w>
       <w>fgsm</w>
       <w>imagestacks</w>
       <w>logdir</w>
