@@ -4,19 +4,19 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Data Model &#8212; AI-Trainer 0.0.5 documentation</title>
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../_static/jquery.js"></script>
-    <script type="text/javascript" src="../_static/underscore.js"></script>
-    <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="../_static/language_data.js"></script>
-    <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="The Mission" href="../introduction.html" />
+    <title>Code Documentation &#8212; AI-Trainer 0.0.5 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Command Line Tools" href="cli.html" />
    
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
@@ -31,8 +31,13 @@
 
           <div class="body" role="main">
             
-  <div class="section" id="module-trainer.ml.data_model">
-<span id="data-model"></span><h1>Data Model<a class="headerlink" href="#module-trainer.ml.data_model" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="code-documentation">
+<h1>Code Documentation<a class="headerlink" href="#code-documentation" title="Permalink to this headline">¶</a></h1>
+<p>This page is generated automatically from the docstrings.</p>
+<div class="section" id="machine-learning-trainer-ml-package">
+<h2>Machine Learning (trainer.ml package)<a class="headerlink" href="#machine-learning-trainer-ml-package" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-trainer.ml.data_model">
+<span id="data-model"></span><h3>Data Model<a class="headerlink" href="#module-trainer.ml.data_model" title="Permalink to this headline">¶</a></h3>
 <p>The data model aims to simplify machine learning on complex data structures.
 For example classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.</p>
 <p>A dataset contains
@@ -233,6 +238,90 @@ Instead of modelling ligament tear as one class, define a binary class for each 
 </dd></dl>
 
 </div>
+<div class="section" id="module-trainer.ml.data_loading">
+<span id="data-loading"></span><h3>Data Loading<a class="headerlink" href="#module-trainer.ml.data_loading" title="Permalink to this headline">¶</a></h3>
+<dl class="function">
+<dt id="trainer.ml.data_loading.get_img_mask_pair">
+<code class="sig-prename descclassname">trainer.ml.data_loading.</code><code class="sig-name descname">get_img_mask_pair</code><span class="sig-paren">(</span><em class="sig-param">s: trainer.ml.data_model.Subject</em>, <em class="sig-param">binary_name: str</em>, <em class="sig-param">struct_name: str</em>, <em class="sig-param">frame_number=-1</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_loading.get_img_mask_pair" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an (image, mask) pair for a specified frame.</p>
+<p>For a single image no frame has to be specified.
+If no valid frame is specified for a video, an exception is raised.
+If no mask exists, (image, None) is returned</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="trainer.ml.data_loading.get_subject_gen">
+<code class="sig-prename descclassname">trainer.ml.data_loading.</code><code class="sig-name descname">get_subject_gen</code><span class="sig-paren">(</span><em class="sig-param">ds: trainer.ml.data_model.Dataset</em>, <em class="sig-param">split: str = None</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_loading.get_subject_gen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates once through the dataset. Intended for custom exporting, not machine learning.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="trainer.ml.data_loading.iterate_over_samples">
+<code class="sig-prename descclassname">trainer.ml.data_loading.</code><code class="sig-name descname">iterate_over_samples</code><span class="sig-paren">(</span><em class="sig-param">ds: trainer.ml.data_model.Dataset, f: Callable[[trainer.ml.data_model.Subject], trainer.ml.data_model.Subject]</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_loading.iterate_over_samples" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a function on every subject in this dataset.
+:param ds: The dataset to be modified
+:param f: f takes a subject and can modify it. The result is automatically saved
+:return:</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-trainer.ml.utils">
+<span id="utils"></span><h3>Utils<a class="headerlink" href="#module-trainer.ml.utils" title="Permalink to this headline">¶</a></h3>
+<dl class="class">
+<dt id="trainer.ml.utils.ImageNormalizations">
+<em class="property">class </em><code class="sig-prename descclassname">trainer.ml.utils.</code><code class="sig-name descname">ImageNormalizations</code><a class="headerlink" href="#trainer.ml.utils.ImageNormalizations" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="trainer.ml.utils.append_dicom_to_subject">
+<code class="sig-prename descclassname">trainer.ml.utils.</code><code class="sig-name descname">append_dicom_to_subject</code><span class="sig-paren">(</span><em class="sig-param">te_path: str</em>, <em class="sig-param">dicom_path: str</em>, <em class="sig-param">binary_name: str = ''</em>, <em class="sig-param">seg_structs: Dict[str</em>, <em class="sig-param">str] = None</em>, <em class="sig-param">auto_save=True</em><span class="sig-paren">)</span> &#x2192; trainer.ml.data_model.Subject<a class="headerlink" href="#trainer.ml.utils.append_dicom_to_subject" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>te_path</strong> – directory path to the subject</p></li>
+<li><p><strong>dicom_path</strong> – filepath to the dicom containing the image data</p></li>
+<li><p><strong>binary_name</strong> – Name of the binary, if not provided a name is chosen.</p></li>
+<li><p><strong>seg_structs</strong> – Structures that can be segmented in the image data</p></li>
+<li><p><strong>auto_save</strong> – The new state of the subject is automatically saved to disk</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The subject containing the new data</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="trainer.ml.utils.batcherize">
+<code class="sig-prename descclassname">trainer.ml.utils.</code><code class="sig-name descname">batcherize</code><span class="sig-paren">(</span><em class="sig-param">g: Iterable[Tuple[numpy.ndarray, numpy.ndarray]], batchsize=8</em><span class="sig-paren">)</span> &#x2192; Iterable[Tuple[numpy.ndarray, numpy.ndarray]]<a class="headerlink" href="#trainer.ml.utils.batcherize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Note that all images have to be of the same size.
+:param g:
+:param batchsize:
+:return:</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="trainer.ml.utils.normalize_im">
+<code class="sig-prename descclassname">trainer.ml.utils.</code><code class="sig-name descname">normalize_im</code><span class="sig-paren">(</span><em class="sig-param">im: numpy.ndarray</em>, <em class="sig-param">norm_type=&lt;ImageNormalizations.UnitRange: 1&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.utils.normalize_im" title="Permalink to this definition">¶</a></dt>
+<dd><p>Currently just normalizes an image with pixel intensities in range [0, 255] to [-1, 1]
+:return: The normalized image</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="tooling">
+<h2>Tooling<a class="headerlink" href="#tooling" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="command-line-tools">
+<h3>Command Line Tools<a class="headerlink" href="#command-line-tools" title="Permalink to this headline">¶</a></h3>
+<p>Currently, this part of the documentation is not complete, because sphinx cannot deal with function decorators.</p>
+<span class="target" id="module-trainer.tools.cli"></span><p>This module contains the tooling for:</p>
+<ul class="simple">
+<li><p>CLI tools for training and long file/import/export operations.</p></li>
+</ul>
+</div>
+</div>
+</div>
 
 
           </div>
@@ -241,7 +330,7 @@ Instead of modelling ligament tear as one class, define a binary class for each 
       </div>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../index.html">AI-Trainer</a></h1>
+<h1 class="logo"><a href="index.html">AI-Trainer</a></h1>
 
 
 
@@ -253,22 +342,28 @@ Instead of modelling ligament tear as one class, define a binary class for each 
 <h3>Navigation</h3>
 <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../introduction.html">The Mission</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Data Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mission.html">The Mission</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Command Line Tools</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Code Documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#machine-learning-trainer-ml-package">Machine Learning (trainer.ml package)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#tooling">Tooling</a></li>
+</ul>
+</li>
 </ul>
 
 <div class="relations">
 <h3>Related Topics</h3>
 <ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../introduction.html" title="previous chapter">The Mission</a></li>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="cli.html" title="previous chapter">Command Line Tools</a></li>
   </ul></li>
 </ul>
 </div>
 <div id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
-    <form class="search" action="../search.html" method="get">
+    <form class="search" action="search.html" method="get">
       <input type="text" name="q" aria-labelledby="searchlabel" />
       <input type="submit" value="Go" />
     </form>
@@ -295,7 +390,7 @@ Instead of modelling ligament tear as one class, define a binary class for each 
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
       
       |
-      <a href="../_sources/trainer/data_model.rst.txt"
+      <a href="_sources/autodoc.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

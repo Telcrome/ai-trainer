@@ -10,8 +10,11 @@ Welcome to AI-Trainer's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   introduction
-   trainer/data_model
+   getting_started
+   mission
+
+   cli
+   autodoc
 
 Indices and tables
 ==================
