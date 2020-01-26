@@ -179,8 +179,8 @@ class JsonClass:
     def get_image_stack_keys(self):
         return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
 
-    def count_binaries(self):
-        return len(self._binaries)
+    def count_binaries_memory(self):
+        return sum([self._binaries[k].nbytes for k in self._binaries.keys()])
 
     def matplot_imagestacks(self):
         import matplotlib.pyplot as plt
