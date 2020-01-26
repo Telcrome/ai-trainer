@@ -4,6 +4,7 @@
       <w>conv</w>
       <w>convolutional</w>
       <w>cuda</w>
+      <w>datasets</w>
       <w>fgsm</w>
       <w>imagestacks</w>
       <w>logdir</w>
@@ -11,6 +12,7 @@
       <w>matplotlib</w>
       <w>mnist</w>
       <w>oneshot</w>
+      <w>preprocessing</w>
       <w>pretrain</w>
       <w>pyplot</w>
       <w>tensorboard</w>

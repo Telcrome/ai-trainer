@@ -33,13 +33,13 @@ def dir_is_json_class(dir_name: str, json_checker: Callable[[str], bool] = None)
 
 class JsonClass:
     """
-    Intended to be subclassed by classes which should to_disk their state
-    in the form of numpy binaries (Video, images...) and json metadata (name, example quality...).
+    Intended to be subclassed by classes which need to persist their state
+    in the form of numpy binaries (Video, images...) and json metadata (name, attributes...).
     """
 
     def __init__(self, name: str, model: Dict = None, b_model: Dict = None):
         self.name = name
-        self._binaries_dir_path = None
+        self.binaries_dir_path = None
 
         if model is not None:
             self.json_model = model
@@ -55,7 +55,7 @@ class JsonClass:
         self._last_used_parent_dir = None
 
     @classmethod
-    def from_disk(cls, dir_path: str):
+    def from_disk(cls, dir_path: str, pre_load_binaries=False):
         if not dir_is_json_class(dir_path):
             raise Exception(f"{dir_path} is not a valid directory.")
 
@@ -68,14 +68,17 @@ class JsonClass:
         res._last_used_parent_dir = os.path.dirname(dir_path)
 
         # Load binaries
-        binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
-        binaries_paths_ls = os.listdir(binaries_dir_path)
-        for binary_path in binaries_paths_ls:
-            binary_name = os.path.splitext(os.path.basename(binary_path))[0]
-            binary_payload = np.load(os.path.join(binaries_dir_path, binary_path), allow_pickle=True)
-            res._binaries[binary_name] = binary_payload
-
+        res.binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
+        if pre_load_binaries:
+            binaries_paths_ls = os.listdir(res.binaries_dir_path)
+            for binary_path in binaries_paths_ls:
+                binary_name = os.path.splitext(os.path.basename(binary_path))[0]
+                res.load_binary(binary_name)
         return res
+
+    def load_binary(self, binary_name):
+        binary_payload = np.load(os.path.join(self.binaries_dir_path, f'{binary_name}.npy'), allow_pickle=True)
+        self._binaries[binary_name] = binary_payload
 
     def to_disk(self, dir_path: str = "", properly_formatted=True, prompt_user=False) -> None:
         if not dir_path:
@@ -100,9 +103,9 @@ class JsonClass:
                 json.dump(save_json, f)
 
         # Write all binaries
-        self._binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
-        if not os.path.exists(self._binaries_dir_path):
-            os.mkdir(self._binaries_dir_path)
+        self.binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
+        if not os.path.exists(self.binaries_dir_path):
+            os.mkdir(self.binaries_dir_path)
         for binary_key in self._binaries:
             self.save_binary(binary_key)
 
@@ -110,9 +113,9 @@ class JsonClass:
             os.startfile(file_name)
 
     def save_binary(self, binary_key):
-        if self._binaries_dir_path is None:
-            self._binaries_dir_path = os.path.join(self._last_used_parent_dir, BINARIES_DIRNAME)
-        np.save(os.path.join(self._binaries_dir_path, binary_key), self._binaries[binary_key])
+        if self.binaries_dir_path is None:
+            self.binaries_dir_path = os.path.join(self._last_used_parent_dir, BINARIES_DIRNAME)
+        np.save(os.path.join(self.binaries_dir_path, binary_key), self._binaries[binary_key])
 
     def delete_on_disk(self, blocking=True):
         shutil.rmtree(self.get_working_directory(), ignore_errors=True)
@@ -163,6 +166,8 @@ class JsonClass:
         self.to_disk(self._last_used_parent_dir)
 
     def get_binary(self, binary_name):
+        if binary_name not in self._binaries:
+            self.load_binary(binary_name)
         return self._binaries[binary_name]
 
     def get_binary_model(self, binary_name):
@@ -174,8 +179,8 @@ class JsonClass:
     def get_image_stack_keys(self):
         return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
 
-    def count_binaries(self):
-        return len(self._binaries)
+    def count_binaries_memory(self):
+        return sum([self._binaries[k].nbytes for k in self._binaries.keys()])
 
     def matplot_imagestacks(self):
         import matplotlib.pyplot as plt

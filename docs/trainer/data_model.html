@@ -1,0 +1,306 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Data Model &#8212; AI-Trainer 0.0.5 documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="The Mission" href="../introduction.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="module-trainer.ml.data_model">
+<span id="data-model"></span><h1>Data Model<a class="headerlink" href="#module-trainer.ml.data_model" title="Permalink to this headline">¶</a></h1>
+<p>The data model aims to simplify machine learning on complex data structures.
+For example classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.</p>
+<p>A dataset contains
+- Subjects (Which are the training examples)
+- Model Weights
+- Config Json files</p>
+<dl class="class">
+<dt id="trainer.ml.data_model.Dataset">
+<em class="property">class </em><code class="sig-prename descclassname">trainer.ml.data_model.</code><code class="sig-name descname">Dataset</code><span class="sig-paren">(</span><em class="sig-param">name: str</em>, <em class="sig-param">model: Dict = None</em>, <em class="sig-param">b_model: Dict = None</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Dataset" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="trainer.ml.data_model.Dataset.add_class">
+<code class="sig-name descname">add_class</code><span class="sig-paren">(</span><em class="sig-param">class_name: str, class_type: trainer.lib.enums.ClassType, values: List[str]</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Dataset.add_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a class on a dataset level.
+:param class_name:
+:param class_type:
+:param values:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Dataset.add_image_folder">
+<code class="sig-name descname">add_image_folder</code><span class="sig-paren">(</span><em class="sig-param">parent_folder: str, structures: Dict[str, str], split=None, progress=True</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Dataset.add_image_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterates through a folder.</p>
+<p>If a file is found, a new subject is created with only that file.
+If a directory is found, a new subject is created with all files that live within that directory.
+If a dicom file is found, the image is appended to the subject with that patient_id</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parent_folder</strong> – Top level folder path</p></li>
+<li><p><strong>split</strong> – The dataset split this data is appended to.</p></li>
+<li><p><strong>progress</strong> – If true, displays a progress bar</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Dataset.add_ml_folder">
+<code class="sig-name descname">add_ml_folder</code><span class="sig-paren">(</span><em class="sig-param">folder: str</em>, <em class="sig-param">split=None</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#trainer.ml.data_model.Dataset.add_ml_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assumes a folder structure of the following form:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>subject 1</dt><dd><ul>
+<li><p>im (training images)</p></li>
+<li><p>gt1 (segmentation maps for class gt1)</p></li>
+<li><p>gt2 (segmentation maps for class gt2)</p></li>
+<li><p>…</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>subject 2</dt><dd><ul>
+<li><p>…</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>The name of the source image and its corresponding ground truths must be identical
+:param split: The training split (train, test…) that the folder is appended to
+:param folder: The path to the parent folder
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Dataset.append_dataset">
+<code class="sig-name descname">append_dataset</code><span class="sig-paren">(</span><em class="sig-param">d_path: str</em>, <em class="sig-param">source_split: Optional[str] = None</em>, <em class="sig-param">target_split: Optional[str] = None</em><span class="sig-paren">)</span> &#x2192; List<a class="headerlink" href="#trainer.ml.data_model.Dataset.append_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Appends the structures from d to this dataset.
+Then copies the subjects.
+:param d_path: Path of the appended dataset
+:param source_split: The split in d that the subjects come from.
+:param target_split: The split that the subjects are appended to.
+:return: The names of the subjects that are copied from d to self</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Dataset.compute_segmentation_structures">
+<code class="sig-name descname">compute_segmentation_structures</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; Dict[str, Set[str]]<a class="headerlink" href="#trainer.ml.data_model.Dataset.compute_segmentation_structures" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a dictionary.
+Keys: All different structures.
+Values: The names of the subjects that can be used to train these structures with.
+:return: Dictionary of structures and corresponding subjects</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Dataset.delete_subjects">
+<code class="sig-name descname">delete_subjects</code><span class="sig-paren">(</span><em class="sig-param">del_ls: List[trainer.ml.data_model.Subject]</em><span class="sig-paren">)</span> &#x2192; None<a class="headerlink" href="#trainer.ml.data_model.Dataset.delete_subjects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes a list of subjects
+:param del_ls: List of instances of subjects
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Dataset.filter_subjects">
+<code class="sig-name descname">filter_subjects</code><span class="sig-paren">(</span><em class="sig-param">filterer: Callable[[trainer.ml.data_model.Subject], bool], viz=False</em><span class="sig-paren">)</span> &#x2192; List[str]<a class="headerlink" href="#trainer.ml.data_model.Dataset.filter_subjects" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list with the names of subjects of interest.
+:param filterer: If the filterer returns true, the subject is added to the list
+:return: The list of subjects of interest</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="trainer.ml.data_model.Subject">
+<em class="property">class </em><code class="sig-prename descclassname">trainer.ml.data_model.</code><code class="sig-name descname">Subject</code><span class="sig-paren">(</span><em class="sig-param">name: str</em>, <em class="sig-param">model: Dict = None</em>, <em class="sig-param">b_model: Dict = None</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject" title="Permalink to this definition">¶</a></dt>
+<dd><p>In a medical context a subject is concerned with the data of one patient.
+For example, a patient has classes (disease_1, …), imaging (US video, CT volumetric data, x-ray image, …),
+text (symptom description, history) and structured data (date of birth, nationality…).</p>
+<p>Wherever possible the data is saved in json format, but for example for imaging only the metadata is saved
+as json, the actual image file can be found in the binaries-list.</p>
+<p>In future releases a complete changelog will be saved in a format suitable for process mining.</p>
+<dl class="method">
+<dt id="trainer.ml.data_model.Subject.add_file_as_imagestack">
+<code class="sig-name descname">add_file_as_imagestack</code><span class="sig-paren">(</span><em class="sig-param">file_path: str</em>, <em class="sig-param">binary_name=''</em>, <em class="sig-param">structures: Optional[Dict[str</em>, <em class="sig-param">str]] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject.add_file_as_imagestack" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes an image path and tries to deduce the type of image from the path ending.
+No path ending is assumed to be a DICOM file (not a DICOM folder)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Subject.add_new_gt_by_arr">
+<code class="sig-name descname">add_new_gt_by_arr</code><span class="sig-paren">(</span><em class="sig-param">gt_arr: numpy.ndarray</em>, <em class="sig-param">structure_names: Optional[List[str]] = None</em>, <em class="sig-param">mask_of: Optional[str] = None</em>, <em class="sig-param">frame_number=0</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject.add_new_gt_by_arr" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>gt_arr</strong> – </p></li>
+<li><p><strong>structure_names</strong> – </p></li>
+<li><p><strong>mask_of</strong> – </p></li>
+<li><p><strong>frame_number</strong> – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The identifier of this binary</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Subject.add_source_image_by_arr">
+<code class="sig-name descname">add_source_image_by_arr</code><span class="sig-paren">(</span><em class="sig-param">src_im</em>, <em class="sig-param">binary_name: str = 'src'</em>, <em class="sig-param">structures: Optional[Dict[str</em>, <em class="sig-param">str]] = None</em>, <em class="sig-param">extra_info: Optional[Dict] = None</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject.add_source_image_by_arr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Only adds images, not volumes or videos! Unless it is already in shape (frames, width, height, channels).
+Multi-channel images are assumed to be channels last.
+Grayscale images are assumed to be of shape (width, height)
+:param src_im:
+:param binary_name:
+:param structures:
+:param extra_info: Extra info for a human. Must contain only standard types to be json serializable
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Subject.get_structure_list">
+<code class="sig-name descname">get_structure_list</code><span class="sig-paren">(</span><em class="sig-param">image_stack_key: str = ''</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject.get_structure_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the possible structures. If no image_stack_key is provided, all possible structures are returned.
+:param image_stack_key:
+:return:</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Subject.set_class">
+<code class="sig-name descname">set_class</code><span class="sig-paren">(</span><em class="sig-param">class_name: str</em>, <em class="sig-param">value: str</em>, <em class="sig-param">for_dataset: Optional[trainer.ml.data_model.Dataset] = None</em>, <em class="sig-param">for_binary=''</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject.set_class" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set a class to true. Classes are stored by their unique string.</p>
+<p>Absence of a class indicates an unknown.</p>
+<p>Hint: If two states of one class can be true to the same time, do not model them as one class.
+Instead of modelling ligament tear as one class, define a binary class for each different ligament.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>class_name</strong> – Unique string that is used to identify the class.</p></li>
+<li><p><strong>value</strong> – boolean indicating</p></li>
+<li><p><strong>for_dataset</strong> – If provided, set_class checks for compliance with the dataset.</p></li>
+<li><p><strong>for_binary</strong> – If provided, only set the class of the binary and not the whole subject</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="trainer.ml.data_model.Subject.stack_gts">
+<code class="sig-name descname">stack_gts</code><span class="sig-paren">(</span><em class="sig-param">src_name</em><span class="sig-paren">)</span><a class="headerlink" href="#trainer.ml.data_model.Subject.stack_gts" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>src_name</strong> – Source binary name</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">AI-Trainer</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../introduction.html">The Mission</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Data Model</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../introduction.html" title="previous chapter">The Mission</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Raphael Schaefer.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 2.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/trainer/data_model.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

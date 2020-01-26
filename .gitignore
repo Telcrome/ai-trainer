@@ -4,6 +4,7 @@
 data
 vsc/node_modules
 vsc/out
+build
 
 # PyCharm
 workspace.xml

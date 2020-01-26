@@ -499,10 +499,10 @@ class Dataset(JsonClass):
                     self.json_model["splits"][split].remove(del_name)
         self.to_disk(self._last_used_parent_dir)
 
-    def get_subject_by_name(self, te_name: str):
-        if te_name not in self.json_model['subjects']:
+    def get_subject_by_name(self, s_name: str):
+        if s_name not in self.json_model['subjects']:
             raise Exception('This dataset does not contain a subject with this name')
-        res = Subject.from_disk(os.path.join(self.get_working_directory(), te_name))
+        res = Subject.from_disk(os.path.join(self.get_working_directory(), s_name))
         return res
 
     def get_summary(self) -> str:

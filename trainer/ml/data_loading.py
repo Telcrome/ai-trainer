@@ -35,16 +35,7 @@ def random_subject_generator(ds: Dataset, split=None):
         yield te
 
 
-def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_number=-1):
-    """
-    Returns an (image, mask) pair for a specified frame.
-
-    For a single image no frame has to be specified.
-    If no valid frame is specified for a video, an exception is raised.
-    If no mask exists, (image, None) is returned
-    """
-    frame = s.get_binary(binary_name)[frame_number]
-
+def get_mask_for_frame(s: Subject, binary_name: str, struct_name: str, frame_number=-1):
     struct_index = list(s.get_binary_model(binary_name)["meta_data"]["structures"].keys()).index(struct_name)
 
     def mask_condition(binary_model):
@@ -54,11 +45,23 @@ def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_numb
                     return True
         return False
 
-    mask_names = s.get_binary_list_filtered(mask_condition)[0]
+    mask_names = s.get_binary_list_filtered(mask_condition)
     if mask_names:
-        mask = s.get_binary(mask_names)[:, :, struct_index]
-        return frame, mask
-    return frame, None
+        mask = s.get_binary(mask_names[0])[:, :, struct_index]
+        return mask
+    return None
+
+
+def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_number=-1):
+    """
+    Returns an (image, mask) pair for a specified frame.
+
+    For a single image no frame has to be specified.
+    If no valid frame is specified for a video, an exception is raised.
+    If no mask exists, (image, None) is returned
+    """
+    frame = s.get_binary(binary_name)[frame_number]
+    return frame, get_mask_for_frame(s, binary_name, struct_name, frame_number)
 
 
 def random_struct_generator(ds: Dataset, struct_name: str, split=None, verbose=True):
