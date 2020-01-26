@@ -1,3 +1,5 @@
+[Ai-Trainer Documentation](https://telcrome.github.io/ai-trainer/)
+
 # Installation for User
 
 Open anaconda powershell, activate an environment with anaconda, navigate into the trainer repo and execute the following to install trainer using pip, including its dependencies:
