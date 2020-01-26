@@ -1,11 +1,12 @@
 import setuptools
+from trainer import VERSION
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="ai-trainer",
-    version="0.0.4",
+    version=VERSION,
     author="Raphael Schaefer",
     author_email="raphaelschaefer1@outlook.com",
     description="AI Trainer",
