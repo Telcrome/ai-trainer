@@ -99,3 +99,9 @@ pip install -e .
 
 Docker and the provided DOCKERFILE support is currently experimental as it proved to slow down the annotation GUI too much.
 When the transition to a web GUI is completed docker will be supported again.
+
+# Contribution
+
+### Tutorials inside the repo
+
+- Do not use jupyter notebooks

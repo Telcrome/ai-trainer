@@ -11,6 +11,7 @@
       <w>matplotlib</w>
       <w>mnist</w>
       <w>oneshot</w>
+      <w>preprocessing</w>
       <w>pretrain</w>
       <w>pyplot</w>
       <w>tensorboard</w>
