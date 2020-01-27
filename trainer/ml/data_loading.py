@@ -1,3 +1,8 @@
+"""
+Loading data from the data model (Dataset and Subject) exists as a separate module,
+because there are so many different, complex things to be done which would bloat the respective classes.
+"""
+
 import itertools
 import random
 from typing import Dict, Callable

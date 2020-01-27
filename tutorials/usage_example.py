@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 import trainer.ml as ml
+import trainer.lib as lib
 from trainer.ml.data_loading import get_subject_gen, get_img_mask_pair
 
 
@@ -21,10 +22,10 @@ def visualize_one_train_pair(ds: ml.Dataset, image_stack_index=0, segmentation_n
         segmentation_name,
         frame_number=frame)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    pair_fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.imshow(frame)
     sns.heatmap(mask, ax=ax2)
-    return fig
+    return pair_fig
 
 
 if __name__ == '__main__':

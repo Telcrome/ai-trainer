@@ -9,7 +9,7 @@
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-    <option name="docutils_input_file" value="C:\Users\rapha\Desktop\ai-trainer\source" />
+    <option name="docutils_input_file" value="C:\Users\rapha\Desktop\ai-trainer\documentation_source" />
     <option name="docutils_output_file" value="C:\Users\rapha\Desktop\ai-trainer\docs" />
     <option name="docutils_params" value="" />
     <option name="docutils_task" value="html" />
