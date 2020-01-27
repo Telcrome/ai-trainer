@@ -1,4 +1,4 @@
-[Ai-Trainer Documentation](https://telcrome.github.io/ai-trainer/)
+[Documentation](https://telcrome.github.io/ai-trainer/)
 
 # Installation for User
 
