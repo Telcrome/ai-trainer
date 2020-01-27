@@ -6,7 +6,9 @@
       <w>convolutional</w>
       <w>cuda</w>
       <w>datasets</w>
+      <w>dicom</w>
       <w>fgsm</w>
+      <w>imagestack</w>
       <w>imagestacks</w>
       <w>logdir</w>
       <w>matplot</w>
