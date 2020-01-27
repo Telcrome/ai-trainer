@@ -153,6 +153,9 @@ def load_b8(file_path: str) -> np.ndarray:
 
     res = np.rot90(im.reshape((d, w, h)), k=3, axes=(1, 2))
 
+    # Add an empty channel axis to match the imagestack array format
+    res = np.expand_dims(res, axis=3)
+
     return res
 
 

@@ -8,7 +8,7 @@ A dataset contains
 - Config Json files
 """
 
-from __future__ import annotations
+from __future__ import annotations  # Important for function annotations of symbols that are not loaded yet
 
 import os
 from typing import Callable, List, Dict, Set, Tuple, Union
@@ -133,11 +133,22 @@ class Subject(JsonClass):
         Takes an image path and tries to deduce the type of image from the path ending.
         No path ending is assumed to be a DICOM file (not a DICOM folder)
         """
+        if not binary_name:
+            binary_name = create_identifier(hint="binary")
+
         file_ending = os.path.splitext(file_path)[1]
-        if file_ending in ['']:
+        if file_ending in ['', '.dcm']:
             from trainer.ml import append_dicom_to_subject
             append_dicom_to_subject(self.get_working_directory(), file_path, binary_name=binary_name,
                                     seg_structs=structures)
+        elif file_ending == '.b8':
+            from trainer.lib.misc import load_b8
+            img_data = load_b8(file_path)
+            self.add_source_image_by_arr(
+                img_data,
+                binary_name=binary_name,
+                structures=structures
+            )
         elif file_ending in ['.mp4']:
             print('Video!')
         else:
@@ -316,21 +327,34 @@ class Dataset(JsonClass):
     def get_structure_template_by_name(self, tpl_name):
         return self.json_model["structure_templates"][tpl_name]
 
-    def save_subject(self, te: Subject, split=None, auto_save=True):
+    def save_subject(self, s: Subject, split=None, auto_save=True):
+        """
+
+        
+        :param s: The subject to be saved into this dataset
+        :param split:
+        :param auto_save: If True, the subject is immediately written to disk
+        :return:
+        """
         # Add the name of the subject into the model
-        if te.name not in self.json_model["subjects"]:
-            self.json_model["subjects"].append(te.name)
+        if s.name not in self.json_model["subjects"]:
+            self.json_model["subjects"].append(s.name)
 
         # Save it as a child directory to this dataset
-        te.to_disk(self.get_working_directory())
+        s.to_disk(self.get_working_directory())
 
         if split is not None:
-            self.append_subject_to_split(te, split)
+            self.append_subject_to_split(s, split)
 
         if auto_save:
             self.to_disk(self._last_used_parent_dir)
 
     def get_subject_name_list(self, split=None) -> List[str]:
+        """
+        Computes the list of subjects in this dataset.
+        :param split: Dataset splits of the subjects
+        :return: List of the names of the subjects
+        """
         if split is None:
             subjects = self.json_model["subjects"]
         else:
@@ -382,6 +406,11 @@ class Dataset(JsonClass):
         If a directory is found, a new subject is created with all files that live within that directory.
         If a dicom file is found, the image is appended to the subject with that patient_id
 
+        Supported file formats:
+        - DICOM (no extension or .dcm)
+        - Standard image files
+        - B8 files (.b8)
+
         :param parent_folder: Top level folder path
         :param structures: Dict with structure_name: structure_type pairs
         :param split: The dataset split this data is appended to.
@@ -400,7 +429,20 @@ class Dataset(JsonClass):
                 )
 
             if os.path.isdir(os.path.join(parent_folder, file_name)):
-                pass
+                # Create the new subject
+                s_name = os.path.splitext(file_name)[0]
+                s = Subject.build_empty(s_name)
+                self.save_subject(s, split=split, auto_save=False)
+                dir_children = os.listdir(os.path.join(parent_folder, file_name))
+
+                for image_path in dir_children:
+                    # Append this image to the subject
+                    s.add_file_as_imagestack(
+                        os.path.join(parent_folder, file_name, image_path),
+                        binary_name=os.path.splitext(image_path)[0],
+                        structures=structures,
+                    )
+                self.save_subject(s, split=split, auto_save=False)
             else:  # Assume this is a file
                 file_ext = os.path.splitext(os.path.join(parent_folder, file_name))[1]
                 if file_ext in ['', '.dcm']:  # Most likely a dicom file
@@ -420,14 +462,17 @@ class Dataset(JsonClass):
                                               structures=structures,
                                               extra_info=meta)
                     self.save_subject(s, split=split, auto_save=False)
-
                 else:  # Everything else is assumed to be a traditional image file
                     # Create the new subject
                     s_name = os.path.splitext(file_name)[0]
                     s = Subject.build_empty(s_name)
-                    self.save_subject(s, split=split, auto_save=False)
 
-                    s.add_file_as_imagestack(os.path.join(parent_folder, file_name), structures=structures)
+                    s.add_file_as_imagestack(
+                        os.path.join(parent_folder, file_name),
+                        binary_name=os.path.splitext(file_name)[0],
+                        structures=structures,
+                    )
+                    self.save_subject(s, split=split, auto_save=False)
 
         self.to_disk()
 
