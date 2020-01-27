@@ -11,7 +11,7 @@ A dataset contains
 from __future__ import annotations
 
 import os
-from typing import Callable, List, Dict, Set, Tuple
+from typing import Callable, List, Dict, Set, Tuple, Union
 
 import PySimpleGUI as sg
 import numpy as np
@@ -141,7 +141,7 @@ class Subject(JsonClass):
         elif file_ending in ['.mp4']:
             print('Video!')
         else:
-            raise Exception('This filetype is not understood')
+            raise Exception('This file type is not understood')
 
     def delete_gt(self, mask_of: str = None, frame_number=0):
         print(f"Deleting ground truth of {mask_of} at frame {frame_number}")
@@ -161,8 +161,8 @@ class Subject(JsonClass):
         :param frame_number:
         :return: The identifier of this binary
         """
-        mismatch_msg = "#structures must correspond to the #channels or be 1 in the case of a single indicated structure"
-        assert len(gt_arr.shape) == 2 or gt_arr.shape[2] == len(structure_names), mismatch_msg
+        err_msg = "#structures must correspond to the #channels or be 1 in the case of a single indicated structure"
+        assert len(gt_arr.shape) == 2 or gt_arr.shape[2] == len(structure_names), err_msg
         assert gt_arr.dtype == np.bool, "Convert to bool, because the ground truth is assumed to be binary!"
         assert mask_of is not None, "Currently for_src can not be inferred, set a value!"
 
@@ -290,7 +290,7 @@ class Dataset(JsonClass):
     def get_class_names(self):
         return list(self.json_model['classes'].keys())
 
-    def get_class(self, class_name: str) -> Dict:
+    def get_class(self, class_name: str) -> Union[Dict, None]:
         if class_name in self.json_model['classes']:
             return self.json_model['classes'][class_name]
         else:
@@ -383,6 +383,7 @@ class Dataset(JsonClass):
         If a dicom file is found, the image is appended to the subject with that patient_id
 
         :param parent_folder: Top level folder path
+        :param structures: Dict with structure_name: structure_type pairs
         :param split: The dataset split this data is appended to.
         :param progress: If true, displays a progress bar
         :return:
