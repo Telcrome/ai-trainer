@@ -15,21 +15,21 @@ class ImageNormalizations(Enum):
     UnitRange = 1
 
 
-def append_dicom_to_subject(te_path: str,
+def append_dicom_to_subject(s_path: str,
                             dicom_path: str,
                             binary_name: str = '',
                             seg_structs: Dict[str, str] = None,
                             auto_save=True) -> Subject:
     """
 
-    :param te_path: directory path to the subject
+    :param s_path: directory path to the subject
     :param dicom_path: filepath to the dicom containing the image data
     :param binary_name: Name of the binary, if not provided a name is chosen.
     :param seg_structs: Structures that can be segmented in the image data
     :param auto_save: The new state of the subject is automatically saved to disk
     :return: The subject containing the new data
     """
-    s = Subject.from_disk(te_path)
+    s = Subject.from_disk(s_path)
 
     if not binary_name:
         binary_name = create_identifier(hint='DICOM')

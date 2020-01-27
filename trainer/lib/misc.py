@@ -139,8 +139,8 @@ def slugify(value):
 def load_b8(file_path: str) -> np.ndarray:
     """
 
-    @param file_path: The direct path to the b8 file
-    @return: Numpy array with the image data
+    :param file_path: The direct path to the b8 file
+    :return Numpy array with the image data
     """
     with open(file_path, 'r') as f:
         data = np.fromfile(f, dtype=np.uint8)
@@ -151,7 +151,9 @@ def load_b8(file_path: str) -> np.ndarray:
     header = raw_header.view(dtype=np.int32)
     d, w, h = header[1], header[2], header[3]
 
-    return im.reshape((d, w, h))
+    res = np.rot90(im.reshape((d, w, h)), k=3, axes=(1, 2))
+
+    return res
 
 
 if __name__ == '__main__':
