@@ -136,9 +136,24 @@ def slugify(value):
     return re.sub(r'[\\/*?:"<>|]', "", value)
 
 
+def load_b8(file_path: str) -> np.ndarray:
+    """
+
+    @param file_path: The direct path to the b8 file
+    @return: Numpy array with the image data
+    """
+    with open(file_path, 'r') as f:
+        data = np.fromfile(f, dtype=np.uint8)
+
+    last_header_byte = 4 * 19
+    raw_header, im = data[:last_header_byte], data[last_header_byte:]
+
+    header = raw_header.view(dtype=np.int32)
+    d, w, h = header[1], header[2], header[3]
+
+    return im.reshape((d, w, h))
+
+
 if __name__ == '__main__':
-    folder, x = standalone_foldergrab(folder_not_file=True, optional_inputs=[("Download Path: ", "d_p")],
-                                      title="Download")
-    download_url = x['d_p']
-    p = download_and_extract(download_url, parent_dir=folder)
-    print("finished")
+    p, _ = standalone_foldergrab()
+    image_stack = load_b8(p)
