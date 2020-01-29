@@ -14,7 +14,15 @@ Welcome to AI-Trainer's documentation!
    mission
 
    cli
-   autodoc
+
+AI-Trainer is a toolbox that defines multiple exciting simplifications to your workflow:
+
+- A dataset format that allows to group several properties (images) for one entity
+- A labelling tool that helps gives us AI-assisted proposals for unlabelled data
+- Data generators that actually work without further modification to train your own models!
+
+This page only contain hand-written tutorials and explanations,
+the docstrings are available in the corresponding code.
 
 Indices and tables
 ==================
