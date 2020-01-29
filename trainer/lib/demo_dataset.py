@@ -9,7 +9,6 @@ A demo dataset contains the following classes:
 and the following structures:
 -
 """
-
 import os
 import random
 

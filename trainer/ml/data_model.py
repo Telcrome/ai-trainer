@@ -17,7 +17,7 @@ import PySimpleGUI as sg
 import numpy as np
 from tqdm import tqdm
 
-from trainer.lib import JsonClass, download_and_extract, create_identifier
+from trainer.lib import JsonClass, download_and_extract
 from trainer.lib import MaskType, BinaryType, ClassType
 
 

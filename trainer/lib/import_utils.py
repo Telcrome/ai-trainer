@@ -3,8 +3,9 @@ Collection of utility function which can be used to add content from other file-
 to the convenient trainer dataset-format.
 """
 import os
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
+import numpy as np
 import PySimpleGUI as sg
 import imageio
 
@@ -19,7 +20,7 @@ ALLOWED_TYPES = [
 ]
 
 
-def add_imagestack(s: ml.Subject, file_path: str, binary_id='', structures: Dict[str, str] = None):
+def add_imagestack(s: ml.Subject, file_path: str, binary_id='', structures: Dict[str, str] = None) -> None:
     """
     Takes an image path and tries to deduce the type of image from the path ending.
     No path ending is assumed to be a DICOM file (not a DICOM folder)
@@ -168,39 +169,30 @@ def add_image_folder(ds: ml.Dataset, parent_folder: str, structures: Dict[str, s
     ds.to_disk()
 
 
-def add_ml_folder(ds: ml.Dataset, folder: str, split=None) -> None:
+def append_subject(ds: ml.Dataset,
+                   im_path: Tuple[str, str],
+                   gt_paths: List[Tuple[str, str]],
+                   seg_structs: Dict[str, str],
+                   split='') -> None:
     """
-    Assumes a folder structure of the following form:
+    Appends one subject with an image and corresponding masks to a dataset split.
 
-    - train
-        - im (training images)
-        - gt_humans (segmentation maps for class humans)
-        - gt_cars (segmentation maps for class cars)
-        - ...
-    - test
-        - ...
-
-    The name of the source image and its corresponding ground truths must be identical
-    :param ds: A trainer.ml.Dataset that this folder will be appended to
-    :param split: The training split (train, test...) that the folder is appended to
-    :param folder: The path to the parent folder
-    :return:
+    TODO: Add support for directories to add subjects with multiple images with corresponding gts
     """
-    raise NotImplementedError()  # Update this method
-    structure_names = [item for item in os.listdir(folder) if
-                       item not in ['im'] and os.path.isdir(os.path.join(folder, item))]
-    source_folder = os.path.join(folder, 'im')
-    if not os.path.exists(source_folder):
-        raise FileNotFoundError("Directory doesnt contain source images")
+    im_path, im_name = im_path
+    s = ml.Subject.build_empty(name=im_name)
+    ds.save_subject(s, split=split, auto_save=False)
 
-    source_paths = os.listdir(source_folder)
-    for src_path in source_paths:
-        te = Subject.build_with_src_image(os.path.splitext(src_path)[0],
-                                          os.path.join(source_folder, src_path))
-        for structure_name in structure_names:
-            structure_path = os.path.join(folder, structure_name)
-            gt_p = os.path.join(structure_path, f"{te.name}{os.path.splitext(src_path)[1]}")
-            te.add_new_gt_by_path(structure_name, gt_p)
-        ds.save_subject(te, split=split, auto_save=False)
+    add_imagestack(s, im_path, binary_id=im_name, structures=seg_structs)
+    im_arr = s.get_binary(im_name)
 
-    ds.to_disk()
+    if gt_paths:
+        gt_arr = np.zeros((im_arr.shape[1], im_arr.shape[2], len(gt_paths)), dtype=np.bool)
+        for i, (gt_path, gt_name) in enumerate(gt_paths):
+            arr = imageio.imread(os.path.join(gt_path, im_name))
+            gt_arr[:, :, i] = arr
+        s.add_new_gt_by_arr(gt_arr, structure_names=[v for (_, v) in gt_paths], mask_of=im_name, frame_number=0)
+
+    # print(f'File path: {im_path} with name: {im_name}')
+
+    s.to_disk()

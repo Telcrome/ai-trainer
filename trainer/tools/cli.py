@@ -7,6 +7,7 @@ This module contains the tooling for:
 import os
 
 import click
+from tqdm import tqdm
 
 from trainer.lib import standalone_foldergrab
 from trainer.lib.JsonClass import dir_is_json_class
@@ -138,6 +139,63 @@ def dataset_add_image_folder(dataset_path: str, folder_path: str, structure_tpl:
         structure_tpl = inputs_dict['str_tpl']
     seg_structs = d.get_structure_template_by_name(structure_tpl)
     lib.add_image_folder(d, folder_path, structures=seg_structs)
+
+
+@ds.command(name='add-ml-folder')
+@click.option('--dataset-path', '-p', default=os.getcwd)
+@click.option('--folder-path', '-ip', default='')
+@click.option('--structure-tpl', '-st', default='')
+def dataset_add_ml_folder(dataset_path: str, folder_path: str, structure_tpl: str):
+    """
+    Imports a computer vision related folder into the trainer format.
+    Currently supports:
+    - Images with segmentation masks
+
+    Assumes a folder structure of the following form:
+
+    - train
+        - im (training images)
+            - single_image.jpg
+            - subject_folder
+                - one.jpg
+                - ...
+        - gt_humans (binary segmentation maps for class humans)
+            - single_image.jpg
+            - subject_folder
+                - one.jpg
+                - ...
+        - gt_cars (segmentation maps for class cars)
+        - ...
+    - test
+        - ...
+
+    The name of the source image and its corresponding ground truths must be identical.
+    The structure template must exist beforehand and must contain the knowledge about the given supervised data.
+    """
+    d = ml.Dataset.from_disk(dataset_path)
+    if not folder_path:
+        folder_path, inputs_dict = standalone_foldergrab(
+            folder_not_file=True,
+            title='Pick Image folder',
+            optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]
+        )
+        structure_tpl = inputs_dict['str_tpl']
+    seg_structs = d.get_structure_template_by_name(structure_tpl)
+
+    # Iterate over splits (top-level-directories)
+    for split in filter(os.path.isdir, [os.path.join(folder_path, fn) for fn in os.listdir(folder_path)]):
+        ims_folder = os.path.join(split, 'im')
+        for path_dir, path_name in tqdm([(os.path.join(ims_folder, fn), fn) for fn in os.listdir(ims_folder)]):
+            # Compute the ground truths
+            gt_folders = [(os.path.join(split, p), p) for p in os.listdir(split) if p != 'im']
+            lib.import_utils.append_subject(
+                d,
+                (path_dir, path_name),
+                gt_folders,
+                seg_structs,
+                split=os.path.split(split)[-1])
+        # lib.import_utils.add_to_split(d, dicts)
+    d.to_disk()
 
 
 if __name__ == '__main__':
