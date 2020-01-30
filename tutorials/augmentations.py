@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import imgaug.augmenters as iaa
 
-import trainer
+import trainer.lib as lib
 import trainer.ml as ml
 
 
@@ -16,12 +16,12 @@ def visualize_generator(g_vis, name="Gen") -> plt.Figure:
 
 if __name__ == '__main__':
     # Load the Dataset we want to perform augmentations on
-    ds_path, _ = trainer.bib.standalone_foldergrab(folder_not_file=True)
+    ds_path, _ = lib.standalone_foldergrab(folder_not_file=True)
     ds = ml.Dataset.from_disk(ds_path)
     board = ml.VisBoard()
 
     example_structure = list(ds.compute_segmentation_structures().keys())[0]
-    g = trainer.ml.data_loading.random_struct_generator(ds, struct_name=example_structure)
+    g = ml.data_loading.random_struct_generator(ds, struct_name=example_structure)
     g_aug = ml.utils.pair_augmentation(g, [
         # iaa.Crop(px=(1, 16), keep_size=False),
         iaa.Fliplr(0.5),
