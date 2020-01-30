@@ -17,7 +17,7 @@ import PySimpleGUI as sg
 import numpy as np
 from tqdm import tqdm
 
-from trainer.lib import JsonClass, download_and_extract, create_identifier
+from trainer.lib import JsonClass, download_and_extract
 from trainer.lib import MaskType, BinaryType, ClassType
 
 
@@ -90,7 +90,7 @@ class Subject(JsonClass):
     def add_source_image_by_arr(self,
                                 src_im,
                                 binary_name: str = "src",
-                                structures: Dict[str, str] = None,
+                                structures: (str, str) = None,
                                 extra_info: Dict = None):
         """
         Only adds images, not volumes or videos! Unless it is already in shape (frames, width, height, channels).
@@ -117,42 +117,13 @@ class Subject(JsonClass):
             res = src_im.astype(np.uint8) if src_im.dtype != np.uint8 else src_im
             meta["image_type"] = "video"
         else:
-            raise Exception("This image can not be an image, check shape!")
+            raise Exception("This array can not be an image, check shape!")
 
         # Extra info
         if extra_info is not None:
             meta["extra"] = extra_info
 
         self.add_binary(binary_name, res, b_type=BinaryType.ImageStack.value, meta_data=meta)
-
-    def add_file_as_imagestack(self,
-                               file_path: str,
-                               binary_name='',
-                               structures: Dict[str, str] = None):
-        """
-        Takes an image path and tries to deduce the type of image from the path ending.
-        No path ending is assumed to be a DICOM file (not a DICOM folder)
-        """
-        if not binary_name:
-            binary_name = create_identifier(hint="binary")
-
-        file_ending = os.path.splitext(file_path)[1]
-        if file_ending in ['', '.dcm']:
-            from trainer.ml import append_dicom_to_subject
-            append_dicom_to_subject(self.get_working_directory(), file_path, binary_name=binary_name,
-                                    seg_structs=structures)
-        elif file_ending == '.b8':
-            from trainer.lib.misc import load_b8
-            img_data = load_b8(file_path)
-            self.add_source_image_by_arr(
-                img_data,
-                binary_name=binary_name,
-                structures=structures
-            )
-        elif file_ending in ['.mp4']:
-            print('Video!')
-        else:
-            raise Exception('This file type is not understood')
 
     def delete_gt(self, mask_of: str = None, frame_number=0):
         print(f"Deleting ground truth of {mask_of} at frame {frame_number}")
@@ -206,33 +177,8 @@ class Subject(JsonClass):
         else:
             raise NotImplementedError()
 
-    def stack_gts(self, src_name):
-        """
-
-        :param src_name: Source binary name
-        :return:
-        """
-        im_shape = self.get_binary(src_name).shape
-
-        def is_gt_of_im(gt: Dict) -> bool:
-            if "mask_of" in gt["meta_data"]:
-                return gt["meta_data"]["mask_of"] == src_name
-
-        gt_binaries = self.get_binary_list_filtered(is_gt_of_im)
-        # print(len(gt_binaries))
-        assert len(gt_binaries) == 1  # For a single image there should only be one ground truth
-        # res = np.zeros((im_shape[0], im_shape[1], len(gt_binaries) - 1))
-        # for channel_index, b_name in enumerate(gt_binaries):
-        #     res[:, :, channel_index] = self.get_binary(b_name)
-        return self.get_binary(gt_binaries[0])
-
-    def get_grayimage_training_tuple_raw(self, src_name: str):
-        training_input = self.get_binary(src_name)
-        training_output = self.stack_gts(src_name)
-        return training_input[0, :, :, 0].astype(np.float32), training_output.astype(np.float32)
-
     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
-        res, N = {}, 0
+        res, n = {}, 0
 
         def filter_imgstack_structs(x: Dict):
             is_img_stack = x['binary_type'] == BinaryType.ImageStack.value
@@ -246,12 +192,12 @@ class Subject(JsonClass):
             for m_name in self.get_binary_list_filtered(
                     lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
                 bs.append(m_name)
-                N += 1
+                n += 1
 
             if bs:
                 res[b_name] = bs
 
-        return res, N
+        return res, n
 
 
 class Dataset(JsonClass):
@@ -397,120 +343,6 @@ class Dataset(JsonClass):
                 self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
         self.to_disk(self._last_used_parent_dir)
         return copied
-
-    def add_image_folder(self, parent_folder: str, structures: Dict[str, str], split=None, progress=True):
-        """
-        Iterates through a folder.
-
-        If a file is found, a new subject is created with only that file.
-        If a directory is found, a new subject is created with all files that live within that directory.
-        If a dicom file is found, the image is appended to the subject with that patient_id
-
-        Supported file formats:
-        - DICOM (no extension or .dcm)
-        - Standard image files
-        - B8 files (.b8)
-
-        :param parent_folder: Top level folder path
-        :param structures: Dict with structure_name: structure_type pairs
-        :param split: The dataset split this data is appended to.
-        :param progress: If true, displays a progress bar
-        :return:
-        """
-        top_level_files = os.listdir(parent_folder)
-        for i, file_name in enumerate(top_level_files):
-            if progress:
-                sg.OneLineProgressMeter(
-                    title=f'Adding Image Folder',
-                    key='key',
-                    current_value=i,
-                    max_value=len(top_level_files),
-                    grab_anywhere=True,
-                )
-
-            if os.path.isdir(os.path.join(parent_folder, file_name)):
-                # Create the new subject
-                s_name = os.path.splitext(file_name)[0]
-                s = Subject.build_empty(s_name)
-                self.save_subject(s, split=split, auto_save=False)
-                dir_children = os.listdir(os.path.join(parent_folder, file_name))
-
-                for image_path in dir_children:
-                    # Append this image to the subject
-                    s.add_file_as_imagestack(
-                        os.path.join(parent_folder, file_name, image_path),
-                        binary_name=os.path.splitext(image_path)[0],
-                        structures=structures,
-                    )
-                self.save_subject(s, split=split, auto_save=False)
-            else:  # Assume this is a file
-                file_ext = os.path.splitext(os.path.join(parent_folder, file_name))[1]
-                if file_ext in ['', '.dcm']:  # Most likely a dicom file
-                    from trainer.lib.dicom_utils import import_dicom
-                    img_data, meta = import_dicom(os.path.join(parent_folder, file_name))
-                    from trainer.lib import slugify
-                    p_id = meta['PatientID']
-                    p_id_clean = slugify(p_id)
-                    if p_id_clean in self.get_subject_name_list():
-                        print("load patient")
-                        s = Subject.from_disk(os.path.join(self.get_working_directory(), p_id_clean))
-                    else:
-                        print("Create new patient")
-                        s = Subject.build_empty(p_id_clean)
-                    s.add_source_image_by_arr(img_data,
-                                              create_identifier(hint='DICOM'),
-                                              structures=structures,
-                                              extra_info=meta)
-                    self.save_subject(s, split=split, auto_save=False)
-                else:  # Everything else is assumed to be a traditional image file
-                    # Create the new subject
-                    s_name = os.path.splitext(file_name)[0]
-                    s = Subject.build_empty(s_name)
-
-                    s.add_file_as_imagestack(
-                        os.path.join(parent_folder, file_name),
-                        binary_name=os.path.splitext(file_name)[0],
-                        structures=structures,
-                    )
-                    self.save_subject(s, split=split, auto_save=False)
-
-        self.to_disk()
-
-    def add_ml_folder(self, folder: str, split=None) -> None:
-        """
-        Assumes a folder structure of the following form:
-
-        - subject 1
-            - im (training images)
-            - gt1 (segmentation maps for class gt1)
-            - gt2 (segmentation maps for class gt2)
-            - ...
-        - subject 2
-            - ...
-
-        The name of the source image and its corresponding ground truths must be identical
-        :param split: The training split (train, test...) that the folder is appended to
-        :param folder: The path to the parent folder
-        :return:
-        """
-        raise NotImplementedError()  # Update this method
-        structure_names = [item for item in os.listdir(folder) if
-                           item not in ['im'] and os.path.isdir(os.path.join(folder, item))]
-        source_folder = os.path.join(folder, 'im')
-        if not os.path.exists(source_folder):
-            raise FileNotFoundError("Directory doesnt contain source images")
-
-        source_paths = os.listdir(source_folder)
-        for src_path in source_paths:
-            te = Subject.build_with_src_image(os.path.splitext(src_path)[0],
-                                              os.path.join(source_folder, src_path))
-            for structure_name in structure_names:
-                structure_path = os.path.join(folder, structure_name)
-                gt_p = os.path.join(structure_path, f"{te.name}{os.path.splitext(src_path)[1]}")
-                te.add_new_gt_by_path(structure_name, gt_p)
-            self.save_subject(te, split=split, auto_save=False)
-
-        self.to_disk()
 
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """

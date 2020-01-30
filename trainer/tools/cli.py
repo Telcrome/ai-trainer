@@ -7,11 +7,13 @@ This module contains the tooling for:
 import os
 
 import click
+from tqdm import tqdm
 
 from trainer.lib import standalone_foldergrab
 from trainer.lib.JsonClass import dir_is_json_class
-from trainer.ml.data_model import Dataset
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
+import trainer.ml as ml
+import trainer.lib as lib
 
 
 @click.group()
@@ -48,7 +50,7 @@ def dataset_init(parent_path, name):
         if os.path.isdir(p):
             click.echo(f"Dirname: {os.path.basename(p)}")
     if click.confirm(f"The dataset {name} will be created in {parent_path}"):
-        d = Dataset.build_new(name, parent_path)
+        d = ml.Dataset.build_new(name, parent_path)
         d.to_disk(parent_path)
     click.echo(f"For working with the dataset {name}, please switch into the directory")
 
@@ -70,7 +72,7 @@ def dataset_annotate(dataset_path: str, subject_name: str):
     """
     if not subject_name:
         # Subject name needs to be picked
-        d = Dataset.from_disk(dataset_path)
+        d = ml.Dataset.from_disk(dataset_path)
         subject_name = d.get_subject_name_list()[0]  # Just pick the first subject
     run_window(AnnotationGui, os.path.join(dataset_path, subject_name), dataset_path)
 
@@ -98,7 +100,7 @@ def dataset_train(dataset_path: str):
     """
     if not dir_is_json_class(dataset_path):
         raise Exception("The given directory is not a valid Dataset")
-    d = Dataset.from_disk(dataset_path)
+    d = ml.Dataset.from_disk(dataset_path)
 
     seg_structs = d.compute_segmentation_structures()
 
@@ -112,9 +114,9 @@ def dataset_train(dataset_path: str):
 @click.option('--dataset-path', '-p', default=os.getcwd)
 @click.option('--subject-name', '-s', default='')
 def dataset_visualize(dataset_path: str, subject_name: str):
-    ds = Dataset.from_disk(dataset_path)
+    d = ml.Dataset.from_disk(dataset_path)
     if subject_name:
-        s = ds.get_subject_by_name(subject_name)
+        s = d.get_subject_by_name(subject_name)
         s.matplot_imagestacks()
     else:
         # TODO Create a html folder with a simple static webview
@@ -127,16 +129,73 @@ def dataset_visualize(dataset_path: str, subject_name: str):
 @click.option('--folder-path', '-ip', default='')
 @click.option('--structure-tpl', '-st', default='')
 def dataset_add_image_folder(dataset_path: str, folder_path: str, structure_tpl: str):
-    ds = Dataset.from_disk(dataset_path)
+    d = ml.Dataset.from_disk(dataset_path)
     if not folder_path:
         folder_path, inputs_dict = standalone_foldergrab(
             folder_not_file=True,
             title='Pick Image folder',
-            optional_choices=[('Structure Template', 'str_tpl', ds.get_structure_template_names())]
+            optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]
         )
         structure_tpl = inputs_dict['str_tpl']
-    seg_structs = ds.get_structure_template_by_name(structure_tpl)
-    ds.add_image_folder(folder_path, structures=seg_structs)
+    seg_structs = d.get_structure_template_by_name(structure_tpl)
+    lib.add_image_folder(d, folder_path, structures=seg_structs)
+
+
+@ds.command(name='add-ml-folder')
+@click.option('--dataset-path', '-p', default=os.getcwd)
+@click.option('--folder-path', '-ip', default='')
+@click.option('--structure-tpl', '-st', default='')
+def dataset_add_ml_folder(dataset_path: str, folder_path: str, structure_tpl: str):
+    """
+    Imports a computer vision related folder into the trainer format.
+    Currently supports:
+    - Images with segmentation masks
+
+    Assumes a folder structure of the following form:
+
+    - train
+        - im (training images)
+            - single_image.jpg
+            - subject_folder
+                - one.jpg
+                - ...
+        - gt_humans (binary segmentation maps for class humans)
+            - single_image.jpg
+            - subject_folder
+                - one.jpg
+                - ...
+        - gt_cars (segmentation maps for class cars)
+        - ...
+    - test
+        - ...
+
+    The name of the source image and its corresponding ground truths must be identical.
+    The structure template must exist beforehand and must contain the knowledge about the given supervised data.
+    """
+    d = ml.Dataset.from_disk(dataset_path)
+    if not folder_path:
+        folder_path, inputs_dict = standalone_foldergrab(
+            folder_not_file=True,
+            title='Pick Image folder',
+            optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]
+        )
+        structure_tpl = inputs_dict['str_tpl']
+    seg_structs = d.get_structure_template_by_name(structure_tpl)
+
+    # Iterate over splits (top-level-directories)
+    for split in filter(os.path.isdir, [os.path.join(folder_path, fn) for fn in os.listdir(folder_path)]):
+        ims_folder = os.path.join(split, 'im')
+        for path_dir, path_name in tqdm([(os.path.join(ims_folder, fn), fn) for fn in os.listdir(ims_folder)]):
+            # Compute the ground truths
+            gt_folders = [(os.path.join(split, p), p) for p in os.listdir(split) if p != 'im']
+            lib.import_utils.append_subject(
+                d,
+                (path_dir, path_name),
+                gt_folders,
+                seg_structs,
+                split=os.path.split(split)[-1])
+        # lib.import_utils.add_to_split(d, dicts)
+    d.to_disk()
 
 
 if __name__ == '__main__':

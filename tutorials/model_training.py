@@ -13,34 +13,39 @@ from trainer.ml import batcherize, resize, normalize_im
 
 def g_convert(g):
     for vid, gt, f in g:
+        res = np.zeros((vid.shape[1], vid.shape[2], 3))
         if f >= 2:
-            res = np.zeros((vid.shape[1], vid.shape[2], 3))
             # Discard most of the video, deeplab can handle only 3 frames
             res[:, :, 0] = vid[f - 2, :, :, 0]
             res[:, :, 1] = vid[f - 1, :, :, 0]
             res[:, :, 2] = vid[f, :, :, 0]
-            gt_stacked = np.zeros((gt.shape[0], gt.shape[1], 2), dtype=np.float32)
-            gt_stacked[:, :, 0] = gt.astype(np.float32)
-            gt_stacked[:, :, 1] = np.invert(gt).astype(gt_stacked.dtype)
-            yield normalize_im(res).astype(np.float32), gt_stacked
+        else:
+            res[:, :, 0] = vid[f, :, :, 0]
+            res[:, :, 1] = vid[f, :, :, 0]
+            res[:, :, 2] = vid[f, :, :, 0]
+        gt_stacked = np.zeros((gt.shape[0], gt.shape[1], 2), dtype=np.float32)
+        gt_stacked[:, :, 0] = gt.astype(np.float32)
+        gt_stacked[:, :, 1] = np.invert(gt).astype(gt_stacked.dtype)
+        yield normalize_im(res).astype(np.float32), gt_stacked
 
 
 if __name__ == '__main__':
-    ds = ml.Dataset.download(url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
-                             local_path='./data',  # Your local data folder
-                             dataset_name='crucial_ligament_diagnosis'  # Name of the dataset
-                             )
+    # ds = ml.Dataset.download(url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
+    #                          local_path='./data',  # Your local data folder
+    #                          dataset_name='crucial_ligament_diagnosis'  # Name of the dataset
+    #                          )
+    ds = ml.Dataset.from_disk('./data/b8_old_ultrasound_segmentation')
 
-    structure_name = 'femur'  # The structure that we now train for
+    structure_name = 'gt'  # The structure that we now train for
 
     # Simple generator preprocessing chain
-    g_raw = random_struct_generator(ds, structure_name)
+    g_raw = random_struct_generator(ds, structure_name, split='train')
     g_extracted = g_convert(g_raw)
     g_resized = resize(g_extracted, (384, 384))
     g_train = batcherize(g_resized, batchsize=1)
 
     # training loop
-    for x, y in g_train:
-        print(x.shape)
-        print(y.shape)
-        break
+    # for x, y in g_train:
+    #     print(x.shape)
+    #     print(y.shape)
+    #     break

@@ -17,7 +17,7 @@ import numpy as np
 
 def get_img_from_fig(fig: plt.figure, dpi=180):
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=180)
+    fig.savefig(buf, format="png", dpi=dpi)
     buf.seek(0)
     img_arr = np.frombuffer(buf.getvalue(), dtype=np.uint8)
     buf.close()
@@ -157,8 +157,3 @@ def load_b8(file_path: str) -> np.ndarray:
     res = np.expand_dims(res, axis=3)
 
     return res
-
-
-if __name__ == '__main__':
-    p, _ = standalone_foldergrab()
-    image_stack = load_b8(p)

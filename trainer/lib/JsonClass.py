@@ -113,6 +113,8 @@ class JsonClass:
             os.startfile(file_name)
 
     def save_binary(self, binary_key):
+        if self._last_used_parent_dir is None:
+            raise Exception("First save to disk!")
         if self.binaries_dir_path is None:
             self.binaries_dir_path = os.path.join(self._last_used_parent_dir, BINARIES_DIRNAME)
         np.save(os.path.join(self.binaries_dir_path, binary_key), self._binaries[binary_key])
@@ -136,8 +138,16 @@ class JsonClass:
                    binary_name: str,
                    binary: np.ndarray,
                    b_type: str = BinaryType.Unknown.value,
-                   meta_data=None,
-                   auto_save=True):
+                   meta_data=None):
+        """
+        Adds a numpy array.
+        Note that the subject must be saved using ```Subject.to_disk()``` to actually be written to disk.
+        :param binary_name:
+        :param binary:
+        :param b_type:
+        :param meta_data:
+        :return:
+        """
         # if binary_name in self._binaries:
         #     raise Exception("This binary already exists")
         self._binaries[binary_name] = binary
@@ -150,9 +160,6 @@ class JsonClass:
             self._binaries_model[binary_name]["meta_data"] = {}
         else:
             self._binaries_model[binary_name]["meta_data"] = meta_data
-
-        # if auto_save and self._last_used_parent_dir is not None:
-        #     self.to_disk(self._last_used_parent_dir)
         self.save_binary(binary_name)
 
     def remove_binary(self, binary_name):

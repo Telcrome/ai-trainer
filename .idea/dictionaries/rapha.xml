@@ -1,6 +1,7 @@
 <component name="ProjectDictionaryState">
   <dictionary name="rapha">
     <words>
+      <w>annos</w>
       <w>autodoc</w>
       <w>conv</w>
       <w>convolutional</w>
@@ -8,8 +9,11 @@
       <w>datasets</w>
       <w>dicom</w>
       <w>fgsm</w>
+      <w>foldergrab</w>
       <w>imagestack</w>
       <w>imagestacks</w>
+      <w>imgstack</w>
+      <w>kaggle</w>
       <w>logdir</w>
       <w>matplot</w>
       <w>matplotlib</w>
@@ -18,6 +22,7 @@
       <w>preprocessing</w>
       <w>pretrain</w>
       <w>pyplot</w>
+      <w>segmentations</w>
       <w>tensorboard</w>
       <w>testset</w>
       <w>visboard</w>
