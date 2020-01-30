@@ -99,6 +99,14 @@ def batcherize(g: Iterable[Tuple[np.ndarray, np.ndarray]], batchsize=8) -> Itera
         gts.append(gt)
 
 
+def channels_last_to_first(g: Iterable[Tuple[np.ndarray, np.ndarray]]) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
+    """
+    Should be the last step before training. Input is expected to be [batch, w, h, c]
+    """
+    for im, gt in g:
+        yield np.rollaxis(im, 3, 1), np.rollaxis(gt, 3, 1)
+
+
 def pair_augmentation(g: Iterable[Tuple[np.ndarray, np.ndarray]], aug_ls) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
     import imgaug.augmenters as iaa
     seq = iaa.Sequential(aug_ls)
