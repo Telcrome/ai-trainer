@@ -16,7 +16,7 @@ from trainer.ml.data_loading import get_subject_gen, random_struct_generator, ge
 from trainer.ml import batcherize, resize, normalize_im
 
 
-def g_convert(g):
+def g_convert(g: Iterable):
     for vid, gt, f in g:
         res = np.zeros((vid.shape[1], vid.shape[2], 3))
         if f >= 2:
@@ -32,6 +32,13 @@ def g_convert(g):
         gt_stacked[:, :, 0] = gt.astype(np.float32)
         gt_stacked[:, :, 1] = np.invert(gt).astype(gt_stacked.dtype)
         yield normalize_im(res).astype(np.float32), gt_stacked
+
+
+def g_from_struct_generator(g):
+    g_extracted = g_convert(g)
+    g_resized = resize(g_extracted, (384, 384))
+    g = ml.channels_last_to_first(batcherize(g_resized, batchsize=BATCH_SIZE))
+    return g
 
 
 def vis(g: Iterable):
@@ -67,15 +74,15 @@ if __name__ == '__main__':
     ds = ml.Dataset.from_disk('./data/b8_old_ultrasound_segmentation')
 
     structure_name = 'gt'  # The structure that we now train for
-    bce_weight = 0.5
+    loss_weights = (0.5, 0.5)
     BATCH_SIZE = 4
+    criterion = ml.FocalLoss(alpha=0.5, gamma=2., logits=False)
+    EPOCHS = 60
 
     # Simple generator preprocessing chain
-    g_raw = random_struct_generator(ds, structure_name, split='train')
-    g_extracted = g_convert(g_raw)
-    g_resized = resize(g_extracted, (384, 384))
-    g_train = ml.channels_last_to_first(batcherize(g_resized, batchsize=BATCH_SIZE))
-
+    g_train = g_from_struct_generator(random_struct_generator(ds, structure_name, split='train'))
+    g_test = g_from_struct_generator(random_struct_generator(ds, structure_name, split='test'))
+    g_b8 = g_from_struct_generator(random_struct_generator(ds, structure_name, split='machine'))
     vis(g_train)
 
     device = torch.device('cuda')
@@ -84,10 +91,11 @@ if __name__ == '__main__':
     model.train()
     N = ds.get_subject_count(split='train')
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=1e-3)
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
+
 
     def run_epoch(epoch: int):
         print(f'Starting epoch: {epoch} with {N} training examples')
@@ -97,10 +105,11 @@ if __name__ == '__main__':
             x, y = next(g_train)
             y_ = model(torch.from_numpy(x).to(device))
             for i in range(y_.shape[0]):
-                fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+                fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
                 sns.heatmap(x[i, 0, :, :], ax=ax1)
                 sns.heatmap(y[i, 0, :, :], ax=ax2)
                 sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
+                sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
                 visboard.add_figure(fig, group_name=f'Before Epoch{epoch}')
 
         for i in tqdm(range(N // BATCH_SIZE)):
@@ -110,12 +119,13 @@ if __name__ == '__main__':
             optimizer.zero_grad()
 
             outputs = model(x)
-            bce = F.binary_cross_entropy_with_logits(outputs, y)
+            bce = criterion(outputs, y)
 
-            outputs = torch.sigmoid(outputs)
+            # outputs = torch.tanh(outputs)
             dice = ml.dice_loss(outputs, y)
 
-            loss = bce * bce_weight + dice * (1 - bce_weight)
+            # bce_weight = bce_weight - 1. / EPOCHS
+            loss = bce * loss_weights[0] + dice * loss_weights[1]
 
             loss.backward()
             optimizer.step()
@@ -124,11 +134,12 @@ if __name__ == '__main__':
             # metrics['dice'] += dice.data.cpu().numpy() * target.size(0)
             # metrics['loss'] += loss.data.cpu().numpy() * target.size(0)
             epoch_loss_sum += loss.data.cpu().numpy() * y.size(0)
-            epoch_loss = epoch_loss_sum / (i+1)
-            visboard.writer.add_scalar(f'loss/train epoch {epoch+1}', epoch_loss, i)
+            epoch_loss = epoch_loss_sum / (i + 1)
+            visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
         print(f"Epoch result: {epoch_loss_sum / N}")
 
-    for epoch in range(20):
+
+    for epoch in range(10):
         run_epoch(epoch)
     # for x, y in g_train:
     #     print(x.shape)
