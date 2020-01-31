@@ -25,6 +25,9 @@ AI-Trainer is a toolbox that defines multiple exciting simplifications to your w
 This page only contain hand-written tutorials and explanations,
 the docstrings are available in the corresponding code.
 
+.. automodule:: trainer.ml.data_model
+   :members:
+
 Indices and tables
 ==================
 
