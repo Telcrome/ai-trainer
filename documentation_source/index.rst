@@ -12,6 +12,7 @@ Welcome to AI-Trainer's documentation!
 
    getting_started
    mission
+   next_major_version
 
    cli
 

@@ -5,6 +5,7 @@
       <w>autodoc</w>
       <w>conv</w>
       <w>convolutional</w>
+      <w>convrelu</w>
       <w>cuda</w>
       <w>datasets</w>
       <w>dicom</w>
@@ -15,6 +16,7 @@
       <w>imgstack</w>
       <w>kaggle</w>
       <w>logdir</w>
+      <w>logits</w>
       <w>matplot</w>
       <w>matplotlib</w>
       <w>mnist</w>
