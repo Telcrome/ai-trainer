@@ -65,7 +65,6 @@ def calc_loss(pred, target, metrics, bce_weight=0.5):
 
     return loss
 
-
 if __name__ == '__main__':
     # ds = ml.Dataset.download(url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
     #                          local_path='./data',  # Your local data folder
@@ -141,6 +140,7 @@ if __name__ == '__main__':
 
     for epoch in range(10):
         run_epoch(epoch)
+
     # for x, y in g_train:
     #     print(x.shape)
     #     print(y.shape)
