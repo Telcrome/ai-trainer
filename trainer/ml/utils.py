@@ -34,7 +34,7 @@ def append_dicom_to_subject(s_path: str,
     if not binary_name:
         binary_name = create_identifier(hint='DICOM')
 
-    from trainer.lib.dicom_utils import import_dicom
+    from trainer.lib import import_dicom
 
     img_data, meta = import_dicom(dicom_path)
     s.add_source_image_by_arr(img_data, binary_name, structures=seg_structs, extra_info=meta)
@@ -99,7 +99,7 @@ def batcherize(g: Iterable[Tuple[np.ndarray, np.ndarray]], batchsize=8) -> Itera
         gts.append(gt)
 
 
-def channels_last_to_first(g: Iterable[Tuple[np.ndarray, np.ndarray]]) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
+def g_channels_last_to_first(g: Iterable[Tuple[np.ndarray, np.ndarray]]) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
     """
     Should be the last step before training. Input is expected to be [batch, w, h, c]
     """

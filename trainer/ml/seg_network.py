@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchvision import models
 
 
@@ -101,11 +100,11 @@ class ResNetUNet(nn.Module):
         self.conv_last = nn.Conv2d(64, n_class, 1)
         self.activation_layer = nn.Softmax2d()
 
-    def forward(self, input):
-        x_original = self.conv_original_size0(input)
+    def forward(self, x: torch.Tensor):
+        x_original = self.conv_original_size0(x)
         x_original = self.conv_original_size1(x_original)
 
-        layer0 = self.layer0(input)
+        layer0 = self.layer0(x)
         layer1 = self.layer1(layer0)
         layer2 = self.layer2(layer1)
         layer3 = self.layer3(layer2)
@@ -137,5 +136,4 @@ class ResNetUNet(nn.Module):
         x = self.conv_original_size2(x)
 
         out = self.conv_last(x)
-        res = self.activation_layer(out)
-        return res
+        return out
