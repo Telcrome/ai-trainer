@@ -89,6 +89,18 @@ When the transition to a web GUI is completed docker will be supported again.
 
 # Contribution
 
+### Docs
+
+Currently [Read the Docs](https://readthedocs.org/) is used
+for CI of the docs.
+Before submitting changes, test the make command in the environment:
+```shell script
+conda env create -f environment.yml
+conda activate trainer_env
+make html
+```
+If this throws warnings or errors, `Read the Docs` won`t publish them.
+
 ### Tutorials inside the repo
 
 - Do not use jupyter notebooks
