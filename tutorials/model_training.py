@@ -32,8 +32,7 @@ def g_convert(g):
         gt_stacked[:, :, 0] = gt.astype(np.float32)
         gt_stacked[:, :, 1] = np.invert(gt).astype(gt_stacked.dtype)
         yield normalize_im(res).astype(np.float32), gt_stacked
-
-
+        
 def vis(g: Iterable):
     im, gt = next(g)
     fig, (ax1, ax2) = plt.subplots(1, 2)
@@ -57,7 +56,6 @@ def calc_loss(pred, target, metrics, bce_weight=0.5):
     metrics['loss'] += loss.data.cpu().numpy() * target.size(0)
 
     return loss
-
 
 if __name__ == '__main__':
     # ds = ml.Dataset.download(url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
@@ -127,9 +125,10 @@ if __name__ == '__main__':
             epoch_loss = epoch_loss_sum / (i+1)
             visboard.writer.add_scalar(f'loss/train epoch {epoch+1}', epoch_loss, i)
         print(f"Epoch result: {epoch_loss_sum / N}")
-
+        
     for epoch in range(20):
         run_epoch(epoch)
+
     # for x, y in g_train:
     #     print(x.shape)
     #     print(y.shape)
