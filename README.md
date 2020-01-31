@@ -79,7 +79,7 @@ pip install -e .
 
 ```shell script
 python setup.py sdist bdist_wheel
-twine upload dist/*
+twine upload dist/* # The asterisk is important
 ```
 
 # Using Docker
