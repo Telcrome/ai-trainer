@@ -15,33 +15,6 @@ from torchvision import datasets, transforms
 from trainer.lib import create_identifier
 from trainer.ml.visualization import VisBoard
 
-
-class TorchDataset(Enum):
-    MNIST = "MNIST"
-
-
-def load_torch_dataset(dataset: TorchDataset, local_path='./data', batch_size=32):
-    if dataset == TorchDataset.MNIST:
-        def normalize_mnist(x):
-            return x * 2 - 1
-
-        train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(local_path, train=True, download=True, transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize_mnist
-            ])),
-            batch_size=batch_size, shuffle=True)
-
-        test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(local_path, train=False, download=True, transform=transforms.Compose([
-                transforms.ToTensor(),
-                normalize_mnist
-            ])),
-            batch_size=batch_size, shuffle=True)
-
-        return train_loader, test_loader
-
-
 # If GPU is available, use GPU
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 IDENTIFIER = create_identifier()
@@ -49,17 +22,20 @@ IDENTIFIER = create_identifier()
 
 class TorchModel(nn.Module):
     """
-    Torchmodels are a subclass of nn.Module with added functionality:
+    TorchModel is a subclass of nn.Module with added functionality:
     - Name
+    - Process chain: Subject -> Augmented subject -> Input layer
     """
 
     def __init__(self, model_name: str):
         super(TorchModel, self).__init__()
         self.name = model_name
 
+    def train_from_subject(self):
+        pass
 
-def instantiate_model(model_definition: TorchModel, weights_path='', data_loader=None) -> Tuple[
-    TorchModel, VisBoard]:
+
+def instantiate_model(model_definition: TorchModel, weights_path='', data_loader=None) -> Tuple[TorchModel, VisBoard]:
     model = model_definition().to(device)
     visboard = VisBoard(run_name=f'{model.name}_{IDENTIFIER}')
     if data_loader is not None:
@@ -70,30 +46,6 @@ def instantiate_model(model_definition: TorchModel, weights_path='', data_loader
         model.load_state_dict(torch.load(weights_path))
 
     return model, visboard
-
-
-def oneshot_attack(image: torch.Tensor, max_change_percentage: float, data_grad: torch.Tensor, data_range=(-1., 1.)):
-    """
-    Oneshot attack, takes one step against the gradient direction to increase the error.
-    """
-    # sign_data_grad = data_grad.sign()
-    epsilon = (((max_change_percentage * image) / data_grad).sum() / image.numel()).item()
-    perturbed_image = image + epsilon * data_grad
-    perturbed_image = torch.clamp(perturbed_image, data_range[0], data_range[1])
-    return perturbed_image
-
-
-def fgsm_attack(image: torch.Tensor, epsilon: float, data_grad: torch.Tensor, data_range=(-1., 1.)):
-    """
-    Fast gradient sign method attack as proposed by:
-    https://arxiv.org/pdf/1712.07107.pdf
-
-    FGSM is an attack for an infinity-norm bounded adversary.
-    """
-    sign_data_grad = data_grad.sign()
-    perturbed_image = image + epsilon * sign_data_grad
-    perturbed_image = torch.clamp(perturbed_image, data_range[0], data_range[1])
-    return perturbed_image
 
 
 def visualize_input_batch(data_loader, visboard: VisBoard, name="Input Example"):

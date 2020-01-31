@@ -137,5 +137,5 @@ class ResNetUNet(nn.Module):
         x = self.conv_original_size2(x)
 
         out = self.conv_last(x)
-        # res = self.activation_layer(out)
-        return out
+        res = self.activation_layer(out)
+        return res

@@ -3,6 +3,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from trainer.lib import get_img_from_fig, create_identifier
+import trainer.ml as ml
 
 
 class VisBoard:
@@ -24,6 +25,9 @@ class VisBoard:
             self.run_name = create_identifier()
         self.writer = SummaryWriter(f'{self.dir_name}/{self.run_name}')
 
+    def add_scalar(self, tag: str, val: float, step: int):
+        self.writer.add_scalar(tag, val, step)
+
     def add_figure(self, fig: plt.Figure, group_name: str = "Default", close_figure: bool = True) -> None:
         """
         Logs a matplotlib.pyplot Figure.
@@ -35,3 +39,6 @@ class VisBoard:
         self.writer.add_image(group_name, img)
         if close_figure:
             plt.close(fig)
+
+    def visualize_subject(self, s: ml.Subject):
+        fig, ax = plt.subplots()
