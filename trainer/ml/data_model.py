@@ -436,12 +436,3 @@ class Dataset(JsonClass):
     def __iter__(self):
         from trainer.ml.data_loading import get_subject_gen
         return get_subject_gen(self)
-
-
-if __name__ == '__main__':
-    ds_path = download_and_extract(
-        online_url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
-        parent_dir='./data',  # Your local data folder
-        dir_name='crucial_ligament_diagnosis'  # Name of the dataset
-    )
-    ds = Dataset.from_disk(ds_path)
