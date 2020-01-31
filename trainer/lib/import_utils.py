@@ -178,7 +178,7 @@ def append_subject(ds: ml.Dataset,
     """
     Appends one subject with an image and corresponding masks to a dataset split.
 
-    TODO: Add support for directories to add subjects with multiple images with corresponding gts
+    TODO: Add support for adding subjects with multiple images with corresponding gts
     :param ds:
     :param im_path:
     :param gt_paths:

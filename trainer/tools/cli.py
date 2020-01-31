@@ -45,10 +45,10 @@ def dataset_init(parent_path, name):
     Create a new dataset
     """
     ls = os.listdir(parent_path)
-    click.echo(f"Other datasets in {parent_path}")
-    for p in ls:
-        if os.path.isdir(p):
-            click.echo(f"Dirname: {os.path.basename(p)}")
+    # click.echo(f"Other datasets in {parent_path}")
+    # for p in ls:
+    #     if os.path.isdir(p):
+    #         click.echo(f"Dirname: {os.path.basename(p)}")
     if click.confirm(f"The dataset {name} will be created in {parent_path}"):
         d = ml.Dataset.build_new(name, parent_path)
         d.to_disk(parent_path)
