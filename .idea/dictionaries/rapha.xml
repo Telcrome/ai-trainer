@@ -2,6 +2,7 @@
   <dictionary name="rapha">
     <words>
       <w>annos</w>
+      <w>artefact</w>
       <w>autodoc</w>
       <w>conv</w>
       <w>convolutional</w>
@@ -27,6 +28,7 @@
       <w>segmentations</w>
       <w>tensorboard</w>
       <w>testset</w>
+      <w>thresholding</w>
       <w>visboard</w>
     </words>
   </dictionary>

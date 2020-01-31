@@ -173,13 +173,21 @@ def append_subject(ds: ml.Dataset,
                    im_path: Tuple[str, str],
                    gt_paths: List[Tuple[str, str]],
                    seg_structs: Dict[str, str],
-                   split='') -> None:
+                   split='',
+                   artefact_threshold=150) -> None:
     """
     Appends one subject with an image and corresponding masks to a dataset split.
 
     TODO: Add support for directories to add subjects with multiple images with corresponding gts
+    :param ds:
+    :param im_path:
+    :param gt_paths:
+    :param seg_structs:
+    :param split:
+    :param artefact_threshold: Threshold for removing artifacts. Pass none if no thresholding should happen.
     """
-    im_path, im_name = im_path
+    im_path, im_file = im_path
+    im_name, im_ext = os.path.splitext(im_file)
     s = ml.Subject.build_empty(name=im_name)
     ds.save_subject(s, split=split, auto_save=False)
 
@@ -189,7 +197,9 @@ def append_subject(ds: ml.Dataset,
     if gt_paths:
         gt_arr = np.zeros((im_arr.shape[1], im_arr.shape[2], len(gt_paths)), dtype=np.bool)
         for i, (gt_path, gt_name) in enumerate(gt_paths):
-            arr = imageio.imread(os.path.join(gt_path, im_name))
+            arr = imageio.imread(os.path.join(gt_path, im_file))
+            if artefact_threshold is not None:
+                arr = arr > artefact_threshold
             gt_arr[:, :, i] = arr
         s.add_new_gt_by_arr(gt_arr, structure_names=[v for (_, v) in gt_paths], mask_of=im_name, frame_number=0)
 
