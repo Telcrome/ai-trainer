@@ -91,7 +91,7 @@ When the transition to a web GUI is completed docker will be supported again.
 
 ### Docs
 
-Currently [Read the Docs](https://readthedocs.org/) is used
+Currently, [Read the Docs](https://readthedocs.org/) is used
 for CI of the docs.
 Before submitting changes, test the make command in the environment:
 ```shell script
