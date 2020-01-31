@@ -32,7 +32,30 @@ def g_convert(g: Iterable):
         gt_stacked[:, :, 0] = gt.astype(np.float32)
         gt_stacked[:, :, 1] = np.invert(gt).astype(gt_stacked.dtype)
         yield normalize_im(res).astype(np.float32), gt_stacked
+        
+def vis(g: Iterable):
+    im, gt = next(g)
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    im_2d = im[0, :, :, 0]
+    gt_2d = gt[0, :, :, 0]
+    sns.heatmap(im_2d, ax=ax1)
+    sns.heatmap(gt_2d, ax=ax2)
+    fig.show()
 
+
+def calc_loss(pred, target, metrics, bce_weight=0.5):
+    bce = F.binary_cross_entropy_with_logits(pred, target)
+
+    pred = F.sigmoid(pred)
+    dice = ml.dice_loss(pred, target)
+
+    loss = bce * bce_weight + dice * (1 - bce_weight)
+
+    metrics['bce'] += bce.data.cpu().numpy() * target.size(0)
+    metrics['dice'] += dice.data.cpu().numpy() * target.size(0)
+    metrics['loss'] += loss.data.cpu().numpy() * target.size(0)
+
+    return loss
 
 def g_from_struct_generator(g):
     g_extracted = g_convert(g)
@@ -94,7 +117,6 @@ if __name__ == '__main__':
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
-
 
     def run_epoch(epoch: int):
         print(f'Starting epoch: {epoch} with {N} training examples')
