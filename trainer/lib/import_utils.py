@@ -20,6 +20,36 @@ ALLOWED_TYPES = [
 ]
 
 
+def append_dicom_to_subject(s_path: str,
+                            dicom_path: str,
+                            binary_name: str = '',
+                            seg_structs: Dict[str, str] = None,
+                            auto_save=True) -> ml.Subject:
+    """
+
+    :param s_path: directory path to the subject
+    :param dicom_path: filepath to the dicom containing the image data
+    :param binary_name: Name of the binary, if not provided a name is chosen.
+    :param seg_structs: Structures that can be segmented in the image data
+    :param auto_save: The new state of the subject is automatically saved to disk
+    :return: The subject containing the new data
+    """
+    s = ml.Subject.from_disk(s_path)
+
+    if not binary_name:
+        binary_name = lib.create_identifier(hint='DICOM')
+
+    from trainer.lib import import_dicom
+
+    img_data, meta = import_dicom(dicom_path)
+    s.add_source_image_by_arr(img_data, binary_name, structures=seg_structs, extra_info=meta)
+
+    if auto_save:
+        s.to_disk(s.get_parent_directory())
+
+    return s
+
+
 def add_imagestack(s: ml.Subject, file_path: str, binary_id='', structures: Dict[str, str] = None) -> None:
     """
     Takes an image path and tries to deduce the type of image from the path ending.
@@ -30,7 +60,6 @@ def add_imagestack(s: ml.Subject, file_path: str, binary_id='', structures: Dict
 
     file_ending = os.path.splitext(file_path)[1]
     if file_ending in ['', '.dcm']:
-        from trainer.ml import append_dicom_to_subject
         append_dicom_to_subject(s.get_working_directory(), file_path, binary_name=binary_id,
                                 seg_structs=structures)
     elif file_ending == '.b8':

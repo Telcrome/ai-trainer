@@ -251,7 +251,7 @@ class AnnotationGui(TWindow):
                                                                   self.d.get_structure_template_names())],
                                                title="Select DICOM file")
         if dicom_path:
-            from trainer.ml import append_dicom_to_subject
+            from trainer.lib.import_utils import append_dicom_to_subject
             tpl_name = ks['struct_tpl']
             if tpl_name in self.d.get_structure_template_names():
                 seg_structs = self.d.get_structure_template_by_name(tpl_name)
