@@ -104,4 +104,4 @@ If this throws warnings or errors, `Read the Docs` won`t publish them.
 ### Tutorials inside the repo
 
 - Do not use jupyter notebooks
-- Should be testable
+- Should be testable without preparing data by hand where possible.
