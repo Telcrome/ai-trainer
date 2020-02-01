@@ -7,6 +7,7 @@
       <w>conv</w>
       <w>convolutional</w>
       <w>convrelu</w>
+      <w>crit</w>
       <w>cuda</w>
       <w>datasets</w>
       <w>dicom</w>
@@ -20,8 +21,11 @@
       <w>logits</w>
       <w>matplot</w>
       <w>matplotlib</w>
+      <w>minibatch</w>
       <w>mnist</w>
       <w>oneshot</w>
+      <w>opti</w>
+      <w>optim</w>
       <w>preprocessing</w>
       <w>pretrain</w>
       <w>pyplot</w>

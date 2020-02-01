@@ -177,6 +177,16 @@ class Subject(JsonClass):
         else:
             raise NotImplementedError()
 
+    def get_masks_of(self, b_name: str, frame_numbers=False):
+        res = []
+        for m_name in self.get_binary_list_filtered(
+                lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
+            if frame_numbers:
+                res.append(self.get_binary_model(m_name)['meta_data']['frame_number'])
+            else:
+                res.append(m_name)
+        return res
+
     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
         res, n = {}, 0
 
@@ -188,12 +198,9 @@ class Subject(JsonClass):
         # Iterate over image stacks that contain the structure
         for b_name in self.get_binary_list_filtered(filter_imgstack_structs):
             # Find the masks of this binary and list them
-            bs = []
-            for m_name in self.get_binary_list_filtered(
-                    lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
-                bs.append(m_name)
-                n += 1
 
+            bs = self.get_masks_of(b_name)
+            n += len(bs)
             if bs:
                 res[b_name] = bs
 

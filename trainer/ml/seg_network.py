@@ -1,6 +1,79 @@
+import random
+from typing import Tuple, Union, Any, Callable
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import torch.nn as nn
 from torchvision import models
+from torch.optim import optimizer
+import torch.optim as optim
+
+import trainer.ml as ml
+from trainer.ml.data_loading import get_mask_for_frame
+from trainer.ml.torch_utils import TrainerModel, device
+
+
+class SegCrit(nn.Module):
+
+    def __init__(self, alpha, beta, loss_weights: Tuple):
+        super().__init__()
+        self.loss_weights = loss_weights
+        self.focal_loss = ml.FocalLoss(alpha=alpha, gamma=beta, logits=False)
+
+    def forward(self, logits, target):
+        outputs = torch.sigmoid(logits)
+        bce = self.focal_loss(outputs, target)
+        dice = ml.dice_loss(outputs, target)
+        return bce * self.loss_weights[0] + dice * self.loss_weights[1]
+
+
+class SegNetwork(TrainerModel):
+
+    def __init__(self,
+                 model_name: str,
+                 in_channels: int,
+                 n_classes: int,
+                 ds: ml.Dataset,
+                 batch_size=4):
+        model = ResNetUNet(n_class=n_classes)
+        opti = optim.Adam(model.parameters(), lr=1e-3)
+        crit = SegCrit(1., 2., (0.1, 1.5))
+        super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size)
+        self.in_channels, self.n_classes = in_channels, n_classes
+
+    def visualize_input_batch(self) -> plt.Figure:
+        x, y = next(self.gen)
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        im_2d = x[0, 0, :, :]
+        gt_2d = y[0, 0, :, :]
+        sns.heatmap(im_2d, ax=ax1)
+        sns.heatmap(gt_2d, ax=ax2)
+        return fig
+
+    def preprocess(self, s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
+        is_names = s.get_image_stack_keys()
+        is_name = random.choice(is_names)
+        available_structures = s.get_structure_list(image_stack_key=is_name)
+        selected_struct = random.choice(list(available_structures.keys()))
+        im = s.get_binary(is_name)
+        possible_frames = s.get_masks_of(is_name, frame_numbers=True)
+        selected_frame = random.choice(possible_frames)
+        gt = get_mask_for_frame(s, is_name, selected_struct, selected_frame)
+
+        # Processing
+        im = cv2.resize(im[selected_frame], (384, 384))
+        im = np.rollaxis(ml.normalize_im(cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)), 2, 0)
+        gt = gt.astype(np.float32)
+        gt = cv2.resize(gt, (384, 384))
+        # gt = np.expand_dims(gt, 0)
+        gt_stacked = np.zeros((2, gt.shape[0], gt.shape[1]), dtype=np.float32)
+        gt_stacked[0, :, :] = gt.astype(np.float32)
+        gt_stacked[1, :, :] = np.invert(gt.astype(np.bool)).astype(gt_stacked.dtype)
+
+        return im, gt_stacked
 
 
 def double_conv(in_channels, out_channels):
@@ -69,7 +142,7 @@ def convrelu(in_channels, out_channels, kernel, padding):
 
 
 class ResNetUNet(nn.Module):
-    def __init__(self, n_class):
+    def __init__(self, n_class=2):
         super().__init__()
 
         self.base_model = models.resnet18(pretrained=True)
