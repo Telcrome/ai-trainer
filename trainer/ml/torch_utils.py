@@ -77,7 +77,9 @@ class TrainerModel(ABC):
         if not split:
             split = ALL_TORCHSET_KEY
         if split not in self._torch_sets:
-            self._torch_sets[split] = TorchDataset(self.ds.get_working_directory(), self.preprocess, split=split)
+            self._torch_sets[split] = TorchDataset(self.ds.get_working_directory(),
+                                                   self.preprocess,
+                                                   split=split)
         return self._torch_sets[split]
 
     def train_on_minibatch(self, training_example: Tuple[torch.Tensor, torch.Tensor]) -> float:

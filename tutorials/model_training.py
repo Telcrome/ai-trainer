@@ -35,8 +35,10 @@ if __name__ == '__main__':
         batch_size=BATCH_SIZE,
         shuffle=True,
         num_workers=4)
-    test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test'), batch_size=BATCH_SIZE)
-    machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine'), batch_size=BATCH_SIZE)
+    test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test'), batch_size=BATCH_SIZE, shuffle=True)
+    machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine'), batch_size=BATCH_SIZE,
+                                     shuffle=True)
+
 
     def run_epoch(epoch: int):
         print(f'Starting epoch: {epoch} with {N} training examples')

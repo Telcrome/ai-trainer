@@ -11,6 +11,9 @@ from torchvision import models
 from torch.optim import optimizer
 import torch.optim as optim
 import segmentation_models_pytorch as smp
+import imgaug as ia
+import imgaug.augmenters as iaa
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 import trainer.ml as ml
 from trainer.ml.data_loading import get_mask_for_frame
@@ -40,7 +43,7 @@ class SegNetwork(TrainerModel):
                  ds: ml.Dataset,
                  batch_size=4):
         # model = ResNetUNet(n_class=n_classes)
-        model = smp.PSPNet(in_channels=in_channels, classes=n_classes)
+        model = smp.PAN(in_channels=in_channels, classes=n_classes)
         opti = optim.Adam(model.parameters(), lr=1e-3)
         crit = SegCrit(1., 2., (0.5, 0.5))
         super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size)
@@ -75,14 +78,36 @@ class SegNetwork(TrainerModel):
         is_name = random.choice(is_names)
         available_structures = s.get_structure_list(image_stack_key=is_name)
         selected_struct = random.choice(list(available_structures.keys()))
-        im = s.get_binary(is_name)
         possible_frames = s.get_masks_of(is_name, frame_numbers=True)
         selected_frame = random.choice(possible_frames)
+        im = cv2.cvtColor(s.get_binary(is_name)[selected_frame], cv2.COLOR_GRAY2RGB)
         gt = get_mask_for_frame(s, is_name, selected_struct, selected_frame)
 
+        # Augmentation
+        seq = iaa.Sequential([
+            iaa.Dropout([0.01, 0.2]),  # drop 5% or 20% of all pixels
+            iaa.Crop(percent=(0, 0.1)),
+            iaa.Fliplr(0.5),
+            iaa.Sharpen((0.0, 1.0)),  # sharpen the image
+            # iaa.SaltAndPepper(0.1),
+            iaa.WithColorspace(
+                to_colorspace="HSV",
+                from_colorspace="RGB",
+                children=iaa.WithChannels(
+                    0,
+                    iaa.Add((0, 50))
+                )
+            ),
+            iaa.Sometimes(p=0.5, then_list=[iaa.Affine(rotate=(-10, 10))])
+            # iaa.ElasticTransformation(alpha=50, sigma=5)  # apply water effect (affects segmaps)
+        ], random_order=True)
+        segmap = SegmentationMapsOnImage(gt, shape=im.shape)
+        im, gt = seq(image=im, segmentation_maps=segmap)
+        gt = gt.arr
+
         # Processing
-        im = cv2.resize(im[selected_frame], (384, 384))
-        im = np.rollaxis(ml.normalize_im(cv2.cvtColor(im, cv2.COLOR_GRAY2RGB)), 2, 0)
+        im = cv2.resize(im, (384, 384))
+        im = np.rollaxis(ml.normalize_im(im), 2, 0)
         gt = gt.astype(np.float32)
         gt = cv2.resize(gt, (384, 384))
         # gt = np.expand_dims(gt, 0)
