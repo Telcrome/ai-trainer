@@ -47,8 +47,6 @@ def random_subject_generator(ds: Dataset, preprocessor: Callable[[Subject], Tupl
     subjects = ds.get_subject_name_list(split=split)
     random.shuffle(subjects)
 
-    # TODO: Allow user to decide if all subjects should be preloaded into memory!
-
     xs, ys = [], []  # Used for storing batches
 
     for s_name in itertools.cycle(subjects):

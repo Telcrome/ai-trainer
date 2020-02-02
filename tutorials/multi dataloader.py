@@ -6,13 +6,15 @@ from typing import Tuple
 from tqdm import tqdm
 import numpy as np
 import cv2
+import torch
 from torch.multiprocessing import Process, Queue, Lock
 
 import trainer.ml as ml
 from trainer.ml.data_loading import random_subject_generator, get_mask_for_frame
 
+device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 
-def producer(queue, lock, ds_path: str):
+def producer(queue, lock, ds_path: str, max_queue_size=100):
     # Synchronize access to the console
     with lock:
         print('Starting producer => {}'.format(os.getpid()))
@@ -42,29 +44,28 @@ def producer(queue, lock, ds_path: str):
         return im, gt_stacked
 
     g = random_subject_generator(ds, preprocess, split='train', batchsize=4)
-
-    # Place our names on the Queue
     for te in g:
         queue.put(te)
+        # while queue.qsize() > max_queue_size:
+        #     time.sleep(1)
 
-    # Synchronize access to the console
     with lock:
         print('Producer {} exiting...'.format(os.getpid()))
 
 
 def consumer(queue, lock):
-    # Synchronize access to the console
     with lock:
         print('Starting consumer => {}'.format(os.getpid()))
 
     lw = ml.LogWriter()
 
     # Train
-    for _ in tqdm(range(10000)):
+    for _ in tqdm(range(1000)):
         # If the queue is empty, queue.get() will block until the queue has data
         x, y = queue.get()
-        lw.save_tensor(x, name='input_tensor')
-        del x
+        cx, cy = x.to(device), y.to(device)
+        del x, y
+        lw.save_tensor(cx, name='input_tensor')
         # Synchronize access to the console
     with lock:
         print(f'{os.getpid()} finished')
@@ -79,9 +80,9 @@ if __name__ == '__main__':
     lock = Lock()
 
     producers = [Process(target=producer, args=(queue, lock, './data/full_ultrasound_seg_0_0_9')) for _ in range(4)]
-    consumers = [
-        Process(target=consumer, args=(queue, lock))
-    ]
+    # consumers = [
+    #
+    # ]
 
     # Create consumer processes
     # for i in range(len(names) * 2):
@@ -97,8 +98,10 @@ if __name__ == '__main__':
     for p in producers:
         p.start()
 
-    for c in consumers:
-        c.start()
+    # for c in consumers:
+    #     c.start()
+    c = Process(target=consumer, args=(queue, lock))
+    c.start()
 
     # Like threading, we have a join() method that synchronizes our program
     for p in producers:
