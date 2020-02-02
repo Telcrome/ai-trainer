@@ -10,10 +10,11 @@ import torch.nn as nn
 from torchvision import models
 from torch.optim import optimizer
 import torch.optim as optim
+import segmentation_models_pytorch as smp
 
 import trainer.ml as ml
 from trainer.ml.data_loading import get_mask_for_frame
-from trainer.ml.torch_utils import TrainerModel, TorchDataset
+from trainer.ml.torch_utils import TrainerModel, TorchDataset, device
 
 
 class SegCrit(nn.Module):
@@ -40,18 +41,32 @@ class SegNetwork(TrainerModel):
                  batch_size=4):
         model = ResNetUNet(n_class=n_classes)
         opti = optim.Adam(model.parameters(), lr=1e-3)
-        crit = SegCrit(1., 2., (0.1, 1.5))
+        crit = SegCrit(1., 2., (0.5, 0.5))
         super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size)
         self.in_channels, self.n_classes = in_channels, n_classes
 
-    def visualize_input_batch(self) -> plt.Figure:
-        x, y = next(self.gen)
+    def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
+        x, y = te
         fig, (ax1, ax2) = plt.subplots(1, 2)
         im_2d = x[0, 0, :, :]
         gt_2d = y[0, 0, :, :]
         sns.heatmap(im_2d, ax=ax1)
         sns.heatmap(gt_2d, ax=ax2)
         return fig
+
+    def visualize_prediction(self, loader):
+        x, y = next(iter(loader))
+        x, y = x.to(device), y.to(device)
+        y_ = torch.sigmoid(self.model(x))
+        figs = []
+        for i in range(y_.shape[0]):
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+            sns.heatmap(x.cpu().numpy()[i, 0, :, :], ax=ax1)
+            sns.heatmap(y.cpu().numpy()[i, 0, :, :], ax=ax2)
+            sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
+            sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
+            figs.append(fig)
+        return figs
 
     @staticmethod
     def preprocess(s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
@@ -104,6 +119,8 @@ class UNet(nn.Module):
         self.dconv_up1 = double_conv(128 + 64, 64)
 
         self.conv_last = nn.Conv2d(64, n_class, 1)
+
+        # self.apply(torch.nn.init.xavier_normal)
 
     def forward(self, x):
         conv1 = self.dconv_down1(x)

@@ -20,7 +20,6 @@ if __name__ == '__main__':
     ds = ml.Dataset.from_disk('./data/full_ultrasound_seg_0_0_9')
 
     structure_name = 'gt'  # The structure that we now train for
-    loss_weights = (0.1, 1.5)
     BATCH_SIZE = 4
     EPOCHS = 60
 
@@ -31,7 +30,12 @@ if __name__ == '__main__':
     seg_network = ml.seg_network.SegNetwork("ResNet_UNet", 3, 2, ds, batch_size=BATCH_SIZE)
     visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
 
-    train_loader = data.DataLoader(seg_network.get_torch_dataset(split='train'), batch_size=BATCH_SIZE, num_workers=4)
+    train_loader = data.DataLoader(
+        seg_network.get_torch_dataset(split='train'),
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=4)
+    test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test'), batch_size=BATCH_SIZE)
     machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine'), batch_size=BATCH_SIZE)
 
     def run_epoch(epoch: int):
@@ -39,16 +43,15 @@ if __name__ == '__main__':
         epoch_loss_sum = 0.
         with torch.no_grad():
             # Visualize model output
-            x, y = next(iter(machine_loader))
-            x, y = x.to(device), y.to(device)
-            y_ = torch.sigmoid(seg_network.model(x))
-            for i in range(y_.shape[0]):
-                fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-                sns.heatmap(x.cpu().numpy()[i, 0, :, :], ax=ax1)
-                sns.heatmap(y.cpu().numpy()[i, 0, :, :], ax=ax2)
-                sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
-                sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
-                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}')
+            for fig in seg_network.visualize_prediction(machine_loader):
+                fig.suptitle("B8 Stuff")
+                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, B8')
+            for fig in seg_network.visualize_prediction(test_loader):
+                fig.suptitle("Test Set")
+                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Test')
+            # for fig in seg_network.visualize_prediction(train_loader):
+            #     fig.suptitle("Train Set")
+            #     visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Train')
 
         for i, (x, y) in tqdm(enumerate(train_loader)):
             # x, y = seg_network.sample_minibatch(split='train')
@@ -59,7 +62,7 @@ if __name__ == '__main__':
             epoch_loss_sum += loss
             epoch_loss = epoch_loss_sum / (i + 1)
             visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
-        print(f"Epoch result: {epoch_loss_sum / N}")
+        print(f"Epoch result: {epoch_loss_sum / (N // BATCH_SIZE)}")
 
 
     for epoch in range(10):

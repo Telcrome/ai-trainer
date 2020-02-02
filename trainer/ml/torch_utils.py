@@ -104,7 +104,7 @@ class TrainerModel(ABC):
         pass
 
     @abstractmethod
-    def visualize_input_batch(self) -> plt.Figure:
+    def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
         """
         Needs to be implemented by the subclass, because different networks.
         :return: A matplotlib.figure
