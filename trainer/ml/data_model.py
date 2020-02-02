@@ -302,13 +302,13 @@ class Dataset(JsonClass):
         if auto_save:
             self.to_disk(self._last_used_parent_dir)
 
-    def get_subject_name_list(self, split=None) -> List[str]:
+    def get_subject_name_list(self, split='') -> List[str]:
         """
         Computes the list of subjects in this dataset.
         :param split: Dataset splits of the subjects
         :return: List of the names of the subjects
         """
-        if split is None:
+        if not split:
             subjects = self.json_model["subjects"]
         else:
             subjects = self.json_model["splits"][split]
@@ -320,36 +320,6 @@ class Dataset(JsonClass):
             self.json_model["splits"][split] = []
 
         self.json_model["splits"][split].append(s.name)
-
-    def append_dataset(self, d_path: str, source_split: str = None, target_split: str = None) -> List:
-        """
-        Appends the structures from d to this dataset.
-        Then copies the subjects.
-        :param d_path: Path of the appended dataset
-        :param source_split: The split in d that the subjects come from.
-        :param target_split: The split that the subjects are appended to.
-        :return: The names of the subjects that are copied from d to self
-        """
-        raise NotImplementedError()  # TODO Update this method
-        # Load the other dataset from disk
-        d = Dataset.from_disk(d_path)
-
-        # Append structure templates
-        self._json_model["structure_templates"].extend(d._json_model["structure_templates"])
-        self._json_model["structure_templates"] = list(set(self._json_model["structure_templates"]))
-
-        # Add the subjects
-        copied = []
-        if source_split is None:
-            for s_name in tqdm(d._json_model["subjects"], desc=f"Adding {d.name}"):
-                copied.append(s_name)
-                self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
-        else:
-            for s_name in tqdm(d._json_model["splits"][source_split], desc=f"Adding {d.name}"):
-                copied.append(s_name)
-                self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
-        self.to_disk(self._last_used_parent_dir)
-        return copied
 
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """
@@ -428,8 +398,8 @@ class Dataset(JsonClass):
         self.filter_subjects(lambda x: te_filterer(x))
         return seg_structs
 
-    def get_subject_count(self, split=None):
-        if split is None:
+    def get_subject_count(self, split=''):
+        if not split:
             return len(self.json_model["subjects"])
         else:
             return len(self.json_model["splits"][split])

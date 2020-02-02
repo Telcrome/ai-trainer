@@ -72,8 +72,9 @@ class TrainerModel(ABC):
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
 
+    @staticmethod
     @abstractmethod
-    def preprocess(self, s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
+    def preprocess(s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
         """
         Provides the preprocessing chain to extract a training example from a subject.
         :param s: One subject

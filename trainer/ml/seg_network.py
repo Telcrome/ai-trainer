@@ -53,7 +53,8 @@ class SegNetwork(TrainerModel):
         sns.heatmap(gt_2d, ax=ax2)
         return fig
 
-    def preprocess(self, s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
+    @staticmethod
+    def preprocess(s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
         is_names = s.get_image_stack_keys()
         is_name = random.choice(is_names)
         available_structures = s.get_structure_list(image_stack_key=is_name)
