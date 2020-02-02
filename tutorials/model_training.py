@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 import torch
+from torch.utils import data
 from tqdm import tqdm
 
 import trainer.lib as lib
 import trainer.ml as ml
-from trainer.ml import normalize_im
+from trainer.ml.torch_utils import device
 from trainer.ml.data_loading import get_mask_for_frame, random_subject_generator
 
 if __name__ == '__main__':
@@ -27,17 +28,20 @@ if __name__ == '__main__':
 
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
-    model = ml.seg_network.SegNetwork("ResNet_UNet", 3, 2, ds, batch_size=BATCH_SIZE)
+    seg_network = ml.seg_network.SegNetwork("ResNet_UNet", 3, 2, ds, batch_size=BATCH_SIZE)
     visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
 
+    train_loader = data.DataLoader(seg_network.get_torch_dataset(split='train'), batch_size=BATCH_SIZE, num_workers=4)
+    machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine'), batch_size=BATCH_SIZE)
 
     def run_epoch(epoch: int):
         print(f'Starting epoch: {epoch} with {N} training examples')
         epoch_loss_sum = 0.
         with torch.no_grad():
             # Visualize model output
-            x, y = model.sample_minibatch(split="machine")
-            y_ = torch.sigmoid(model.model(x))
+            x, y = next(iter(machine_loader))
+            x, y = x.to(device), y.to(device)
+            y_ = torch.sigmoid(seg_network.model(x))
             for i in range(y_.shape[0]):
                 fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
                 sns.heatmap(x.cpu().numpy()[i, 0, :, :], ax=ax1)
@@ -46,9 +50,11 @@ if __name__ == '__main__':
                 sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
                 visboard.add_figure(fig, group_name=f'Before Epoch{epoch}')
 
-        for i in tqdm(range(N // BATCH_SIZE)):
-            x, y = model.sample_minibatch(split='train')
-            loss = model.train_on_minibatch((x, y))
+        for i, (x, y) in tqdm(enumerate(train_loader)):
+            # x, y = seg_network.sample_minibatch(split='train')
+            x, y = x.to(device), y.to(device)
+
+            loss = seg_network.train_on_minibatch((x, y))
 
             epoch_loss_sum += loss
             epoch_loss = epoch_loss_sum / (i + 1)

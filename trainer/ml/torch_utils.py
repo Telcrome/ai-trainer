@@ -15,12 +15,40 @@ from torchvision import datasets, transforms
 
 import trainer.ml as ml
 from trainer.ml.data_loading import random_subject_generator
+from torch.utils import data
 from trainer.lib import create_identifier
 from trainer.ml.visualization import VisBoard
 
 # If GPU is available, use GPU
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 IDENTIFIER = create_identifier()
+
+
+class TorchDataset(data.Dataset):
+
+    def __init__(self,
+                 ds_path: str,
+                 f: Callable[[ml.Subject], Tuple[np.ndarray, np.ndarray]],
+                 split=''):
+        super().__init__()
+        self.ds = ml.Dataset.from_disk(ds_path)
+        self.preprocessor = f
+        self.split = split
+        self.ss = self.ds.get_subject_name_list(split=self.split)
+
+    def __getitem__(self, item):
+        # print(f'item: {item}')
+        s = self.ds.get_subject_by_name(self.ss[item])
+        x, y = self.preprocessor(s)
+        # Cannot transformed to cuda tensors at this point,
+        # because they do not seem to work in shared memory. Return numpy arrays instead.
+        return x, y
+
+    def __len__(self):
+        return self.ds.get_subject_count(split=self.split)
+
+
+ALL_TORCHSET_KEY = '_all_'
 
 
 class TrainerModel(ABC):
@@ -41,23 +69,16 @@ class TrainerModel(ABC):
         self.name = model_name
         self.model, self.optimizer, self.criterion, self.ds, self.batch_size = model, opti, crit, ds, batch_size
         self.model = self.model.to(device)
-        self.gen = {
-            '_all_': random_subject_generator(self.ds, self.preprocess, split='train', batchsize=self.batch_size)
+        self._torch_sets = {
+            ALL_TORCHSET_KEY: TorchDataset(self.ds.get_working_directory(), self.preprocess, split='')
         }
 
-    def sample_minibatch(self, split='') -> Tuple[torch.Tensor, torch.Tensor]:
+    def get_torch_dataset(self, split=''):
         if not split:
-            x, y = next(self.gen['_all_'])
-        else:
-            if split not in self.gen:
-                self.gen[split] = random_subject_generator(
-                    self.ds,
-                    self.preprocess,
-                    split=split,
-                    batchsize=self.batch_size)
-            x, y = next(self.gen[split])
-
-        return x.to(device), y.to(device)
+            split = ALL_TORCHSET_KEY
+        if split not in self._torch_sets:
+            self._torch_sets[split] = TorchDataset(self.ds.get_working_directory(), self.preprocess, split=split)
+        return self._torch_sets[split]
 
     def train_on_minibatch(self, training_example: Tuple[torch.Tensor, torch.Tensor]) -> float:
         x, y = training_example

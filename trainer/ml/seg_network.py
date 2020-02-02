@@ -13,7 +13,7 @@ import torch.optim as optim
 
 import trainer.ml as ml
 from trainer.ml.data_loading import get_mask_for_frame
-from trainer.ml.torch_utils import TrainerModel, device
+from trainer.ml.torch_utils import TrainerModel, TorchDataset
 
 
 class SegCrit(nn.Module):
