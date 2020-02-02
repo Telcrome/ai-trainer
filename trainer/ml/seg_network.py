@@ -39,7 +39,8 @@ class SegNetwork(TrainerModel):
                  n_classes: int,
                  ds: ml.Dataset,
                  batch_size=4):
-        model = ResNetUNet(n_class=n_classes)
+        # model = ResNetUNet(n_class=n_classes)
+        model = smp.PSPNet(in_channels=in_channels, classes=n_classes)
         opti = optim.Adam(model.parameters(), lr=1e-3)
         crit = SegCrit(1., 2., (0.5, 0.5))
         super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size)
