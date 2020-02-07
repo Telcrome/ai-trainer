@@ -7,23 +7,22 @@ Welcome to AI-Trainer's documentation!
 ======================================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
    getting_started
    mission
    next_major_version
-
    cli
+
+   trainer
+
 
 AI-Trainer is a toolbox that defines multiple exciting simplifications to your workflow:
 
-- A dataset format that allows to group several properties (images) for one entity
-- A labelling tool that helps gives us AI-assisted proposals for unlabelled data
+- A dataset format that allows to group several properties (e.g. images) for one entity (e.g. a medical patient)
+- A labelling tool that helps us with AI-assisted proposals for unlabelled data
 - Data generators that actually work without further modification to train your own models!
-
-This page only contain hand-written tutorials and explanations,
-the docstrings are available in the corresponding code.
 
 Indices and tables
 ==================

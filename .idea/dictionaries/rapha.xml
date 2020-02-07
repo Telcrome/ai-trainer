@@ -4,6 +4,7 @@
       <w>annos</w>
       <w>artefact</w>
       <w>autodoc</w>
+      <w>childclass</w>
       <w>conv</w>
       <w>convolutional</w>
       <w>convrelu</w>
@@ -29,7 +30,9 @@
       <w>preprocessing</w>
       <w>pretrain</w>
       <w>pyplot</w>
+      <w>segmap</w>
       <w>segmentations</w>
+      <w>statedict</w>
       <w>tensorboard</w>
       <w>testset</w>
       <w>thresholding</w>

@@ -12,6 +12,7 @@ workspace.xml
 # Project
 envs
 tb
+docs
 
 # PyPi
 dist
