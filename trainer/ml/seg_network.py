@@ -16,11 +16,18 @@ import imgaug.augmenters as iaa
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 import trainer.ml as ml
-from trainer.ml.data_loading import get_mask_for_frame
-from trainer.ml.torch_utils import TrainerModel, TorchDataset, device
 
 
 class SegCrit(nn.Module):
+    """
+    Criterion which is optimized for semantic segmentation tasks.
+
+    Expects targets in the range between 0 and 1 and the logits of the predictions.
+
+    >>> import trainer.ml as ml
+    >>> alpha, beta, loss_weights = 1., 2., (0.5, 0.5)
+    >>> sc = ml.SegCrit(alpha, beta, loss_weights)
+    """
 
     def __init__(self, alpha, beta, loss_weights: Tuple):
         super().__init__()
@@ -34,19 +41,20 @@ class SegCrit(nn.Module):
         return bce * self.loss_weights[0] + dice * self.loss_weights[1]
 
 
-class SegNetwork(TrainerModel):
+class SegNetwork(ml.TrainerModel):
 
     def __init__(self,
                  model_name: str,
                  in_channels: int,
                  n_classes: int,
                  ds: ml.Dataset,
-                 batch_size=4):
+                 batch_size=4,
+                 vis_board=None):
         # model = ResNetUNet(n_class=n_classes)
         model = smp.PAN(in_channels=in_channels, classes=n_classes)
-        opti = optim.Adam(model.parameters(), lr=1e-3)
+        opti = optim.Adam(model.parameters(), lr=5e-3)
         crit = SegCrit(1., 2., (0.5, 0.5))
-        super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size)
+        super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size, vis_board=vis_board)
         self.in_channels, self.n_classes = in_channels, n_classes
 
     def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
@@ -60,62 +68,71 @@ class SegNetwork(TrainerModel):
 
     def visualize_prediction(self, loader):
         x, y = next(iter(loader))
-        x, y = x.to(device), y.to(device)
+        x, y = x.to(ml.torch_device), y.to(ml.torch_device)
         y_ = torch.sigmoid(self.model(x))
         figs = []
         for i in range(y_.shape[0]):
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
             sns.heatmap(x.cpu().numpy()[i, 0, :, :], ax=ax1)
-            sns.heatmap(y.cpu().numpy()[i, 0, :, :], ax=ax2)
+            if y.size(1) > 0:  # np.empty is returned as a type-consistent substitute for None
+                sns.heatmap(y.cpu().numpy()[i, 0, :, :], ax=ax2)
             sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
             sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
             figs.append(fig)
         return figs
 
     @staticmethod
-    def preprocess(s: ml.Subject) -> Tuple[np.ndarray, np.ndarray]:
+    def preprocess(s: ml.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
         is_names = s.get_image_stack_keys()
         is_name = random.choice(is_names)
         available_structures = s.get_structure_list(image_stack_key=is_name)
+        # TODO: Doesnt make sense for multiple structures
         selected_struct = random.choice(list(available_structures.keys()))
-        possible_frames = s.get_masks_of(is_name, frame_numbers=True)
-        selected_frame = random.choice(possible_frames)
-        im = cv2.cvtColor(s.get_binary(is_name)[selected_frame], cv2.COLOR_GRAY2RGB)
-        gt = get_mask_for_frame(s, is_name, selected_struct, selected_frame)
+        im = s.get_binary(is_name)
+        if not mode == ml.ModelMode.Usage:
+            possible_frames = s.get_masks_of(is_name, frame_numbers=True)
+            selected_frame = random.choice(possible_frames)
+        else:
+            selected_frame = random.randint(0, im.shape[0])
+        im = cv2.cvtColor(im[selected_frame], cv2.COLOR_GRAY2RGB)
+        gt = ml.get_mask_for_frame(s, is_name, selected_struct, selected_frame)
 
-        # Augmentation
-        seq = iaa.Sequential([
-            iaa.Dropout([0.01, 0.2]),  # drop 5% or 20% of all pixels
-            iaa.Crop(percent=(0, 0.1)),
-            iaa.Fliplr(0.5),
-            iaa.Sharpen((0.0, 1.0)),  # sharpen the image
-            # iaa.SaltAndPepper(0.1),
-            iaa.WithColorspace(
-                to_colorspace="HSV",
-                from_colorspace="RGB",
-                children=iaa.WithChannels(
-                    0,
-                    iaa.Add((0, 50))
-                )
-            ),
-            iaa.Sometimes(p=0.5, then_list=[iaa.Affine(rotate=(-10, 10))])
-            # iaa.ElasticTransformation(alpha=50, sigma=5)  # apply water effect (affects segmaps)
-        ], random_order=True)
-        segmap = SegmentationMapsOnImage(gt, shape=im.shape)
-        im, gt = seq(image=im, segmentation_maps=segmap)
-        gt = gt.arr
+        if mode == ml.ModelMode.Train:
+            # Augmentation
+            seq = iaa.Sequential([
+                iaa.Dropout([0.01, 0.2]),  # drop 5% or 20% of all pixels
+                iaa.Crop(percent=(0, 0.1)),
+                iaa.Fliplr(0.5),
+                iaa.Sharpen((0.0, 1.0)),  # sharpen the image
+                # iaa.SaltAndPepper(0.1),
+                iaa.WithColorspace(
+                    to_colorspace="HSV",
+                    from_colorspace="RGB",
+                    children=iaa.WithChannels(
+                        0,
+                        iaa.Add((0, 50))
+                    )
+                ),
+                iaa.Sometimes(p=0.5, then_list=[iaa.Affine(rotate=(-10, 10))])
+                # iaa.ElasticTransformation(alpha=50, sigma=5)  # apply water effect (affects segmaps)
+            ], random_order=True)
+            segmap = SegmentationMapsOnImage(gt, shape=im.shape)
+            im, gt = seq(image=im, segmentation_maps=segmap)
+            gt = gt.arr
 
         # Processing
         im = cv2.resize(im, (384, 384))
         im = np.rollaxis(ml.normalize_im(im), 2, 0)
-        gt = gt.astype(np.float32)
-        gt = cv2.resize(gt, (384, 384))
-        # gt = np.expand_dims(gt, 0)
-        gt_stacked = np.zeros((2, gt.shape[0], gt.shape[1]), dtype=np.float32)
-        gt_stacked[0, :, :] = gt.astype(np.float32)
-        gt_stacked[1, :, :] = np.invert(gt.astype(np.bool)).astype(gt_stacked.dtype)
 
-        return im, gt_stacked
+        if not mode == ml.ModelMode.Usage:
+            gt = gt.astype(np.float32)
+            gt = cv2.resize(gt, (384, 384))
+            # gt = np.expand_dims(gt, 0)
+            gt_stacked = np.zeros((2, gt.shape[0], gt.shape[1]), dtype=np.float32)
+            gt_stacked[0, :, :] = gt.astype(np.float32)
+            gt_stacked[1, :, :] = np.invert(gt.astype(np.bool)).astype(gt_stacked.dtype)
+            return im, gt_stacked
+        return im, np.empty(0)
 
 
 def double_conv(in_channels, out_channels):

@@ -5,6 +5,11 @@ import torch
 
 
 class SegmentationMetric:
+    """
+    The class takes two numpy arrays or torch tensors as input and computes various segmentation metrics.
+
+
+    """
 
     def __init__(self, x: Union[np.ndarray, torch.Tensor], y: Union[np.ndarray, torch.Tensor]):
         assert (x.dtype == np.bool and y.dtype == np.bool and len(x.shape) == 2 and len(y.shape) == 2)

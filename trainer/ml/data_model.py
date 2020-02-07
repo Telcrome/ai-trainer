@@ -1,8 +1,12 @@
 """
+Data Model
+----------
+
 The data model aims to simplify machine learning on complex data structures.
-For example classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.
+For example, classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.
 
 A dataset contains
+
 - Subjects (Which are the training examples)
 - Model Weights
 - Config Json files

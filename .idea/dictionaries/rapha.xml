@@ -34,6 +34,8 @@
       <w>segmentations</w>
       <w>statedict</w>
       <w>tensorboard</w>
+      <w>testcode</w>
+      <w>testoutput</w>
       <w>testset</w>
       <w>thresholding</w>
       <w>torchset</w>

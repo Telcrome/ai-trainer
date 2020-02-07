@@ -1,14 +1,17 @@
 import json
 import os
 import shutil
-from typing import Dict, Callable
+from typing import Dict, Callable, Union, Any
+import pickle
 
 import numpy as np
 
-from trainer.lib.enums import BinaryType
+import trainer.lib as lib
 
 BINARIES_DIRNAME = "binaries"
 JSON_MODEL_FILENAME = "json_model.json"
+BINARY_TYPE_KEY = "binary_type"
+PICKLE_EXT = 'pickle'
 
 
 def build_full_filepath(name: str, dir_path: str):
@@ -76,9 +79,14 @@ class JsonClass:
                 res.load_binary(binary_name)
         return res
 
-    def load_binary(self, binary_name):
-        binary_payload = np.load(os.path.join(self.binaries_dir_path, f'{binary_name}.npy'), allow_pickle=True)
-        self._binaries[binary_name] = binary_payload
+    def load_binary(self, binary_id) -> None:
+        path_no_ext = os.path.join(self.binaries_dir_path, binary_id)
+        if self.get_binary_provider(binary_id) == lib.BinarySaveProvider.Pickle:
+            with open(f'{path_no_ext}.{PICKLE_EXT}', 'rb') as f:
+                binary_payload = pickle.load(f)
+        else:
+            binary_payload = np.load(f'{path_no_ext}.npy', allow_pickle=False)
+        self._binaries[binary_id] = binary_payload
 
     def to_disk(self, dir_path: str = "", properly_formatted=True, prompt_user=False) -> None:
         if not dir_path:
@@ -112,12 +120,24 @@ class JsonClass:
         if prompt_user:
             os.startfile(file_name)
 
-    def save_binary(self, binary_key):
+    def get_binary_provider(self, binary_key: str):
+        return lib.BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
+
+    def save_binary(self, binary_key) -> None:
+        """
+        Writes the selected binary on disk.
+        :param binary_key: ID of the binary
+        """
         if self._last_used_parent_dir is None:
-            raise Exception("First save to disk!")
+            raise Exception(f" Before saving {binary_key}, save {self.name} to disk!")
         if self.binaries_dir_path is None:
             self.binaries_dir_path = os.path.join(self._last_used_parent_dir, BINARIES_DIRNAME)
-        np.save(os.path.join(self.binaries_dir_path, binary_key), self._binaries[binary_key])
+        path_no_ext = os.path.join(self.binaries_dir_path, binary_key)
+        if self.get_binary_provider(binary_key) == lib.BinarySaveProvider.Pickle:
+            with open(f'{path_no_ext}.{PICKLE_EXT}', 'wb') as f:
+                pickle.dump(self._binaries[binary_key], f)
+        else:
+            np.save(path_no_ext, self._binaries[binary_key])
 
     def delete_on_disk(self, blocking=True):
         shutil.rmtree(self.get_working_directory(), ignore_errors=True)
@@ -135,32 +155,34 @@ class JsonClass:
         return os.path.join(self.get_working_directory(), JSON_MODEL_FILENAME)
 
     def add_binary(self,
-                   binary_name: str,
-                   binary: np.ndarray,
-                   b_type: str = BinaryType.Unknown.value,
-                   meta_data=None):
+                   binary_id: str,
+                   binary: Union[Any, np.ndarray],
+                   b_type: str = lib.BinaryType.Unknown.value,
+                   meta_data=None,
+                   overwrite=True) -> None:
         """
-        Adds a numpy array.
-        Note that the subject must be saved using ```Subject.to_disk()``` to actually be written to disk.
-        :param binary_name:
-        :param binary:
+        Adds a numpy array or a pickled object.
+
+        Note that the childclass must be saved using ```childclass.to_disk()``` to actually be written to disk.
+        :param binary_id: Unique id of this binary
+        :param binary: The binary content. Numpy Arrays and pickle-compatible objects are accepted.
         :param b_type:
         :param meta_data:
+        :param overwrite: Overwrites existing binaries with the same id if true
         :return:
         """
-        # if binary_name in self._binaries:
-        #     raise Exception("This binary already exists")
-        self._binaries[binary_name] = binary
+        if not overwrite and binary_id in self._binaries:
+            raise Exception("This binary already exists")
+        self._binaries[binary_id] = binary
 
-        self._binaries_model[binary_name] = {
-            "numpy_type": str(binary.dtype),
-            "binary_type": b_type
+        self._binaries_model[binary_id] = {
+            BINARY_TYPE_KEY: b_type
         }
         if meta_data is None:
-            self._binaries_model[binary_name]["meta_data"] = {}
+            self._binaries_model[binary_id]["meta_data"] = {}
         else:
-            self._binaries_model[binary_name]["meta_data"] = meta_data
-        self.save_binary(binary_name)
+            self._binaries_model[binary_id]["meta_data"] = meta_data
+        self.save_binary(binary_id)
 
     def remove_binary(self, binary_name):
         # Remove the numpy array from class and disk
@@ -184,7 +206,7 @@ class JsonClass:
         return [i for i in self._binaries_model if key_filterer(self._binaries_model[i])]
 
     def get_image_stack_keys(self):
-        return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
+        return self.get_binary_list_filtered(lambda x: x["binary_type"] == lib.BinaryType.ImageStack.value)
 
     def count_binaries_memory(self):
         return sum([self._binaries[k].nbytes for k in self._binaries.keys()])
@@ -195,7 +217,7 @@ class JsonClass:
         for binary in self._binaries_model:
             b = self._binaries[binary]
             btype = self._binaries_model[binary]["binary_type"]
-            if btype == BinaryType.ImageStack.value:
+            if btype == lib.BinaryType.ImageStack.value:
                 # This is an image or a video
                 b = b[0, :, :, :]
                 if b.dtype == np.bool:

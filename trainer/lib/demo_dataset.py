@@ -23,6 +23,24 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 
+def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
+    """
+    Returns a demo array for testing functionality with logits.
+
+    >>> import trainer.lib as lib
+    >>> import numpy as np
+    >>> np.random.seed(0)
+    >>> lib.get_test_logits(shape=(2,))
+    array([-5.28481063, -2.39723662])
+
+    :param shape: Shape of the test data. For one-dimensional data use (w, ).
+    :param bounds: Optional to specify the ceiling and floor of the output using a 2-Tuple (floor, ceiling)
+    :return: Demo logits
+    """
+    low, high = bounds
+    return np.random.randint(low=low, high=high, size=shape) + np.random.rand(*shape)
+
+
 class SourceData:
 
     def __init__(self, storage_path: str):
@@ -115,4 +133,3 @@ if __name__ == '__main__':
     # Enter your path for storing the standard machine learning datasets:
     data_folder = 'D:/'
     print(f"Downloading source data into {data_folder}")
-
