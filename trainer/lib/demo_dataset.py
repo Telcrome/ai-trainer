@@ -16,7 +16,6 @@ import PySimpleGUI as sg
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import tensorflow as tf
 from torchvision import datasets
 
 import trainer.lib as lib
