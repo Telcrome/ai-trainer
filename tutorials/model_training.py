@@ -12,7 +12,6 @@ from torch.utils import data
 import trainer.lib as lib
 import trainer.ml as ml
 from trainer.ml.torch_utils import device, ModelMode
-from trainer.ml.data_loading import get_mask_for_frame, random_subject_generator
 
 
 def train_model():
@@ -63,37 +62,6 @@ def save_predictions(dir_path: str, split='machine'):
                 imageio.imwrite(os.path.join(p_dir_path, f'{is_name}_{frame_i}_pred.png'), pred)
 
 
-def g_from_struct_generator(g):
-    g_extracted = g_convert(g)
-    g_resized = resize(g_extracted, (384, 384))
-    g = ml.channels_last_to_first(batcherize(g_resized, batchsize=BATCH_SIZE))
-    return g
-
-
-def vis(g: Iterable):
-    im, gt = next(g)
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    im_2d = im[0, :, :, 0]
-    gt_2d = gt[0, :, :, 0]
-    sns.heatmap(im_2d, ax=ax1)
-    sns.heatmap(gt_2d, ax=ax2)
-    fig.show()
-
-
-def calc_loss(pred, target, metrics, bce_weight=0.5):
-    bce = F.binary_cross_entropy_with_logits(pred, target)
-
-    pred = F.sigmoid(pred)
-    dice = ml.dice_loss(pred, target)
-
-    loss = bce * bce_weight + dice * (1 - bce_weight)
-
-    metrics['bce'] += bce.data.cpu().numpy() * target.size(0)
-    metrics['dice'] += dice.data.cpu().numpy() * target.size(0)
-    metrics['loss'] += loss.data.cpu().numpy() * target.size(0)
-
-    return loss
-
 if __name__ == '__main__':
     # ds = ml.Dataset.download(url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
     #                          local_path='./data',  # Your local data folder
@@ -114,6 +82,7 @@ if __name__ == '__main__':
     seg_network = ml.seg_network.SegNetwork("SegNetwork", 3, 2, ds, batch_size=BATCH_SIZE, vis_board=visboard)
     # seg_network.model.load_state_dict(torch.load(f'./model_weights/epoch{28}.pt'))
     from trainer.ml.torch_utils import get_capacity
+
     print(f"Capacity of the network: {get_capacity(seg_network.model)}")
 
     train_loader = data.DataLoader(
