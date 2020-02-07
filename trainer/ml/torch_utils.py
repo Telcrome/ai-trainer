@@ -23,6 +23,8 @@ import trainer.lib as lib
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 IDENTIFIER = lib.create_identifier()
 
+    def train_from_subject(self):
+        pass
 
 class ModelMode(Enum):
     """
