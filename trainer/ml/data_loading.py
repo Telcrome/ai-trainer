@@ -5,7 +5,10 @@ because there are so many different, complex things to be done which would bloat
 
 import itertools
 import random
-from typing import Dict, Callable
+import torch
+from typing import Dict, Callable, Tuple
+
+import numpy as np
 
 import trainer.lib
 from trainer.ml.data_model import Dataset, Subject
@@ -29,15 +32,34 @@ def get_subject_gen(ds: Dataset, split: str = None):
     Iterates once through the dataset. Intended for custom exporting, not machine learning.
     """
     for s_name in ds.get_subject_name_list(split=split):
-        yield ds.get_subject_by_name(s_name)
+        s = ds.get_subject_by_name(s_name)
+        yield s
 
 
-def random_subject_generator(ds: Dataset, split=None):
+def random_subject_generator(ds: Dataset, preprocessor: Callable[[Subject], Tuple], split=None, batchsize=-1):
+    """
+    Intended for usage in machine learning scenarios. Therefore provides batches of samples.
+    :param ds:
+    :param preprocessor:
+    :param split:
+    :return:
+    """
     subjects = ds.get_subject_name_list(split=split)
     random.shuffle(subjects)
+
+    xs, ys = [], []  # Used for storing batches
+
     for s_name in itertools.cycle(subjects):
-        te = ds.get_subject_by_name(s_name)
-        yield te
+        s = ds.get_subject_by_name(s_name)
+        x, y = preprocessor(s)
+        if batchsize == -1:
+            yield torch.from_numpy(x), torch.from_numpy(y)
+        else:
+            if len(xs) == batchsize:
+                yield torch.from_numpy(np.array(xs)), torch.from_numpy(np.array(ys))
+                xs, ys = [], []
+            xs.append(x)
+            ys.append(y)
 
 
 def get_mask_for_frame(s: Subject, binary_name: str, struct_name: str, frame_number=-1):

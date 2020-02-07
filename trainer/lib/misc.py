@@ -138,9 +138,10 @@ def slugify(value):
 
 def load_b8(file_path: str) -> np.ndarray:
     """
+    Loads b8 file used by some ultrasound machines.
 
-    :param file_path: The direct path to the b8 file
-    :return Numpy array with the image data
+    :param: file_path: The direct path to the b8 file
+    :return: Numpy array with the image data
     """
     with open(file_path, 'r') as f:
         data = np.fromfile(f, dtype=np.uint8)

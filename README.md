@@ -1,4 +1,4 @@
-[Documentation](https://telcrome.github.io/ai-trainer/)
+[Documentation](https://ai-trainer.readthedocs.io/en/latest/)
 
 # Installation for User
 
@@ -79,7 +79,7 @@ pip install -e .
 
 ```shell script
 python setup.py sdist bdist_wheel
-twine upload dist/*
+twine upload dist/* # The asterisk is important
 ```
 
 # Using Docker
@@ -91,7 +91,7 @@ When the transition to a web GUI is completed docker will be supported again.
 
 ### Docs
 
-Currently [Read the Docs](https://readthedocs.org/) is used
+Currently, [Read the Docs](https://readthedocs.org/) is used
 for CI of the docs.
 Before submitting changes, test the make command in the environment:
 ```shell script
@@ -104,4 +104,4 @@ If this throws warnings or errors, `Read the Docs` won`t publish them.
 ### Tutorials inside the repo
 
 - Do not use jupyter notebooks
-- Should be testable
+- Should be testable without preparing data by hand where possible.

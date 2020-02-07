@@ -2,10 +2,13 @@
   <dictionary name="rapha">
     <words>
       <w>annos</w>
+      <w>artefact</w>
       <w>autodoc</w>
+      <w>childclass</w>
       <w>conv</w>
       <w>convolutional</w>
       <w>convrelu</w>
+      <w>crit</w>
       <w>cuda</w>
       <w>datasets</w>
       <w>dicom</w>
@@ -19,14 +22,23 @@
       <w>logits</w>
       <w>matplot</w>
       <w>matplotlib</w>
+      <w>minibatch</w>
       <w>mnist</w>
       <w>oneshot</w>
+      <w>opti</w>
+      <w>optim</w>
       <w>preprocessing</w>
       <w>pretrain</w>
       <w>pyplot</w>
+      <w>segmap</w>
       <w>segmentations</w>
+      <w>statedict</w>
       <w>tensorboard</w>
+      <w>testcode</w>
+      <w>testoutput</w>
       <w>testset</w>
+      <w>thresholding</w>
+      <w>torchset</w>
       <w>visboard</w>
     </words>
   </dictionary>

@@ -1,8 +1,12 @@
 """
+Data Model
+----------
+
 The data model aims to simplify machine learning on complex data structures.
-For example classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.
+For example, classifying a subject (medical patient) by both its gender and between 1 and 4 ultrasound videos.
 
 A dataset contains
+
 - Subjects (Which are the training examples)
 - Model Weights
 - Config Json files
@@ -177,6 +181,16 @@ class Subject(JsonClass):
         else:
             raise NotImplementedError()
 
+    def get_masks_of(self, b_name: str, frame_numbers=False):
+        res = []
+        for m_name in self.get_binary_list_filtered(
+                lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
+            if frame_numbers:
+                res.append(self.get_binary_model(m_name)['meta_data']['frame_number'])
+            else:
+                res.append(m_name)
+        return res
+
     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
         res, n = {}, 0
 
@@ -188,12 +202,9 @@ class Subject(JsonClass):
         # Iterate over image stacks that contain the structure
         for b_name in self.get_binary_list_filtered(filter_imgstack_structs):
             # Find the masks of this binary and list them
-            bs = []
-            for m_name in self.get_binary_list_filtered(
-                    lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
-                bs.append(m_name)
-                n += 1
 
+            bs = self.get_masks_of(b_name)
+            n += len(bs)
             if bs:
                 res[b_name] = bs
 
@@ -295,13 +306,13 @@ class Dataset(JsonClass):
         if auto_save:
             self.to_disk(self._last_used_parent_dir)
 
-    def get_subject_name_list(self, split=None) -> List[str]:
+    def get_subject_name_list(self, split='') -> List[str]:
         """
         Computes the list of subjects in this dataset.
         :param split: Dataset splits of the subjects
         :return: List of the names of the subjects
         """
-        if split is None:
+        if not split:
             subjects = self.json_model["subjects"]
         else:
             subjects = self.json_model["splits"][split]
@@ -313,36 +324,6 @@ class Dataset(JsonClass):
             self.json_model["splits"][split] = []
 
         self.json_model["splits"][split].append(s.name)
-
-    def append_dataset(self, d_path: str, source_split: str = None, target_split: str = None) -> List:
-        """
-        Appends the structures from d to this dataset.
-        Then copies the subjects.
-        :param d_path: Path of the appended dataset
-        :param source_split: The split in d that the subjects come from.
-        :param target_split: The split that the subjects are appended to.
-        :return: The names of the subjects that are copied from d to self
-        """
-        raise NotImplementedError()  # TODO Update this method
-        # Load the other dataset from disk
-        d = Dataset.from_disk(d_path)
-
-        # Append structure templates
-        self._json_model["structure_templates"].extend(d._json_model["structure_templates"])
-        self._json_model["structure_templates"] = list(set(self._json_model["structure_templates"]))
-
-        # Add the subjects
-        copied = []
-        if source_split is None:
-            for s_name in tqdm(d._json_model["subjects"], desc=f"Adding {d.name}"):
-                copied.append(s_name)
-                self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
-        else:
-            for s_name in tqdm(d._json_model["splits"][source_split], desc=f"Adding {d.name}"):
-                copied.append(s_name)
-                self.save_subject(d.get_subject_by_name(s_name), split=target_split, auto_save=False)
-        self.to_disk(self._last_used_parent_dir)
-        return copied
 
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """
@@ -421,8 +402,8 @@ class Dataset(JsonClass):
         self.filter_subjects(lambda x: te_filterer(x))
         return seg_structs
 
-    def get_subject_count(self, split=None):
-        if split is None:
+    def get_subject_count(self, split=''):
+        if not split:
             return len(self.json_model["subjects"])
         else:
             return len(self.json_model["splits"][split])
@@ -436,12 +417,3 @@ class Dataset(JsonClass):
     def __iter__(self):
         from trainer.ml.data_loading import get_subject_gen
         return get_subject_gen(self)
-
-
-if __name__ == '__main__':
-    ds_path = download_and_extract(
-        online_url='https://rwth-aachen.sciebo.de/s/1qO95mdEjhoUBMf/download',
-        parent_dir='./data',  # Your local data folder
-        dir_name='crucial_ligament_diagnosis'  # Name of the dataset
-    )
-    ds = Dataset.from_disk(ds_path)

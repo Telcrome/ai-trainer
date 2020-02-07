@@ -1,7 +1,138 @@
+import random
+from typing import Tuple, Union, Any, Callable
+
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torchvision import models
+from torch.optim import optimizer
+import torch.optim as optim
+import segmentation_models_pytorch as smp
+import imgaug as ia
+import imgaug.augmenters as iaa
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+
+import trainer.ml as ml
+
+
+class SegCrit(nn.Module):
+    """
+    Criterion which is optimized for semantic segmentation tasks.
+
+    Expects targets in the range between 0 and 1 and the logits of the predictions.
+
+    >>> import trainer.ml as ml
+    >>> alpha, beta, loss_weights = 1., 2., (0.5, 0.5)
+    >>> sc = ml.SegCrit(alpha, beta, loss_weights)
+    """
+
+    def __init__(self, alpha, beta, loss_weights: Tuple):
+        super().__init__()
+        self.loss_weights = loss_weights
+        self.focal_loss = ml.FocalLoss(alpha=alpha, gamma=beta, logits=False)
+
+    def forward(self, logits, target):
+        outputs = torch.sigmoid(logits)
+        bce = self.focal_loss(outputs, target)
+        dice = ml.dice_loss(outputs, target)
+        return bce * self.loss_weights[0] + dice * self.loss_weights[1]
+
+
+class SegNetwork(ml.TrainerModel):
+
+    def __init__(self,
+                 model_name: str,
+                 in_channels: int,
+                 n_classes: int,
+                 ds: ml.Dataset,
+                 batch_size=4,
+                 vis_board=None):
+        # model = ResNetUNet(n_class=n_classes)
+        model = smp.PAN(in_channels=in_channels, classes=n_classes)
+        opti = optim.Adam(model.parameters(), lr=5e-3)
+        crit = SegCrit(1., 2., (0.5, 0.5))
+        super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size, vis_board=vis_board)
+        self.in_channels, self.n_classes = in_channels, n_classes
+
+    def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
+        x, y = te
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        im_2d = x[0, 0, :, :]
+        gt_2d = y[0, 0, :, :]
+        sns.heatmap(im_2d, ax=ax1)
+        sns.heatmap(gt_2d, ax=ax2)
+        return fig
+
+    def visualize_prediction(self, loader):
+        x, y = next(iter(loader))
+        x, y = x.to(ml.torch_device), y.to(ml.torch_device)
+        y_ = torch.sigmoid(self.model(x))
+        figs = []
+        for i in range(y_.shape[0]):
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+            sns.heatmap(x.cpu().numpy()[i, 0, :, :], ax=ax1)
+            if y.size(1) > 0:  # np.empty is returned as a type-consistent substitute for None
+                sns.heatmap(y.cpu().numpy()[i, 0, :, :], ax=ax2)
+            sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
+            sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
+            figs.append(fig)
+        return figs
+
+    @staticmethod
+    def preprocess(s: ml.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+        is_names = s.get_image_stack_keys()
+        is_name = random.choice(is_names)
+        available_structures = s.get_structure_list(image_stack_key=is_name)
+        # TODO: Doesnt make sense for multiple structures
+        selected_struct = random.choice(list(available_structures.keys()))
+        im = s.get_binary(is_name)
+        if not mode == ml.ModelMode.Usage:
+            possible_frames = s.get_masks_of(is_name, frame_numbers=True)
+            selected_frame = random.choice(possible_frames)
+        else:
+            selected_frame = random.randint(0, im.shape[0])
+        im = cv2.cvtColor(im[selected_frame], cv2.COLOR_GRAY2RGB)
+        gt = ml.get_mask_for_frame(s, is_name, selected_struct, selected_frame)
+
+        if mode == ml.ModelMode.Train:
+            # Augmentation
+            seq = iaa.Sequential([
+                iaa.Dropout([0.01, 0.2]),  # drop 5% or 20% of all pixels
+                iaa.Crop(percent=(0, 0.1)),
+                iaa.Fliplr(0.5),
+                iaa.Sharpen((0.0, 1.0)),  # sharpen the image
+                # iaa.SaltAndPepper(0.1),
+                iaa.WithColorspace(
+                    to_colorspace="HSV",
+                    from_colorspace="RGB",
+                    children=iaa.WithChannels(
+                        0,
+                        iaa.Add((0, 50))
+                    )
+                ),
+                iaa.Sometimes(p=0.5, then_list=[iaa.Affine(rotate=(-10, 10))])
+                # iaa.ElasticTransformation(alpha=50, sigma=5)  # apply water effect (affects segmaps)
+            ], random_order=True)
+            segmap = SegmentationMapsOnImage(gt, shape=im.shape)
+            im, gt = seq(image=im, segmentation_maps=segmap)
+            gt = gt.arr
+
+        # Processing
+        im = cv2.resize(im, (384, 384))
+        im = np.rollaxis(ml.normalize_im(im), 2, 0)
+
+        if not mode == ml.ModelMode.Usage:
+            gt = gt.astype(np.float32)
+            gt = cv2.resize(gt, (384, 384))
+            # gt = np.expand_dims(gt, 0)
+            gt_stacked = np.zeros((2, gt.shape[0], gt.shape[1]), dtype=np.float32)
+            gt_stacked[0, :, :] = gt.astype(np.float32)
+            gt_stacked[1, :, :] = np.invert(gt.astype(np.bool)).astype(gt_stacked.dtype)
+            return im, gt_stacked
+        return im, np.empty(0)
 
 
 def double_conv(in_channels, out_channels):
@@ -31,6 +162,8 @@ class UNet(nn.Module):
         self.dconv_up1 = double_conv(128 + 64, 64)
 
         self.conv_last = nn.Conv2d(64, n_class, 1)
+
+        # self.apply(torch.nn.init.xavier_normal)
 
     def forward(self, x):
         conv1 = self.dconv_down1(x)
@@ -70,7 +203,7 @@ def convrelu(in_channels, out_channels, kernel, padding):
 
 
 class ResNetUNet(nn.Module):
-    def __init__(self, n_class):
+    def __init__(self, n_class=2):
         super().__init__()
 
         self.base_model = models.resnet18(pretrained=True)
@@ -101,11 +234,11 @@ class ResNetUNet(nn.Module):
         self.conv_last = nn.Conv2d(64, n_class, 1)
         self.activation_layer = nn.Softmax2d()
 
-    def forward(self, input):
-        x_original = self.conv_original_size0(input)
+    def forward(self, x: torch.Tensor):
+        x_original = self.conv_original_size0(x)
         x_original = self.conv_original_size1(x_original)
 
-        layer0 = self.layer0(input)
+        layer0 = self.layer0(x)
         layer1 = self.layer1(layer0)
         layer2 = self.layer2(layer1)
         layer3 = self.layer3(layer2)
@@ -137,5 +270,4 @@ class ResNetUNet(nn.Module):
         x = self.conv_original_size2(x)
 
         out = self.conv_last(x)
-        res = self.activation_layer(out)
-        return res
+        return out

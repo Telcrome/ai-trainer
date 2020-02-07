@@ -1,222 +1,205 @@
 import os
 from enum import Enum
-from typing import Tuple, List
+from typing import Tuple, List, Union, Callable
+from abc import ABC, abstractmethod
+from functools import partial
 
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 import numpy as np
 import seaborn as sns
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
+from torch.optim import optimizer
+from torch.utils import data
 import torchvision
 from torchvision import datasets, transforms
 
-from trainer.lib import create_identifier
-from trainer.ml.visualization import VisBoard
+import trainer.ml as ml
+import trainer.lib as lib
 
 # If GPU is available, use GPU
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
-IDENTIFIER = create_identifier()
-
-
-class TorchModel(nn.Module):
-    """
-    TorchModel is a subclass of nn.Module with added functionality:
-    - Name
-    - Process chain: Subject -> Augmented subject -> Input layer
-    """
-
-    def __init__(self, model_name: str):
-        super(TorchModel, self).__init__()
-        self.name = model_name
+IDENTIFIER = lib.create_identifier()
 
     def train_from_subject(self):
         pass
 
+class ModelMode(Enum):
+    """
+    Used to differentiate what the model is currently doing.
 
-def instantiate_model(model_definition: TorchModel, weights_path='', data_loader=None) -> Tuple[TorchModel, VisBoard]:
-    model = model_definition().to(device)
-    visboard = VisBoard(run_name=f'{model.name}_{IDENTIFIER}')
-    if data_loader is not None:
-        test_input = iter(data_loader).__next__()[0].to(device)
-        visboard.writer.add_graph(model, test_input)
+    The following guidelines apply for the semantics of this enum:
 
-    if weights_path and os.path.exists(weights_path):
-        model.load_state_dict(torch.load(weights_path))
-
-    return model, visboard
-
-
-def visualize_input_batch(data_loader, visboard: VisBoard, name="Input Example"):
-    dataiter = iter(data_loader)
-    images, labels = dataiter.next()
-    img_grid = torchvision.utils.make_grid(images)
-    visboard.writer.add_image(name, img_grid)
-    for batch_id in range(images.shape[0]):
-        fig, ax1 = plt.subplots()
-
-        ax1.set_title(f"Input Example for {labels[batch_id]}")
-        sns.heatmap(images[batch_id, 0, :, :])
-        visboard.add_figure(fig, group_name=name)
+    TODO: Explain the enum values.
+    """
+    Train = 0
+    Eval = 1  # Evaluation does not require augmentation
+    Usage = 2  # Usage does not require ground truths
 
 
-def train_model(train_loader, model: TorchModel, visboard: VisBoard, verbose=True, test_loader=None,
-                EPOCHS=20):
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.005, momentum=0.9)
-    N = len(train_loader)
+class TorchDataset(data.Dataset):
 
-    last_epoch_loss, running_loss = -1, 0.  # Used for early stopping
+    def __init__(self,
+                 ds_path: str,
+                 f: Union[Callable[[ml.Subject], Tuple[np.ndarray, np.ndarray]], partial],
+                 split=''):
+        super().__init__()
+        self.ds = ml.Dataset.from_disk(ds_path)
+        self.preprocessor = f
+        self.split = split
+        self.ss = self.ds.get_subject_name_list(split=self.split)
 
-    for epoch in range(EPOCHS):
+    def __getitem__(self, item):
+        # print(f'item: {item}')
+        s = self.ds.get_subject_by_name(self.ss[item])
+        x, y = self.preprocessor(s)
+        # Cannot transformed to cuda tensors at this point,
+        # because they do not seem to work in shared memory. Return numpy arrays instead.
+        return x, y
 
-        if 0. <= last_epoch_loss < running_loss:
-            break
-
-        running_loss, print_loss = 0.0, "-1."
-
-        for batch_id, data in enumerate(train_loader, 0):
-
-            inputs, labels = data
-            inputs, labels = inputs.to(device), labels.to(device)
-            optimizer.zero_grad()
-
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-
-            optimizer.step()
-
-            running_loss += loss.item()
-
-            if batch_id > 0:
-                print_loss = running_loss / batch_id
-                visboard.writer.add_scalar(f'Loss/training epoch {epoch + 1}', print_loss, batch_id)
-        if verbose:
-            print(f"Epoch: {epoch + 1}; Loss: {print_loss}")
-            last_epoch_loss = running_loss
-            if test_loader is not None:
-                test_acc = measure_classification_accuracy(model, test_loader)
-                print(f"Accuracy: {test_acc}")
-                visboard.writer.add_scalar(f'Accuracy/test', test_acc, epoch + 1)
-    return model.state_dict()
+    def __len__(self):
+        return self.ds.get_subject_count(split=self.split)
 
 
-def measure_classification_accuracy(net: nn.Module, data_loader: torch.utils.data.DataLoader):
-    with torch.no_grad():
-        all, correct = 0, 0
-        for data, target in data_loader:
-            data, target = data.to(device), target.to(device)
-            output = net(data)
-            pred = output.max(1, keepdim=True)[1].squeeze()
-            correct_tmp = (target == pred).sum()
-            correct += int(correct_tmp.cpu().numpy())
-            all += pred.shape[0]
-        acc = correct / all
-    return acc
+ALL_TORCHSET_KEY = '_all_'
 
 
-def visualize_model_weights(model: TorchModel, visboard: VisBoard):
-    for i, layer in enumerate(model.children()):
-        if isinstance(layer, nn.Linear):
-            # Visualize a fully connected layer
-            pass
-        elif isinstance(layer, nn.Conv2d):
-            # Visualize a convolutional layer
-            W = layer.weight
-            b = layer.bias
-            for d in range(W.shape[0]):
-                image_list = np.array([W[d, c, :, :].detach().cpu().numpy() for c in range(W.shape[1])])
-                placeholder_arr = torch.from_numpy(np.expand_dims(image_list, 1))
-                img_grid = torchvision.utils.make_grid(placeholder_arr, pad_value=1)
-                visboard.writer.add_image(f"{model.name}_layer_{i}", img_grid)
+class TrainerModel(ABC):
+    """
+    TorchModel is a subclass of nn.Module with added functionality:
+
+    - Name
+    - Processing chain: Subject -> Augmented subject -> Input layer
+    """
+
+    def __init__(self,
+                 model_name: str,
+                 model: nn.Module,
+                 opti: optimizer.Optimizer,
+                 crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module],
+                 ds: ml.Dataset,
+                 batch_size=4,
+                 vis_board=None):
+        super().__init__()
+        self.name = model_name
+        self.model, self.optimizer, self.criterion, self.ds, self.batch_size = model, opti, crit, ds, batch_size
+        self.model = self.model.to(device)
+        self._torch_sets = {
+            ALL_TORCHSET_KEY: TorchDataset(self.ds.get_working_directory(), self.preprocess, split='')
+        }
+        self.vis_board = vis_board
+
+    def get_torch_dataset(self, split='', mode=ModelMode.Train):
+        if not split:
+            split = ALL_TORCHSET_KEY
+        if split not in self._torch_sets:
+            self._torch_sets[split] = TorchDataset(self.ds.get_working_directory(),
+                                                   partial(self.preprocess, mode=mode),  # Python cant pickle lambda
+                                                   split=split)
+        return self._torch_sets[split]
+
+    def train_on_minibatch(self, training_example: Tuple[torch.Tensor, torch.Tensor]) -> float:
+        x, y = training_example
+
+        self.optimizer.zero_grad()
+        y_ = self.model(x)
+
+        loss = self.criterion(y_, y)
+        loss.backward()
+        self.optimizer.step()
+
+        batch_loss = loss.item()  # Loss, in the end, should be a single number
+        return batch_loss
+
+    def run_epoch(self, torch_loader: data.DataLoader, epoch: int, n: int, batch_size: int):
+        print(f'Starting epoch: {epoch} with {n} training examples')
+        epoch_loss_sum = 0.
+
+        data_iter = iter(torch_loader)
+        for i in tqdm(range(n // batch_size)):
+            x, y = data_iter.__next__()
+            # x, y = seg_network.sample_minibatch(split='train')
+            x, y = x.to(device), y.to(device)
+
+            loss = self.train_on_minibatch((x, y))
+
+            epoch_loss_sum += (loss / batch_size)
+            epoch_loss = epoch_loss_sum / (i + 1)
+            self.vis_board.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
+        print(f"Epoch result: {epoch_loss_sum / n}")
+
+    def save_to_dataset(self, structure_template: str, epoch: int):
+        self.ds.add_binary(
+            f'model_{self.name}_{structure_template}_{epoch}',
+            self.model.state_dict(),
+            lib.BinaryType.TorchStateDict.value,
+        )
+        # TODO: Save metrics using binary meta info
+
+    def load_from_dataset(self):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def preprocess(s: ml.Subject, mode: ModelMode = ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Provides the preprocessing chain to extract a training example from a subject.
+
+        :param s: One subject
+        :param mode: ModelMode for the preprocessor. Train is used for training, eval is used for testing, Usage for use
+        :return: The training example (x, y), of type torch.Tensor
+        """
+        pass
+
+    @abstractmethod
+    def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
+        """
+        Needs to be implemented by the subclass, because different networks.
+
+        :return: A matplotlib.figure
+        """
+        pass
 
 
-def perform_adversarial_testing(model: TorchModel, test_loader: torch.utils.data.DataLoader, epsilon: float,
-                                visboard: VisBoard, test_number=100):
-    wrong, correct, adv_success = 0, 0, 0
-    adv_examples = []
-
-    for data, target in test_loader:
-        if wrong + correct > test_number:
-            break
-        data, target = data.to(device), target.to(device)
-
-        data.requires_grad = True  # This enables a gradient based attack such as fgsm
-
-        # Forward pass the data through the model
-        output = model(data)
-        init_pred = output.max(1, keepdim=True)[1]
-
-        if init_pred.item() != target.item():
-            wrong += 1
-        else:
-            # Prediction was correct, try to fool the network
-            correct += 1
-
-            loss = F.nll_loss(output, target)
-
-            model.zero_grad()
-
-            loss.backward()
-
-            data_grad = data.grad.data
-
-            perturbed_data = fgsm_attack(data, epsilon, data_grad)
-
-            output = model(perturbed_data)
-
-            adversarial_pred = output.max(1, keepdim=True)[1]  # max returns a tuple (values, indices)
-            if wrong + correct == test_number:  # wrong + correct % 10 == 0:
-                original_arr = data.detach().cpu().numpy()
-                perturbed_arr = perturbed_data.detach().cpu().numpy()
-
-                fig, (ax1, ax2) = plt.subplots(1, 2)
-
-                fig.suptitle(f'Tested: {correct + wrong}; Adversarial successes: {adv_success}', fontsize=16)
-
-                ax1.set_title(f"Original: {target.item()}, Pred: {init_pred.item()}")
-                sns.heatmap(original_arr[0].squeeze(), ax=ax1)
-
-                ax2.set_title(f"Epsilon: {epsilon}, True Target: {target.item()}, Pred: {adversarial_pred.item()}")
-                sns.heatmap(perturbed_arr[0].squeeze(), ax=ax2)
-
-                visboard.add_figure(fig, group_name=f"Adversarial Example, Epsilon={epsilon}")
-
-                adv_examples.append((target.item(), adversarial_pred.item(), perturbed_arr))
-
-            if adversarial_pred.item() != target.item():
-                adv_success += 1
-
-    print(f'Correct: {correct}; Wrong: {wrong}')
-    print(f'Adversarial Successes: {adv_success}')
-    acc = correct / (wrong + correct)
-    return acc, adv_examples
+# def instantiate_model(model_definition: TorchModel, weights_path='', data_loader=None) -> Tuple[TorchModel, VisBoard]:
+#     model = model_definition().to(device)
+#     visboard = VisBoard(run_name=f'{model.name}_{IDENTIFIER}')
+#     if data_loader is not None:
+#         test_input = iter(data_loader).__next__()[0].to(device)
+#         visboard.writer.add_graph(model, test_input)
+#
+#     if weights_path and os.path.exists(weights_path):
+#         model.load_state_dict(torch.load(weights_path))
+#
+#     return model, visboard
 
 
-def compare_architectures(models: List[nn.Module], writer: VisBoard) -> List[int]:
+# def visualize_model_weights(model: TorchModel, visboard: VisBoard):
+#     for i, layer in enumerate(model.children()):
+#         if isinstance(layer, nn.Linear):
+#             # Visualize a fully connected layer
+#             pass
+#         elif isinstance(layer, nn.Conv2d):
+#             # Visualize a convolutional layer
+#             W = layer.weight
+#             b = layer.bias
+#             for d in range(W.shape[0]):
+#                 image_list = np.array([W[d, c, :, :].detach().cpu().numpy() for c in range(W.shape[1])])
+#                 placeholder_arr = torch.from_numpy(np.expand_dims(image_list, 1))
+#                 img_grid = torchvision.utils.make_grid(placeholder_arr, pad_value=1)
+#                 visboard.writer.add_image(f"{model.name}_layer_{i}", img_grid)
+#
+#
+def get_capacity(model: nn.Module) -> int:
+    """
+    Computes the number of parameters of a network.
+    """
     import inspect
 
     # Instantiate, because model.parameters does not work on the class definition
-    instantiated_list = []
-    for model in models:
-        if inspect.isclass(model):
-            instantiated_list.append(model())
-        else:
-            instantiated_list.append(model)
-    models = instantiated_list
+    if inspect.isclass(model):
+        model = model()
 
-    params = [sum([p.numel() for p in model.parameters()]) for model in models]
-
-    fig, ax1 = plt.subplots()
-
-    ax1.set_title(f"Number of Parameters")
-    sns.barplot(x=[m.name for m in models], y=params, ax=ax1)
-
-    writer.add_figure(fig, group_name='Parameter Number')
-    return params
-
-
-if __name__ == '__main__':
-    ds = load_torch_dataset(TorchDataset.MNIST)
+    return sum([p.numel() for p in model.parameters()])

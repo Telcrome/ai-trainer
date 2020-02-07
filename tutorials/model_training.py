@@ -1,61 +1,67 @@
-# %%
-
-from typing import Iterable
+import os
+from typing import Iterable, Tuple
 
 import matplotlib.pyplot as plt
-import seaborn as sns
+import cv2
+import imageio
 import numpy as np
+import seaborn as sns
 import torch
-import torch.nn.functional as F
-import torch.optim as optim
-from tqdm import tqdm
+from torch.utils import data
 
-import trainer.ml as ml
 import trainer.lib as lib
-from trainer.ml.data_loading import get_subject_gen, random_struct_generator, get_img_mask_pair
-from trainer.ml import batcherize, resize, normalize_im
+import trainer.ml as ml
+from trainer.ml.torch_utils import device, ModelMode
+from trainer.ml.data_loading import get_mask_for_frame, random_subject_generator
 
 
-def g_convert(g: Iterable):
-    for vid, gt, f in g:
-        res = np.zeros((vid.shape[1], vid.shape[2], 3))
-        if f >= 2:
-            # Discard most of the video, deeplab can handle only 3 frames
-            res[:, :, 0] = vid[f - 2, :, :, 0]
-            res[:, :, 1] = vid[f - 1, :, :, 0]
-            res[:, :, 2] = vid[f, :, :, 0]
-        else:
-            res[:, :, 0] = vid[f, :, :, 0]
-            res[:, :, 1] = vid[f, :, :, 0]
-            res[:, :, 2] = vid[f, :, :, 0]
-        gt_stacked = np.zeros((gt.shape[0], gt.shape[1], 2), dtype=np.float32)
-        gt_stacked[:, :, 0] = gt.astype(np.float32)
-        gt_stacked[:, :, 1] = np.invert(gt).astype(gt_stacked.dtype)
-        yield normalize_im(res).astype(np.float32), gt_stacked
-        
-def vis(g: Iterable):
-    im, gt = next(g)
-    fig, (ax1, ax2) = plt.subplots(1, 2)
-    im_2d = im[0, :, :, 0]
-    gt_2d = gt[0, :, :, 0]
-    sns.heatmap(im_2d, ax=ax1)
-    sns.heatmap(gt_2d, ax=ax2)
-    fig.show()
+def train_model():
+    for epoch in range(50):
+        with torch.no_grad():
+            # Visualize model output
+            for fig in seg_network.visualize_prediction(machine_loader):
+                fig.suptitle("B8 Stuff")
+                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, B8')
+            for fig in seg_network.visualize_prediction(test_loader):
+                fig.suptitle("Test Set")
+                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Test')
+            # for fig in seg_network.visualize_prediction(train_loader):
+            #     fig.suptitle("Train Set")
+            #     visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Train')
+        seg_network.run_epoch(train_loader, epoch, N, batch_size=BATCH_SIZE)
+
+        # Save model weights
+        torch.save(seg_network.model.state_dict(), f'./model_weights/epoch{epoch}.pt')
 
 
-def calc_loss(pred, target, metrics, bce_weight=0.5):
-    bce = F.binary_cross_entropy_with_logits(pred, target)
+def save_predictions(dir_path: str, split='machine'):
+    p_dir_path = os.path.join(dir_path, split)
+    if not os.path.exists(p_dir_path):
+        os.mkdir(p_dir_path)
+    seg_network.model.eval()
+    ss = ds.get_subject_name_list(split=split)
+    for s_name in ss:
+        s = ds.get_subject_by_name(s_name)
+        is_names = s.get_image_stack_keys()
+        print(is_names)
+        for is_name in is_names:
+            im = s.get_binary(is_name)
+            print(f'Exporting {is_name}')
+            for frame_i in range(im.shape[0]):
+                frame = im[frame_i, :, :, 0]
+                imsize = frame.shape[1], frame.shape[0]
+                imageio.imwrite(os.path.join(p_dir_path, f'{is_name}_{frame_i}_im.png'), frame)
+                frame_prep = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                frame_prep = cv2.resize(frame_prep, (384, 384))
+                frame_prep = np.rollaxis(ml.normalize_im(frame_prep), 2, 0)
+                frame_batch = np.array([frame_prep] * BATCH_SIZE)
+                frame_batch = torch.from_numpy(frame_batch)
+                pred_batch = torch.sigmoid(seg_network.model(frame_batch.to(device)))
+                pred = pred_batch.detach().cpu().numpy()[0, 0]
+                pred = (pred * 255.).astype(np.uint8)
+                pred = cv2.resize(pred, imsize)
+                imageio.imwrite(os.path.join(p_dir_path, f'{is_name}_{frame_i}_pred.png'), pred)
 
-    pred = F.sigmoid(pred)
-    dice = ml.dice_loss(pred, target)
-
-    loss = bce * bce_weight + dice * (1 - bce_weight)
-
-    metrics['bce'] += bce.data.cpu().numpy() * target.size(0)
-    metrics['dice'] += dice.data.cpu().numpy() * target.size(0)
-    metrics['loss'] += loss.data.cpu().numpy() * target.size(0)
-
-    return loss
 
 def g_from_struct_generator(g):
     g_extracted = g_convert(g)
@@ -93,77 +99,38 @@ if __name__ == '__main__':
     #                          local_path='./data',  # Your local data folder
     #                          dataset_name='crucial_ligament_diagnosis'  # Name of the dataset
     #                          )
-    ds = ml.Dataset.from_disk('./data/b8_old_ultrasound_segmentation')
+    ds = ml.Dataset.from_disk(r'C:\Users\rapha\Desktop\data\old_b8')
 
     structure_name = 'gt'  # The structure that we now train for
-    loss_weights = (0.5, 0.5)
+
     BATCH_SIZE = 4
-    criterion = ml.FocalLoss(alpha=0.5, gamma=2., logits=False)
     EPOCHS = 60
 
-    # Simple generator preprocessing chain
-    g_train = g_from_struct_generator(random_struct_generator(ds, structure_name, split='train'))
-    g_test = g_from_struct_generator(random_struct_generator(ds, structure_name, split='test'))
-    g_b8 = g_from_struct_generator(random_struct_generator(ds, structure_name, split='machine'))
-    vis(g_train)
-
-    device = torch.device('cuda')
-    model = ml.seg_network.ResNetUNet(n_class=2)
-    model = model.to(device)
-    model.train()
     N = ds.get_subject_count(split='train')
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
     # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
+    seg_network = ml.seg_network.SegNetwork("SegNetwork", 3, 2, ds, batch_size=BATCH_SIZE, vis_board=visboard)
+    # seg_network.model.load_state_dict(torch.load(f'./model_weights/epoch{28}.pt'))
+    from trainer.ml.torch_utils import get_capacity
+    print(f"Capacity of the network: {get_capacity(seg_network.model)}")
 
-    def run_epoch(epoch: int):
-        print(f'Starting epoch: {epoch} with {N} training examples')
-        epoch_loss_sum = 0.
-        with torch.no_grad():
-            # Visualize model output
-            x, y = next(g_train)
-            y_ = model(torch.from_numpy(x).to(device))
-            for i in range(y_.shape[0]):
-                fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-                sns.heatmap(x[i, 0, :, :], ax=ax1)
-                sns.heatmap(y[i, 0, :, :], ax=ax2)
-                sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
-                sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
-                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}')
-
-        for i in tqdm(range(N // BATCH_SIZE)):
-            x, y = next(g_train)
-            x, y = torch.from_numpy(x).to(device), torch.from_numpy(y).to(device)
-
-            optimizer.zero_grad()
-
-            outputs = model(x)
-            bce = criterion(outputs, y)
-
-            # outputs = torch.tanh(outputs)
-            dice = ml.dice_loss(outputs, y)
-
-            # bce_weight = bce_weight - 1. / EPOCHS
-            loss = bce * loss_weights[0] + dice * loss_weights[1]
-
-            loss.backward()
-            optimizer.step()
-            # scheduler.step()
-            # metrics['bce'] += bce.data.cpu().numpy() * target.size(0)
-            # metrics['dice'] += dice.data.cpu().numpy() * target.size(0)
-            # metrics['loss'] += loss.data.cpu().numpy() * target.size(0)
-            epoch_loss_sum += loss.data.cpu().numpy() * y.size(0)
-            epoch_loss = epoch_loss_sum / (i + 1)
-            visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
-        print(f"Epoch result: {epoch_loss_sum / N}")
-
-
-    for epoch in range(10):
-        run_epoch(epoch)
-
+    train_loader = data.DataLoader(
+        seg_network.get_torch_dataset(split='train', mode=ModelMode.Train),
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=4)
+    test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test', mode=ModelMode.Eval),
+                                  batch_size=BATCH_SIZE, shuffle=True)
+    machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine', mode=ModelMode.Usage),
+                                     batch_size=BATCH_SIZE,
+                                     shuffle=True)
     # for x, y in g_train:
     #     print(x.shape)
     #     print(y.shape)
     #     break
+    train_model()
+    # save_predictions('./out2/', split='train')
+    # save_predictions('./out2/', split='test')
+    # save_predictions('./out2/', split='machine')

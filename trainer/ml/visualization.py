@@ -1,9 +1,31 @@
+import os
+
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from trainer.lib import get_img_from_fig, create_identifier
 import trainer.ml as ml
+import trainer.lib as lib
+
+
+class LogWriter:
+
+    def __init__(self, log_dir: str = './logs', id_hint='log'):
+        self.log_dir = log_dir
+        self.log_id = lib.create_identifier(hint=id_hint)
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
+        os.mkdir(self.get_run_path())
+
+    def get_run_path(self) -> str:
+        return os.path.join(self.log_dir, self.log_id)
+
+    def save_tensor(self, arr: torch.Tensor, name="tensor"):
+        tensor_dir = os.path.join(self.get_run_path(), name)
+        if not os.path.exists(tensor_dir):
+            os.mkdir(tensor_dir)
+        torch.save(arr, os.path.join(tensor_dir, f'{len(os.listdir(tensor_dir))}.pt'))
 
 
 class VisBoard:

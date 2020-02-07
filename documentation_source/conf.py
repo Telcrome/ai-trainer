@@ -12,6 +12,9 @@
 #
 import os
 import sys
+
+from trainer import VERSION as TRAINER_VERSION
+
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -23,9 +26,7 @@ copyright = '2020, Raphael Schaefer'
 author = 'Raphael Schaefer'
 
 # The full version, including alpha/beta/rc tags
-from trainer import VERSION
-
-release = VERSION
+release = TRAINER_VERSION
 
 # -- General configuration ---------------------------------------------------
 
@@ -33,7 +34,8 @@ release = VERSION
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinx.ext.doctest'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
