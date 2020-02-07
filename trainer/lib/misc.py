@@ -31,7 +31,8 @@ def create_identifier(hint: str = '') -> str:
     """
     Can be used to create unique names for files.
     Follows the form YYYY_MM_DD__hh_mm_ss
-    :return:
+
+    :return: YYYY_MM_DD__hh_mm_ss_{hint}
     """
     now = datetime.now()
     dt_string = now.strftime("%Y_%m_%d__%H_%M_%S")

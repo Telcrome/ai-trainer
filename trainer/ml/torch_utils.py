@@ -1,23 +1,18 @@
-import os
-from enum import Enum
-from typing import Tuple, List, Union, Callable
 from abc import ABC, abstractmethod
+from enum import Enum
 from functools import partial
+from typing import Tuple, Union, Callable
 
 import matplotlib.pyplot as plt
-from tqdm import tqdm
 import numpy as np
-import seaborn as sns
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from torch.optim import optimizer
 from torch.utils import data
-import torchvision
-from torchvision import datasets, transforms
+from tqdm import tqdm
 
-import trainer.ml as ml
 import trainer.lib as lib
+import trainer.ml as ml
 
 # If GPU is available, use GPU
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
