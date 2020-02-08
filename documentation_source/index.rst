@@ -15,7 +15,7 @@ Welcome to AI-Trainer's documentation!
    next_major_version
    cli
 
-   trainer
+   code/modules
 
 
 AI-Trainer is a toolbox that defines multiple exciting simplifications to your workflow:
