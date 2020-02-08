@@ -631,6 +631,7 @@ class Dataset(JsonClass):
         """
         Returns a list with the names of subjects of interest.
         :param filterer: If the filterer returns true, the subject is added to the list
+        :param viz: Whether or not a progress meter should be displayed
         :return: The list of subjects of interest
         """
         res: List[str] = []

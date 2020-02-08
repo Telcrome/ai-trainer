@@ -35,6 +35,10 @@ class ModelMode(Enum):
 
 
 class TorchDataset(data.Dataset):
+    """
+    Wrapper around one dataset split to work with the torch.utils.data.Dataloader.
+    This dataloader can be used to perform augmentations on multiple processes on the CPU and train on the GPU.
+    """
 
     def __init__(self,
                  ds_path: str,
