@@ -210,6 +210,15 @@ class JsonClass:
             os.startfile(file_name)
 
     def get_binary_provider(self, binary_key: str):
+        """
+        Returns the provider for the respective binary.
+        The provider is the software that is used for saving.
+
+        >>> import trainer.lib as lib
+        >>> jc = lib.get_dummy_jsonclass()
+        >>> jc.get_binary_provider('b1')
+        <BinarySaveProvider.Numpy: 1>
+        """
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
 
     def save_binary(self, binary_key) -> None:
