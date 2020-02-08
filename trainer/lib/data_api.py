@@ -710,17 +710,3 @@ class Dataset(JsonClass):
     def __iter__(self):
         from trainer.ml.data_loading import get_subject_gen
         return get_subject_gen(self)
-
-
-if __name__ == '__main__':
-    parent_folder = 'C:\\Users\\rapha\\Desktop'
-    read = False
-    if read:
-        example_class = JsonClass.from_disk(os.path.join(parent_folder, "jsonclass_example"))
-    else:
-        example_class = JsonClass("jsonclass_example", {})
-        example_class.json_model["test_number"] = 4
-        example_class.json_model["test_list"] = [1, 2, 3]
-        example_class.json_model["test_dict"] = {"1": "3", "4": "8"}
-        example_class.add_binary("test_image", np.ones((100, 100)))
-        example_class.to_disk(parent_folder, prompt_user=True)
