@@ -18,9 +18,9 @@ import imageio
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 
+import trainer.lib as lib
 from trainer.lib import standalone_foldergrab
 from trainer.lib.tgui import TClassSelector, TWindow, run_window, Brushes, SegToolController
-from trainer.ml import Subject, Dataset
 
 
 def binary_filter(x, for_name, frame_number):
@@ -66,8 +66,8 @@ class AnnotationGui(TWindow):
 
     def __init__(self, te_path: str, d_path: str = ""):
         if d_path:
-            self.d = Dataset.from_disk(d_path)
-        self.current_subject: Subject = None
+            self.d = lib.Dataset.from_disk(d_path)
+        self.current_subject: lib.Subject = None
         self.seg_structs: List = None
         self.frame_number, self.brush, self._struct_index = 0, Brushes.Standard, -1
         self.img_data, self.mask_data, self.mask_name, self._made_changes = None, None, '', False
@@ -163,7 +163,7 @@ class AnnotationGui(TWindow):
         self.lst_gt_binaries.currentItemChanged.connect(self.lst_gt_binaries_changed)
         self.content_grid.add_tool(self.lst_gt_binaries)
 
-        self.set_current_subject(Subject.from_disk(te_path))
+        self.set_current_subject(lib.Subject.from_disk(te_path))
 
         self.console.push_to_ipython({'gui': self, 'dataset': self.d})
 
@@ -189,7 +189,7 @@ class AnnotationGui(TWindow):
         self.save_to_disk()
 
         next_subject_name = random.choice(self.d.get_subject_name_list())
-        self.set_current_subject(Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
+        self.set_current_subject(lib.Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
         print("Selecting next subject")
 
     def pick_next_subject(self):
@@ -214,7 +214,8 @@ class AnnotationGui(TWindow):
 
         if event == "open_subject" and values['ls_s']:
             next_subject_name = values['ls_s'][0]
-            self.set_current_subject(Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
+            self.set_current_subject(
+                lib.Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
             print(f"Selecting next subject: {next_subject_name}")
 
     def save_to_disk(self):
@@ -259,7 +260,7 @@ class AnnotationGui(TWindow):
                                         seg_structs=seg_structs)
                 print(ks['binary_name'])
                 print(dicom_path)
-                self.set_current_subject(Subject.from_disk(self.current_subject.get_working_directory()))
+                self.set_current_subject(lib.Subject.from_disk(self.current_subject.get_working_directory()))
 
     def inspect_on_disk(self, open_file=False):
         if open_file:
@@ -280,7 +281,7 @@ class AnnotationGui(TWindow):
                                   for_name=self._selected_source_binary,
                                   frame_number=self.frame_number)
 
-    def set_current_subject(self, s: Subject):
+    def set_current_subject(self, s: lib.Subject):
         self.current_subject = s
         self.frame_number = 0
         self.mask_data = None

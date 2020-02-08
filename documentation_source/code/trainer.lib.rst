@@ -11,26 +11,18 @@ Subpackages
 Submodules
 ----------
 
-trainer.lib.JsonClass module
+trainer.lib.data\_api module
 ----------------------------
 
-.. automodule:: trainer.lib.JsonClass
+.. automodule:: trainer.lib.data_api
    :members:
    :undoc-members:
    :show-inheritance:
 
-trainer.lib.demo\_dataset module
---------------------------------
+trainer.lib.demo\_data module
+-----------------------------
 
-.. automodule:: trainer.lib.demo_dataset
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-trainer.lib.enums module
-------------------------
-
-.. automodule:: trainer.lib.enums
+.. automodule:: trainer.lib.demo_data
    :members:
    :undoc-members:
    :show-inheritance:

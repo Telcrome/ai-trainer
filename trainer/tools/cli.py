@@ -10,9 +10,6 @@ import click
 from tqdm import tqdm
 
 import trainer.lib as lib
-import trainer.ml as ml
-from trainer.lib import standalone_foldergrab
-from trainer.lib.JsonClass import dir_is_json_class
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
 
 
@@ -50,7 +47,7 @@ def dataset_init(parent_path, name):
     #     if os.path.isdir(p):
     #         click.echo(f"Dirname: {os.path.basename(p)}")
     if click.confirm(f"The dataset {name} will be created in {parent_path}"):
-        d = ml.Dataset.build_new(name, parent_path)
+        d = lib.Dataset.build_new(name, parent_path)
         d.to_disk(parent_path)
     click.echo(f"For working with the dataset {name}, please switch into the directory")
 
@@ -72,7 +69,7 @@ def dataset_annotate(dataset_path: str, subject_name: str):
     """
     if not subject_name:
         # Subject name needs to be picked
-        d = ml.Dataset.from_disk(dataset_path)
+        d = lib.Dataset.from_disk(dataset_path)
         subject_name = d.get_subject_name_list()[0]  # Just pick the first subject
     run_window(AnnotationGui, os.path.join(dataset_path, subject_name), dataset_path)
 
@@ -98,7 +95,7 @@ def dataset_train(dataset_path: str):
             3.1 -> trains them for one epoch
             3.2 -> saves the weights and metadata into the dataset.
     """
-    if not dir_is_json_class(dataset_path):
+    if not lib.dir_is_json_class(dataset_path):
         raise Exception("The given directory is not a valid Dataset")
     raise NotImplementedError()
     # d = ml.Dataset.from_disk(dataset_path)
@@ -123,9 +120,9 @@ def dataset_visualize(dataset_path: str, subject_name: str):
 @click.option('--folder-path', '-ip', default='')
 @click.option('--structure-tpl', '-st', default='')
 def dataset_add_image_folder(dataset_path: str, folder_path: str, structure_tpl: str):
-    d = ml.Dataset.from_disk(dataset_path)
+    d = lib.Dataset.from_disk(dataset_path)
     if not folder_path:
-        folder_path, inputs_dict = standalone_foldergrab(
+        folder_path, inputs_dict = lib.standalone_foldergrab(
             folder_not_file=True,
             title='Pick Image folder',
             optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]
@@ -166,9 +163,9 @@ def dataset_add_ml_folder(dataset_path: str, folder_path: str, structure_tpl: st
     The name of the source image and its corresponding ground truths must be identical.
     The structure template must exist beforehand and must contain the knowledge about the given supervised data.
     """
-    d = ml.Dataset.from_disk(dataset_path)
+    d = lib.Dataset.from_disk(dataset_path)
     if not folder_path:
-        folder_path, inputs_dict = standalone_foldergrab(
+        folder_path, inputs_dict = lib.standalone_foldergrab(
             folder_not_file=True,
             title='Pick Image folder',
             optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]

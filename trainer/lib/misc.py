@@ -92,6 +92,38 @@ def load_grayscale_from_disk(path: str) -> np.ndarray:
     return im
 
 
+def slugify(value):
+    """
+    Normalizes string, converts to lowercase, removes non-alpha characters,
+    and converts spaces to hyphens.
+    """
+    return re.sub(r'[\\/*?:"<>|]', "", value)
+
+
+def load_b8(file_path: str) -> np.ndarray:
+    """
+    Loads b8 file used by some ultrasound machines.
+
+    :param: file_path: The direct path to the b8 file
+    :return: Numpy array with the image data
+    """
+    with open(file_path, 'r') as f:
+        data = np.fromfile(f, dtype=np.uint8)
+
+    last_header_byte = 4 * 19
+    raw_header, im = data[:last_header_byte], data[last_header_byte:]
+
+    header = raw_header.view(dtype=np.int32)
+    d, w, h = header[1], header[2], header[3]
+
+    res = np.rot90(im.reshape((d, w, h)), k=3, axes=(1, 2))
+
+    # Add an empty channel axis to match the imagestack array format
+    res = np.expand_dims(res, axis=3)
+
+    return res
+
+
 def download_and_extract(online_url: str, parent_dir='./', dir_name: str = None) -> str:
     """
     Can be used to download and extract a .zip dataset file hosted online.
@@ -126,36 +158,4 @@ def download_and_extract(online_url: str, parent_dir='./', dir_name: str = None)
     res = os.path.join(parent_dir, str(Path(first_filename).parent))
     if dir_name is not None and dir_name not in res:
         raise Exception(f"The provided directory name {dir_name} did not match the actual directory name {res}")
-    return res
-
-
-def slugify(value):
-    """
-    Normalizes string, converts to lowercase, removes non-alpha characters,
-    and converts spaces to hyphens.
-    """
-    return re.sub(r'[\\/*?:"<>|]', "", value)
-
-
-def load_b8(file_path: str) -> np.ndarray:
-    """
-    Loads b8 file used by some ultrasound machines.
-
-    :param: file_path: The direct path to the b8 file
-    :return: Numpy array with the image data
-    """
-    with open(file_path, 'r') as f:
-        data = np.fromfile(f, dtype=np.uint8)
-
-    last_header_byte = 4 * 19
-    raw_header, im = data[:last_header_byte], data[last_header_byte:]
-
-    header = raw_header.view(dtype=np.int32)
-    d, w, h = header[1], header[2], header[3]
-
-    res = np.rot90(im.reshape((d, w, h)), k=3, axes=(1, 2))
-
-    # Add an empty channel axis to match the imagestack array format
-    res = np.expand_dims(res, axis=3)
-
     return res

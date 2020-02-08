@@ -5,11 +5,10 @@ to the convenient trainer dataset-format.
 import os
 from typing import Dict, List, Tuple
 
-import numpy as np
 import PySimpleGUI as sg
 import imageio
+import numpy as np
 
-import trainer.ml as ml
 import trainer.lib as lib
 
 ALLOWED_TYPES = [
@@ -24,7 +23,7 @@ def append_dicom_to_subject(s_path: str,
                             dicom_path: str,
                             binary_name: str = '',
                             seg_structs: Dict[str, str] = None,
-                            auto_save=True) -> ml.Subject:
+                            auto_save=True) -> lib.Subject:
     """
 
     :param s_path: directory path to the subject
@@ -34,7 +33,7 @@ def append_dicom_to_subject(s_path: str,
     :param auto_save: The new state of the subject is automatically saved to disk
     :return: The subject containing the new data
     """
-    s = ml.Subject.from_disk(s_path)
+    s = lib.Subject.from_disk(s_path)
 
     if not binary_name:
         binary_name = lib.create_identifier(hint='DICOM')
@@ -50,7 +49,7 @@ def append_dicom_to_subject(s_path: str,
     return s
 
 
-def add_imagestack(s: ml.Subject, file_path: str, binary_id='', structures: Dict[str, str] = None) -> None:
+def add_imagestack(s: lib.Subject, file_path: str, binary_id='', structures: Dict[str, str] = None) -> None:
     """
     Takes an image path and tries to deduce the type of image from the path ending.
     No path ending is assumed to be a DICOM file (not a DICOM folder)
@@ -115,7 +114,7 @@ def import_dicom(dicom_path: str):
     return img_data, meta
 
 
-def add_image_folder(ds: ml.Dataset, parent_folder: str, structures: Dict[str, str], split=None, progress=True):
+def add_image_folder(ds: lib.Dataset, parent_folder: str, structures: Dict[str, str], split=None, progress=True):
     """
     Iterates through a folder.
 
@@ -149,7 +148,7 @@ def add_image_folder(ds: ml.Dataset, parent_folder: str, structures: Dict[str, s
         if os.path.isdir(os.path.join(parent_folder, file_name)):
             # Create the new subject
             s_name = os.path.splitext(file_name)[0]
-            s = ml.Subject.build_empty(s_name)
+            s = lib.Subject.build_empty(s_name)
             ds.save_subject(s, split=split, auto_save=False)
             dir_children = os.listdir(os.path.join(parent_folder, file_name))
 
@@ -171,10 +170,10 @@ def add_image_folder(ds: ml.Dataset, parent_folder: str, structures: Dict[str, s
                 p_id_clean = slugify(p_id)
                 if p_id_clean in ds.get_subject_name_list():
                     print("load patient")
-                    s = ml.Subject.from_disk(os.path.join(ds.get_working_directory(), p_id_clean))
+                    s = lib.Subject.from_disk(os.path.join(ds.get_working_directory(), p_id_clean))
                 else:
                     print("Create new patient")
-                    s = ml.Subject.build_empty(p_id_clean)
+                    s = lib.Subject.build_empty(p_id_clean)
                 ds.save_subject(s, split=split, auto_save=False)
                 s.add_source_image_by_arr(img_data,
                                           lib.create_identifier(hint='DICOM'),
@@ -184,7 +183,7 @@ def add_image_folder(ds: ml.Dataset, parent_folder: str, structures: Dict[str, s
             else:  # Everything else is assumed to be a traditional image file
                 # Create the new subject
                 s_name = os.path.splitext(file_name)[0]
-                s = ml.Subject.build_empty(s_name)
+                s = lib.Subject.build_empty(s_name)
 
                 ds.save_subject(s, split=split, auto_save=False)
                 add_imagestack(
@@ -198,7 +197,7 @@ def add_image_folder(ds: ml.Dataset, parent_folder: str, structures: Dict[str, s
     ds.to_disk()
 
 
-def append_subject(ds: ml.Dataset,
+def append_subject(ds: lib.Dataset,
                    im_path: Tuple[str, str],
                    gt_paths: List[Tuple[str, str]],
                    seg_structs: Dict[str, str],
@@ -217,7 +216,7 @@ def append_subject(ds: ml.Dataset,
     """
     im_path, im_file = im_path
     im_name, im_ext = os.path.splitext(im_file)
-    s = ml.Subject.build_empty(name=im_name)
+    s = lib.Subject.build_empty(name=im_name)
     ds.save_subject(s, split=split, auto_save=False)
 
     add_imagestack(s, im_path, binary_id=im_name, structures=seg_structs)

@@ -11,12 +11,30 @@ and the following structures:
 """
 import os
 import random
+import tempfile
 
 import numpy as np
 from torchvision import datasets
 
 import trainer.lib as lib
-import trainer.ml as ml
+
+
+def get_test_jsonclass(jc_name="Test Json Class"):
+    """
+
+    >>> import trainer.lib as lib
+    >>> jc = lib.get_test_jsonclass()
+    >>> jc.name
+    'Test Json Class'
+
+    :param jc_name:
+    :return:
+    """
+    dir_path = tempfile.gettempdir()
+
+    res = lib.JsonClass(jc_name, {})
+    res.to_disk(dir_path)
+    return res
 
 
 def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
@@ -55,11 +73,11 @@ class SourceData:
         return self.mnist.__getitem__(index)
 
 
-def build_random_subject(d: ml.Dataset, src_manager: SourceData, max_digit_ims=5) -> ml.Subject:
+def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=5) -> lib.Subject:
     """
     Samples a random subject.
     """
-    s = ml.Subject.build_empty(lib.create_identifier())
+    s = lib.Subject.build_empty(lib.create_identifier())
 
     digit_class = random.randint(0, 9)
 
@@ -80,10 +98,11 @@ def create_dataset(dir_path: str, ds_name: str = 'demo', n_subjects=10):
     Mimics the demonstration dataset. See module docstring for details.=
     """
     src_data = SourceData(dir_path)
-    d = ml.Dataset.build_new(ds_name, dir_path)
+    d = lib.Dataset.build_new(ds_name, dir_path)
 
     for _ in range(n_subjects):
         s = build_random_subject(d, src_manager=src_data)
+        d.save_subject(s)
 
     return d
     # fashion_mnist = tf.keras.datasets.fashion_mnist

@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from trainer.lib import get_img_from_fig, create_identifier
-import trainer.ml as ml
 import trainer.lib as lib
+from trainer.lib import get_img_from_fig, create_identifier
 
 
 class LogWriter:
@@ -62,5 +61,6 @@ class VisBoard:
         if close_figure:
             plt.close(fig)
 
-    def visualize_subject(self, s: ml.Subject):
+    def visualize_subject(self, s: lib.Subject):
         fig, ax = plt.subplots()
+        raise NotImplementedError()

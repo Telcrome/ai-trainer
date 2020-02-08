@@ -3,8 +3,7 @@ from typing import Callable
 import PySimpleGUI as sg
 from PyQt5 import QtWidgets, QtCore
 
-from trainer.lib import ClassSelectionLevel
-from trainer.ml import Dataset, Subject
+import trainer.lib as lib
 
 
 class TClassBox(QtWidgets.QWidget):
@@ -32,7 +31,7 @@ class TClassBox(QtWidgets.QWidget):
     def selection_changed(self, text):
         self.f_changed(self.class_name, text)
 
-    def update_values(self, s: Subject, for_binary=""):
+    def update_values(self, s: lib.Subject, for_binary=""):
         index = self.selector.findText(s.get_class_value(self.class_name, for_binary=for_binary),
                                        QtCore.Qt.MatchFixedString)
         if index >= 0:
@@ -49,12 +48,12 @@ class TClassSelector(QtWidgets.QWidget):
         self.layout = QtWidgets.QVBoxLayout()
         self.class_boxes = []
         self.subject, self.binary_name, self.frame_number = None, '', -1
-        self.selection_level = ClassSelectionLevel.SubjectLevel
+        self.selection_level = lib.ClassSelectionLevel.SubjectLevel
 
         self.label = QtWidgets.QLabel("No Selected Subject")
 
         self.level_selector = QtWidgets.QComboBox()
-        self.level_selector.addItems([selection_level.value for selection_level in ClassSelectionLevel])
+        self.level_selector.addItems([selection_level.value for selection_level in lib.ClassSelectionLevel])
         self.level_selector.activated[str].connect(self.selection_level_changed)
 
         self.layout.addWidget(self.label)
@@ -62,36 +61,36 @@ class TClassSelector(QtWidgets.QWidget):
         self.setLayout(self.layout)
 
     def selection_level_changed(self, text):
-        next_selection_level = ClassSelectionLevel.SubjectLevel
-        for selection_level in ClassSelectionLevel:
+        next_selection_level = lib.ClassSelectionLevel.SubjectLevel
+        for selection_level in lib.ClassSelectionLevel:
             if text == selection_level.value:
                 next_selection_level = selection_level
 
-        if next_selection_level == ClassSelectionLevel.SubjectLevel:
+        if next_selection_level == lib.ClassSelectionLevel.SubjectLevel:
             pass
-        elif next_selection_level == ClassSelectionLevel.BinaryLevel:
+        elif next_selection_level == lib.ClassSelectionLevel.BinaryLevel:
             pass
-        elif next_selection_level == ClassSelectionLevel.FrameLevel:
+        elif next_selection_level == lib.ClassSelectionLevel.FrameLevel:
             sg.popup("Frame level class selection not supported yet, go back and hope for the best")
 
         self.selection_level = next_selection_level
         self.update_label()
 
-    def configure_selection(self, d: Dataset):
+    def configure_selection(self, d: lib.Dataset):
         class_names = d.get_class_names()
 
         def change_handler(class_name: str, class_value: str):
             print(class_name)
             print(class_value)
             if class_value == '--Removed--':
-                if self.selection_level == ClassSelectionLevel.BinaryLevel:
+                if self.selection_level == lib.ClassSelectionLevel.BinaryLevel:
                     self.subject.remove_class(class_name, for_binary=self.binary_name)
-                elif self.selection_level == ClassSelectionLevel.SubjectLevel:
+                elif self.selection_level == lib.ClassSelectionLevel.SubjectLevel:
                     self.subject.remove_class(class_name)
             else:
-                if self.selection_level == ClassSelectionLevel.BinaryLevel:
+                if self.selection_level == lib.ClassSelectionLevel.BinaryLevel:
                     self.subject.set_class(class_name, class_value, for_dataset=d, for_binary=self.binary_name)
-                elif self.selection_level == ClassSelectionLevel.SubjectLevel:
+                elif self.selection_level == lib.ClassSelectionLevel.SubjectLevel:
                     self.subject.set_class(class_name, class_value, for_dataset=d)
 
         for class_name in class_names:
@@ -100,32 +99,32 @@ class TClassSelector(QtWidgets.QWidget):
             self.class_boxes.append(class_box)
             self.layout.addWidget(class_box)
 
-    def set_subject(self, subject: Subject):
+    def set_subject(self, subject: lib.Subject):
         self.subject = subject
-        if self.selection_level == ClassSelectionLevel.SubjectLevel:
+        if self.selection_level == lib.ClassSelectionLevel.SubjectLevel:
             self.update_label()
 
     def set_binary_name(self, binary_name: str):
         self.binary_name = binary_name
-        if self.selection_level == ClassSelectionLevel.BinaryLevel:
+        if self.selection_level == lib.ClassSelectionLevel.BinaryLevel:
             self.update_label()
 
     def set_frame_number(self, frame_number: int):
         self.frame_number = frame_number
-        if self.selection_level == ClassSelectionLevel.FrameLevel:
+        if self.selection_level == lib.ClassSelectionLevel.FrameLevel:
             self.update_label()
 
     def update_label(self):
         # Update the label to give feedback to the user
         res = f'Selected subject:\n{self.subject.name}\n'
-        if self.selection_level == ClassSelectionLevel.BinaryLevel or self.selection_level == ClassSelectionLevel.FrameLevel:
+        if self.selection_level == lib.ClassSelectionLevel.BinaryLevel or self.selection_level == lib.ClassSelectionLevel.FrameLevel:
             res += f'Selected binary:\n{self.binary_name}'
-        if self.selection_level == ClassSelectionLevel.FrameLevel:
+        if self.selection_level == lib.ClassSelectionLevel.FrameLevel:
             res += f'Selected frame:\n{self.frame_number}'
         self.label.setText(res)
         # Update the values in the class boxes
         for box in self.class_boxes:
-            if self.selection_level == ClassSelectionLevel.BinaryLevel:
+            if self.selection_level == lib.ClassSelectionLevel.BinaryLevel:
                 box.update_values(self.subject, for_binary=self.binary_name)
-            elif self.selection_level == ClassSelectionLevel.SubjectLevel:
+            elif self.selection_level == lib.ClassSelectionLevel.SubjectLevel:
                 box.update_values(self.subject)

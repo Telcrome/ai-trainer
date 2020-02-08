@@ -12,7 +12,6 @@ from torch.utils import data
 from tqdm import tqdm
 
 import trainer.lib as lib
-import trainer.ml as ml
 
 # If GPU is available, use GPU
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
@@ -39,10 +38,10 @@ class TorchDataset(data.Dataset):
 
     def __init__(self,
                  ds_path: str,
-                 f: Union[Callable[[ml.Subject], Tuple[np.ndarray, np.ndarray]], partial],
+                 f: Union[Callable[[lib.Subject], Tuple[np.ndarray, np.ndarray]], partial],
                  split=''):
         super().__init__()
-        self.ds = ml.Dataset.from_disk(ds_path)
+        self.ds = lib.Dataset.from_disk(ds_path)
         self.preprocessor = f
         self.split = split
         self.ss = self.ds.get_subject_name_list(split=self.split)
@@ -75,7 +74,7 @@ class TrainerModel(ABC):
                  model: nn.Module,
                  opti: optimizer.Optimizer,
                  crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module],
-                 ds: ml.Dataset,
+                 ds: lib.Dataset,
                  batch_size=4,
                  vis_board=None):
         super().__init__()
@@ -139,7 +138,7 @@ class TrainerModel(ABC):
 
     @staticmethod
     @abstractmethod
-    def preprocess(s: ml.Subject, mode: ModelMode = ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+    def preprocess(s: lib.Subject, mode: ModelMode = ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
         """
         Provides the preprocessing chain to extract a training example from a subject.
 

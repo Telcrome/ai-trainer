@@ -20,14 +20,6 @@ trainer.ml.data\_loading module
    :undoc-members:
    :show-inheritance:
 
-trainer.ml.data\_model module
------------------------------
-
-.. automodule:: trainer.ml.data_model
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 trainer.ml.losses module
 ------------------------
 

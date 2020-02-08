@@ -13,6 +13,7 @@ import torch.optim as optim
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 from torchvision import models
 
+import trainer.lib as lib
 import trainer.ml as ml
 
 
@@ -53,7 +54,7 @@ class SegNetwork(ml.TrainerModel):
                  model_name: str,
                  in_channels: int,
                  n_classes: int,
-                 ds: ml.Dataset,
+                 ds: lib.Dataset,
                  batch_size=4,
                  vis_board=None):
         # model = ResNetUNet(n_class=n_classes)
@@ -88,7 +89,7 @@ class SegNetwork(ml.TrainerModel):
         return figs
 
     @staticmethod
-    def preprocess(s: ml.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+    def preprocess(s: lib.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
         is_names = s.get_image_stack_keys()
         is_name = random.choice(is_names)
         available_structures = s.get_structure_list(image_stack_key=is_name)
