@@ -9,11 +9,11 @@ import os
 import click
 from tqdm import tqdm
 
+import trainer.lib as lib
+import trainer.ml as ml
 from trainer.lib import standalone_foldergrab
 from trainer.lib.JsonClass import dir_is_json_class
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
-import trainer.ml as ml
-import trainer.lib as lib
 
 
 @click.group()
@@ -100,28 +100,22 @@ def dataset_train(dataset_path: str):
     """
     if not dir_is_json_class(dataset_path):
         raise Exception("The given directory is not a valid Dataset")
-    d = ml.Dataset.from_disk(dataset_path)
-
-    seg_structs = d.compute_segmentation_structures()
-
-    for str_name in seg_structs:
-        click.echo(f"\n{str_name}: {len(seg_structs[str_name])}")
-        from trainer.ml.predictor import compile_and_train
-        compile_and_train(d, str_name)
+    raise NotImplementedError()
+    # d = ml.Dataset.from_disk(dataset_path)
+    #
+    # seg_structs = d.compute_segmentation_structures()
+    #
+    # for str_name in seg_structs:
+    #     click.echo(f"\n{str_name}: {len(seg_structs[str_name])}")
+    #     from trainer.ml.predictor import compile_and_train
+    #     compile_and_train(d, str_name)
 
 
 @ds.command(name='visualize')
 @click.option('--dataset-path', '-p', default=os.getcwd)
 @click.option('--subject-name', '-s', default='')
 def dataset_visualize(dataset_path: str, subject_name: str):
-    d = ml.Dataset.from_disk(dataset_path)
-    if subject_name:
-        s = d.get_subject_by_name(subject_name)
-        s.matplot_imagestacks()
-    else:
-        # TODO Create a html folder with a simple static webview
-        # TODO Include Media and Metadata
-        raise NotImplementedError()
+    raise NotImplementedError()
 
 
 @ds.command(name='add-image-folder')

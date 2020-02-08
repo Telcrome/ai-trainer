@@ -1,8 +1,8 @@
 import json
 import os
+import pickle
 import shutil
 from typing import Dict, Callable, Union, Any
-import pickle
 
 import numpy as np
 
@@ -208,27 +208,11 @@ class JsonClass:
     def get_image_stack_keys(self):
         return self.get_binary_list_filtered(lambda x: x["binary_type"] == lib.BinaryType.ImageStack.value)
 
-    def count_binaries_memory(self):
+    def count_binaries_memory(self) -> int:
+        """
+        :return: The memory occupied by all the binaries together.
+        """
         return sum([self._binaries[k].nbytes for k in self._binaries.keys()])
-
-    def matplot_imagestacks(self):
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        for binary in self._binaries_model:
-            b = self._binaries[binary]
-            btype = self._binaries_model[binary]["binary_type"]
-            if btype == lib.BinaryType.ImageStack.value:
-                # This is an image or a video
-                b = b[0, :, :, :]
-                if b.dtype == np.bool:
-                    b = b.astype(np.float32) * 255.
-                plt.title(binary)
-                if b.shape[2] == 1:
-                    # Grayscale is assumed
-                    sns.heatmap(b[:, :, 0])
-                else:
-                    plt.imshow(b)
-                plt.show()
 
     def __str__(self):
         res = f"Representation of {self.name}:\n"
