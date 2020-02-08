@@ -12,10 +12,7 @@ and the following structures:
 import os
 import random
 
-import PySimpleGUI as sg
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from torchvision import datasets
 
 import trainer.lib as lib
@@ -71,13 +68,6 @@ def build_random_subject(d: ml.Dataset, src_manager: SourceData, max_digit_ims=5
         x, y = src_manager.sample_digit(digit=digit_class)
         s.add_source_image_by_arr(x, binary_name=lib.create_identifier(f"mnist{i}"))
         s.set_class('digit', str(digit_class), for_dataset=d)
-
-    #
-    im = load_grayscale_from_disk(test_im_path)
-    s.add_source_image_by_arr(im, binary_name="src", structures={"bone": MaskType.Line})
-
-    gt = load_grayscale_from_disk(test_gt_path).astype(np.bool)
-    s.add_new_gt_by_arr(gt, mask_of="src", structure_names=["bone"])
 
     from skimage.data import astronaut
     s.add_source_image_by_arr(src_im=astronaut(), binary_name="astronaut_image")
