@@ -35,6 +35,7 @@
       <w>pyplot</w>
       <w>segmap</w>
       <w>segmentations</w>
+      <w>skdata</w>
       <w>statedict</w>
       <w>tensorboard</w>
       <w>testcode</w>

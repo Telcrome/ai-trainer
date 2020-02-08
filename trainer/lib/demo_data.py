@@ -14,26 +14,44 @@ import random
 import tempfile
 
 import numpy as np
+import skimage
 from torchvision import datasets
 
 import trainer.lib as lib
 
 
-def get_test_jsonclass(jc_name="Test Json Class"):
+def get_dummy_jsonclass(jc_name="Test Json Class"):
     """
+    Intended to be used for testing functionality concerned with the basic Jsonclass.
 
     >>> import trainer.lib as lib
-    >>> jc = lib.get_test_jsonclass()
+    >>> jc = lib.get_dummy_jsonclass()
     >>> jc.name
     'Test Json Class'
+    >>> jc.get_binary('b1')  # A small array is contained in the example
+    array([1, 2, 3])
+    >>> jc.get_binary('obj')
+    {'this': 'is', 'an': 'object'}
 
-    :param jc_name:
-    :return:
+    :param jc_name: Name of the Jsonclass
+    :return: A reference to a Jsonclass
     """
     dir_path = tempfile.gettempdir()
 
-    res = lib.JsonClass(jc_name, {})
+    res = lib.JsonClass(jc_name, {
+        'Attribute 1': "Value 1"
+    })
     res.to_disk(dir_path)
+    res.add_binary('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
+
+    res.add_binary('picture', skimage.data.retina(), b_type=lib.BinaryType.ImageStack.value)
+
+    python_obj = {
+        "this": "is",
+        "an": "object"
+    }
+    res.add_binary('obj', python_obj, lib.BinaryType.Unknown.value)
+
     return res
 
 
@@ -87,8 +105,7 @@ def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=
         s.add_source_image_by_arr(x, binary_name=lib.create_identifier(f"mnist{i}"))
         s.set_class('digit', str(digit_class), for_dataset=d)
 
-    from skimage.data import astronaut
-    s.add_source_image_by_arr(src_im=astronaut(), binary_name="astronaut_image")
+    s.add_source_image_by_arr(src_im=skimage.data.astronaut(), binary_name="astronaut_image")
 
     return s
 
