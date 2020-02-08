@@ -1,11 +1,8 @@
 import os
-from typing import Iterable, Tuple
 
-import matplotlib.pyplot as plt
 import cv2
 import imageio
 import numpy as np
-import seaborn as sns
 import torch
 from torch.utils import data
 
@@ -30,7 +27,8 @@ def train_model():
         seg_network.run_epoch(train_loader, epoch, N, batch_size=BATCH_SIZE)
 
         # Save model weights
-        torch.save(seg_network.model.state_dict(), f'./model_weights/epoch{epoch}.pt')
+        seg_network.save_to_dataset('gt', epoch)
+        # torch.save(seg_network.model.state_dict(), f'./model_weights/epoch{epoch}.pt')
 
 
 def save_predictions(dir_path: str, split='machine'):
@@ -67,7 +65,7 @@ if __name__ == '__main__':
     #                          local_path='./data',  # Your local data folder
     #                          dataset_name='crucial_ligament_diagnosis'  # Name of the dataset
     #                          )
-    ds = ml.Dataset.from_disk(r'C:\Users\rapha\Desktop\data\old_b8')
+    ds = lib.Dataset.from_disk(r'C:\Users\rapha\Desktop\data\old_b8')
 
     structure_name = 'gt'  # The structure that we now train for
 
@@ -99,6 +97,7 @@ if __name__ == '__main__':
     #     print(x.shape)
     #     print(y.shape)
     #     break
+    seg_network.load_from_dataset('gt')
     train_model()
     # save_predictions('./out2/', split='train')
     # save_predictions('./out2/', split='test')

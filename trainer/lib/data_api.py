@@ -177,7 +177,7 @@ class JsonClass:
             binary_payload = np.load(f'{path_no_ext}.npy', allow_pickle=False)
         self._binaries[binary_id] = binary_payload
 
-    def to_disk(self, dir_path: str = "", properly_formatted=True, prompt_user=False) -> None:
+    def to_disk(self, dir_path: str = "", properly_formatted=True) -> None:
         if not dir_path:
             dir_path = self._last_used_parent_dir
 
@@ -185,10 +185,20 @@ class JsonClass:
         dir_path = os.path.join(dir_path, self.name)
         if not os.path.exists(dir_path):
             os.mkdir(dir_path)
-        file_name = os.path.join(dir_path, JSON_MODEL_FILENAME)
-        self._last_used_parent_dir = os.path.dirname(dir_path)
 
+        self._last_used_parent_dir = os.path.dirname(dir_path)
+        self._save_json_model()
+
+        # Write all binaries
+        self.binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
+        if not os.path.exists(self.binaries_dir_path):
+            os.mkdir(self.binaries_dir_path)
+        for binary_key in self._binaries:  # TODO: check if necessary
+            self.save_binary(binary_key)
+
+    def _save_json_model(self, properly_formatted=True):
         # Write the json model file
+        file_name = os.path.join(self.get_working_directory(), JSON_MODEL_FILENAME)
         with open(file_name, 'w+') as f:
             save_json = {
                 "payload": self.json_model,
@@ -198,16 +208,6 @@ class JsonClass:
                 json.dump(save_json, f, indent=4)
             else:
                 json.dump(save_json, f)
-
-        # Write all binaries
-        self.binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
-        if not os.path.exists(self.binaries_dir_path):
-            os.mkdir(self.binaries_dir_path)
-        for binary_key in self._binaries:
-            self.save_binary(binary_key)
-
-        if prompt_user:
-            os.startfile(file_name)
 
     def get_binary_provider(self, binary_key: str):
         """
@@ -236,6 +236,7 @@ class JsonClass:
                 pickle.dump(self._binaries[binary_key], f)
         else:
             np.save(path_no_ext, self._binaries[binary_key])
+        self._save_json_model()
 
     def delete_on_disk(self, blocking=True):
         shutil.rmtree(self.get_working_directory(), ignore_errors=True)
@@ -569,9 +570,9 @@ class Dataset(JsonClass):
     def remove_class(self, class_name: str):
         self.json_model['classes'].pop(class_name)
 
-    def save_into(self, dir_path: str, properly_formatted=True, prompt_user=False, vis=True) -> None:
+    def save_into(self, dir_path: str, properly_formatted=True, vis=True) -> None:
         old_working_dir = self.get_working_directory()
-        super().to_disk(dir_path, properly_formatted=properly_formatted, prompt_user=prompt_user)
+        super().to_disk(dir_path, properly_formatted=properly_formatted)
         for i, te_key in enumerate(self.json_model["subjects"]):
             te_path = os.path.join(old_working_dir, te_key)
             te = Subject.from_disk(te_path)

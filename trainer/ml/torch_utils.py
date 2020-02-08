@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Tuple, Union, Callable
+from typing import Tuple, Union, Callable, Dict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -118,12 +118,13 @@ class TrainerModel(ABC):
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
 
-    def run_epoch(self, torch_loader: data.DataLoader, epoch: int, n: int, batch_size: int):
+    def run_epoch(self, torch_loader: data.DataLoader, epoch: int, n: int, batch_size: int, steps=-1):
         print(f'Starting epoch: {epoch} with {n} training examples')
         epoch_loss_sum = 0.
 
         data_iter = iter(torch_loader)
-        for i in tqdm(range(n // batch_size)):
+        steps = n // batch_size if steps == -1 else steps
+        for i in tqdm(range(steps)):
             x, y = data_iter.__next__()
             # x, y = seg_network.sample_minibatch(split='train')
             x, y = x.to(device), y.to(device)
@@ -143,8 +144,18 @@ class TrainerModel(ABC):
         )
         # TODO: Save metrics using binary meta info
 
-    def load_from_dataset(self):
-        pass
+    def load_from_dataset(self, structure_template: str, epoch=-1):
+        def b_filter(d: Dict) -> bool:
+            return d['binary_type'] == lib.BinaryType.TorchStateDict.value
+
+        weights = self.ds.get_binary_list_filtered(b_filter)
+        print(weights)
+        weight_binary_id = f'model_{self.name}_{structure_template}'
+        if epoch == -1:
+            epoch = max([int(weight_id[-1]) for weight_id in weights if weight_id.startswith(weight_binary_id)])
+        weight_binary_id = f'model_{self.name}_{structure_template}_{epoch}'
+        state_dict = self.ds.get_binary(weight_binary_id)
+        self.model.load_state_dict(state_dict)
 
     @staticmethod
     @abstractmethod
@@ -168,35 +179,6 @@ class TrainerModel(ABC):
         pass
 
 
-# def instantiate_model(model_definition: TorchModel, weights_path='', data_loader=None) -> Tuple[TorchModel, VisBoard]:
-#     model = model_definition().to(device)
-#     visboard = VisBoard(run_name=f'{model.name}_{IDENTIFIER}')
-#     if data_loader is not None:
-#         test_input = iter(data_loader).__next__()[0].to(device)
-#         visboard.writer.add_graph(model, test_input)
-#
-#     if weights_path and os.path.exists(weights_path):
-#         model.load_state_dict(torch.load(weights_path))
-#
-#     return model, visboard
-
-
-# def visualize_model_weights(model: TorchModel, visboard: VisBoard):
-#     for i, layer in enumerate(model.children()):
-#         if isinstance(layer, nn.Linear):
-#             # Visualize a fully connected layer
-#             pass
-#         elif isinstance(layer, nn.Conv2d):
-#             # Visualize a convolutional layer
-#             W = layer.weight
-#             b = layer.bias
-#             for d in range(W.shape[0]):
-#                 image_list = np.array([W[d, c, :, :].detach().cpu().numpy() for c in range(W.shape[1])])
-#                 placeholder_arr = torch.from_numpy(np.expand_dims(image_list, 1))
-#                 img_grid = torchvision.utils.make_grid(placeholder_arr, pad_value=1)
-#                 visboard.writer.add_image(f"{model.name}_layer_{i}", img_grid)
-#
-#
 def get_capacity(model: nn.Module) -> int:
     """
     Computes the number of parameters of a network.
