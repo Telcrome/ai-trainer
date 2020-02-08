@@ -51,6 +51,12 @@ class TorchDataset(data.Dataset):
         self.ss = self.ds.get_subject_name_list(split=self.split)
 
     def __getitem__(self, item):
+        """
+        Uses the preprocessor that converts a subject to a training example.
+
+        :param item: Name of a subject
+        :return: Training example x, y
+        """
         # print(f'item: {item}')
         s = self.ds.get_subject_by_name(self.ss[item])
         x, y = self.preprocessor(s)
