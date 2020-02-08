@@ -20,6 +20,24 @@ from torchvision import datasets
 import trainer.lib as lib
 
 
+class SourceData:
+
+    def __init__(self, storage_path: str):
+        self.storage_folder = storage_path
+        self.kaggle_storage = os.path.join(storage_path, 'kaggle_datasets')
+        self.mnist = datasets.MNIST(data_folder, train=True, download=True)
+
+        self.mnist_indices = {i: [] for i in range(10)}
+        for i in range(len(self.mnist)):
+            _, y = self.mnist.__getitem__(i)
+            self.mnist_indices[y].append(i)
+
+    def sample_digit(self, digit=0):
+        index = random.choice(self.mnist_indices[digit])
+        del self.mnist_indices[index]  # Make sure this very example is not used again
+        return self.mnist.__getitem__(index)
+
+
 def get_dummy_jsonclass(jc_name="Test Json Class"):
     """
     Intended to be used for testing functionality concerned with the basic Jsonclass.
@@ -71,24 +89,6 @@ def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     """
     low, high = bounds
     return np.random.randint(low=low, high=high, size=shape) + np.random.rand(*shape)
-
-
-class SourceData:
-
-    def __init__(self, storage_path: str):
-        self.storage_folder = storage_path
-        self.kaggle_storage = os.path.join(storage_path, 'kaggle_datasets')
-        self.mnist = datasets.MNIST(data_folder, train=True, download=True)
-
-        self.mnist_indices = {i: [] for i in range(10)}
-        for i in range(len(self.mnist)):
-            _, y = self.mnist.__getitem__(i)
-            self.mnist_indices[y].append(i)
-
-    def sample_digit(self, digit=0):
-        index = random.choice(self.mnist_indices[digit])
-        del self.mnist_indices[index]  # Make sure this very example is not used again
-        return self.mnist.__getitem__(index)
 
 
 def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=5) -> lib.Subject:
