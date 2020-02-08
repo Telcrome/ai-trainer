@@ -1,19 +1,17 @@
 import random
-from typing import Tuple, Union, Any, Callable
+from typing import Tuple
 
 import cv2
-import numpy as np
+import imgaug.augmenters as iaa
 import matplotlib.pyplot as plt
+import numpy as np
 import seaborn as sns
+import segmentation_models_pytorch as smp
 import torch
 import torch.nn as nn
-from torchvision import models
-from torch.optim import optimizer
 import torch.optim as optim
-import segmentation_models_pytorch as smp
-import imgaug as ia
-import imgaug.augmenters as iaa
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+from torchvision import models
 
 import trainer.ml as ml
 
@@ -25,8 +23,16 @@ class SegCrit(nn.Module):
     Expects targets in the range between 0 and 1 and the logits of the predictions.
 
     >>> import trainer.ml as ml
+    >>> import trainer.lib as lib
+    >>> import numpy as np
+    >>> import torch
+    >>> np.random.seed(0)
     >>> alpha, beta, loss_weights = 1., 2., (0.5, 0.5)
     >>> sc = ml.SegCrit(alpha, beta, loss_weights)
+    >>> preds, target = lib.get_test_logits(shape=(8, 1, 3, 3)), np.random.randint(size=(8, 1, 3, 3), low=0, high=2)
+    >>> preds, target = torch.from_numpy(preds.astype(np.float32)), torch.from_numpy(target.astype(np.float32))
+    >>> sc.forward(preds, target)
+    tensor(6.8156)
     """
 
     def __init__(self, alpha, beta, loss_weights: Tuple):

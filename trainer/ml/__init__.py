@@ -1,4 +1,7 @@
 """
+Machine Learning Package
+------------------------
+
 The machine learning package bundles everything directly related to learning from the data.
 For internal models, torch is tightly integrated into trainer.
 """
