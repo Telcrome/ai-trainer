@@ -77,19 +77,19 @@ def get_dummy_jsonclass(jc_name="Test Json Class"):
     """
     dir_path = tempfile.gettempdir()
 
-    res = lib.JsonClass(jc_name, {
+    res = lib.Entity(jc_name, {
         'Attribute 1': "Value 1"
     })
     res.to_disk(dir_path)
-    res.add_binary('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
+    res.add_bin('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
 
-    res.add_binary('picture', skimage.data.retina(), b_type=lib.BinaryType.ImageStack.value)
+    res.add_bin('picture', skimage.data.retina(), b_type=lib.BinaryType.ImageStack.value)
 
     python_obj = {
         "this": "is",
         "an": "object"
     }
-    res.add_binary('obj', python_obj, lib.BinaryType.Unknown.value)
+    res.add_bin('obj', python_obj, lib.BinaryType.Unknown.value)
 
     return res
 

@@ -27,7 +27,7 @@ import os
 import pickle
 import shutil
 from enum import Enum
-from typing import Dict, Callable, Union, Any, List, Tuple, Set
+from typing import Dict, Callable, Union, List, Tuple, Set, Any
 
 import PySimpleGUI as sg
 import numpy as np
@@ -78,7 +78,7 @@ class BinaryType(Enum):
             BinaryType.TorchStateDict.value: BinarySaveProvider.Pickle
         }
 
-    Unknown = 'unknown'
+    Unknown = 'unknown'  # pickle
     NumpyArray = 'numpy_array'
     ImageStack = 'image_stack'
     ImageMask = 'img_mask'
@@ -98,7 +98,7 @@ class ClassSelectionLevel(Enum):
 
 
 BINARIES_DIRNAME = "binaries"
-JSON_MODEL_FILENAME = "json_model.json"
+ENTITY_JSON = "entity.json"
 BINARY_TYPE_KEY = "binary_type"
 PICKLE_EXT = 'pickle'
 
@@ -108,7 +108,7 @@ def build_full_filepath(name: str, dir_path: str):
     return os.path.join(dir_path, f"{basename}.json")
 
 
-def dir_is_json_class(dir_name: str, json_checker: Callable[[str], bool] = None):
+def dir_is_valid_entity(dir_name: str, json_checker: Callable[[str], bool] = None):
     if json_checker is None:
         def json_checker(json_val: str) -> bool:
             return True
@@ -123,119 +123,103 @@ def dir_is_json_class(dir_name: str, json_checker: Callable[[str], bool] = None)
     return False
 
 
-class JsonClass:
+class Entity:
     """
     Intended to be subclassed by classes which need to persist their state
-    in the form of numpy binaries (Video, images...) and json metadata (name, attributes...).
+    in the form of binaries (Video, images...) and json metadata (name, attributes...).
+
+    Every entity can have children which are also entities. For an ML folder the hierarchy looks as following:
+    Dataset -> Subjects -> Data Objects (ImageStacks...)
+
+    An entity allows inheriting classes to store files into
+    TODO: Code snippet for finding out working directory.
+    The only reserved names are for the json files and the folder for binaries.
     """
 
-    def __init__(self, name: str, model: Dict = None, b_model: Dict = None):
-        self.name = name
-        self.binaries_dir_path = None
+    def __init__(self, entity_id: str, parent_folder):
+        self.children: List[Entity] = []
 
-        if model is not None:
-            self.json_model = model
-        else:
-            self.json_model = {}
-
-        if b_model is not None:
-            self._binaries_model = b_model
-        else:
-            self._binaries_model = {}
-        self._binaries: Dict[str, np.ndarray] = {}
-
-        self._last_used_parent_dir = None
+        self.entity_id = entity_id
+        self.attrs: Dict[str, Dict] = {}
+        self._binaries: Dict[str, Any] = {}
+        self.parent_folder = parent_folder
 
     @classmethod
-    def from_disk(cls, dir_path: str, pre_load_binaries=False):
-        if not dir_is_json_class(dir_path):
-            raise Exception(f"{dir_path} is not a valid directory.")
+    def from_disk(cls, working_dir: str):
+        if not dir_is_valid_entity(working_dir):
+            raise Exception(f"{working_dir} is not a valid directory.")
 
-        name = os.path.basename(dir_path)
+        parent_folder, entity_id = os.path.dirname(working_dir), os.path.basename(working_dir)
+        res = cls(entity_id, parent_folder)
 
-        full_file_path = os.path.join(dir_path, JSON_MODEL_FILENAME)
+        json_file_paths = os.path.join(working_dir, JSON_MODEL_FILENAME)
         with open(full_file_path, 'r') as f:
             json_content = json.load(f)
-        res = cls(name, json_content["payload"], json_content["binaries"])
-        res._last_used_parent_dir = os.path.dirname(dir_path)
 
-        # Load binaries
-        res.binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
-        if pre_load_binaries:
-            binaries_paths_ls = os.listdir(res.binaries_dir_path)
-            for binary_path in binaries_paths_ls:
-                binary_name = os.path.splitext(os.path.basename(binary_path))[0]
-                res.load_binary(binary_name)
         return res
 
     def load_binary(self, binary_id) -> None:
         path_no_ext = os.path.join(self.binaries_dir_path, binary_id)
-        if self.get_binary_provider(binary_id) == BinarySaveProvider.Pickle:
+        if self.get_bin_provider(binary_id) == BinarySaveProvider.Pickle:
             with open(f'{path_no_ext}.{PICKLE_EXT}', 'rb') as f:
                 binary_payload = pickle.load(f)
         else:
             binary_payload = np.load(f'{path_no_ext}.npy', allow_pickle=False)
         self._binaries[binary_id] = binary_payload
 
-    def to_disk(self, dir_path: str = "", properly_formatted=True) -> None:
-        if not dir_path:
-            dir_path = self._last_used_parent_dir
+    def to_disk(self, parent_folder: str = "", properly_formatted=True) -> None:
+        if not parent_folder:
+            parent_folder = self.parent_folder
 
         # Create the parent directory for this instance
-        dir_path = os.path.join(dir_path, self.name)
-        if not os.path.exists(dir_path):
-            os.mkdir(dir_path)
+        if not os.path.exists(self.get_working_directory()):
+            os.mkdir(self.get_working_directory())
 
-        self._last_used_parent_dir = os.path.dirname(dir_path)
         self._save_json_model()
-
-        # Write all binaries
-        self.binaries_dir_path = os.path.join(dir_path, BINARIES_DIRNAME)
-        if not os.path.exists(self.binaries_dir_path):
-            os.mkdir(self.binaries_dir_path)
-        for binary_key in self._binaries:  # TODO: check if necessary
-            self.save_binary(binary_key)
+        self._write_binaries()
 
     def _save_json_model(self, properly_formatted=True):
         # Write the json model file
-        file_name = os.path.join(self.get_working_directory(), JSON_MODEL_FILENAME)
-        with open(file_name, 'w+') as f:
+        with open(self.get_json_path(), 'w+') as f:
             save_json = {
-                "payload": self.json_model,
-                "binaries": self._binaries_model
+                "attrs": list(self.attrs.keys())
             }
             if properly_formatted:
                 json.dump(save_json, f, indent=4)
             else:
                 json.dump(save_json, f)
 
-    def get_binary_provider(self, binary_key: str):
+    def _write_binaries(self):
+        if not os.path.exists(self.get_bin_dir()):
+            os.mkdir(self.get_bin_dir())
+        for binary_key in self._binaries:  # TODO: check if necessary
+            self.save_binary(binary_key)
+
+    def get_bin_provider(self, binary_key: str):
         """
         Returns the provider for the respective binary.
         The provider is the software that is used for saving.
 
         >>> import trainer.lib as lib
         >>> jc = lib.get_dummy_jsonclass()
-        >>> jc.get_binary_provider('b1')
+        >>> jc.get_bin_provider('b1')
         <BinarySaveProvider.Numpy: 1>
         """
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
 
-    def save_binary(self, binary_key) -> None:
+    def save_binary(self, bin_key) -> None:
         """
         Writes the selected binary on disk.
-        :param binary_key: ID of the binary
+        :param bin_key: identifier of the binary
         """
-        if self._last_used_parent_dir is None:
-            raise Exception(f" Before saving {binary_key}, save {self.name} to disk!")
-        if self.binaries_dir_path is None:
-            self.binaries_dir_path = os.path.join(self._last_used_parent_dir, BINARIES_DIRNAME)
-        path_no_ext = os.path.join(self.binaries_dir_path, binary_key)
-        if self.get_binary_provider(binary_key) == BinarySaveProvider.Pickle:
+        if self.parent_folder is None:
+            raise Exception(f"Before saving {bin_key}, save {self.entity_id} to disk!")
+        path_no_ext = os.path.join(self.binaries_dir_path, bin_key)
+        if self.get_bin_provider(bin_key) == BinarySaveProvider.Pickle:
             with open(f'{path_no_ext}.{PICKLE_EXT}', 'wb') as f:
-                pickle.dump(self._binaries[binary_key], f)
+                pickle.dump(self._binaries[bin_key], f)
         else:
-            np.save(path_no_ext, self._binaries[binary_key])
+            np.save(path_no_ext, self._binaries[bin_key])
         self._save_json_model()
 
     def delete_on_disk(self, blocking=True):
@@ -245,20 +229,23 @@ class JsonClass:
                 pass
 
     def get_parent_directory(self):
-        return self._last_used_parent_dir
+        return self.parent_folder
 
     def get_working_directory(self):
-        return os.path.join(self._last_used_parent_dir, self.name)
+        return os.path.join(self.parent_folder, self.entity_id)
+
+    def get_bin_dir(self):
+        return os.path.join(self.get_working_directory(), BINARIES_DIRNAME)
 
     def get_json_path(self):
-        return os.path.join(self.get_working_directory(), JSON_MODEL_FILENAME)
+        return os.path.join(self.get_working_directory(), ENTITY_JSON)
 
-    def add_binary(self,
-                   binary_id: str,
-                   binary: Union[Any, np.ndarray],
-                   b_type: str = BinaryType.Unknown.value,
-                   meta_data=None,
-                   overwrite=True) -> None:
+    def add_bin(self,
+                binary_id: str,
+                binary: Union[Any, np.ndarray],
+                b_type: str = BinaryType.Unknown.value,
+                meta_data=None,
+                overwrite=True) -> None:
         """
         Adds a numpy array or a pickled object.
 
@@ -291,7 +278,7 @@ class JsonClass:
         # Remove the key in model
         self._binaries_model.pop(binary_name)
         self._binaries.pop(binary_name)
-        self.to_disk(self._last_used_parent_dir)
+        self.to_disk(self.parent_folder)
 
     def get_binary(self, binary_name):
         if binary_name not in self._binaries:
@@ -314,21 +301,21 @@ class JsonClass:
         return sum([self._binaries[k].nbytes for k in self._binaries.keys()])
 
     def __str__(self):
-        res = f"Representation of {self.name}:\n"
-        if self._last_used_parent_dir is not None:
+        res = f"Representation of {self.entity_id}:\n"
+        if self.parent_folder is not None:
             res += f"Last saved at {self.get_working_directory()}\n"
         res += f"Binaries: {len(self._binaries.keys())}\n"
-        for binary in self._binaries.keys():
-            res += f"{binary}: shape: {self._binaries[binary].shape} (type: {self._binaries[binary].dtype})\n"
-            res += f"{json.dumps(self._binaries_model[binary], indent=4)}\n"
-        res += json.dumps(self.json_model, indent=4)
+        # for binary in self._binaries.keys():
+        #     res += f"{binary}: shape: {self._binaries[binary].shape} (type: {self._binaries[binary].dtype})\n"
+        #     res += f"{json.dumps(self._binaries_model[binary], indent=4)}\n"
+        res += json.dumps(self.attrs, indent=4)
         return res
 
     def __repr__(self):
         return str(self)
 
 
-class Subject(JsonClass):
+class Subject(Entity):
     """
     In a medical context a subject is concerned with the data of one patient.
     For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
@@ -367,7 +354,7 @@ class Subject(JsonClass):
             # print(f"Setting {class_name} to {value}")
             # print(f"{for_dataset.name} tells us about the class:\n{class_obj}")
             if value not in class_obj['values']:
-                raise Exception(f"{class_name} cannot be set to {value} according to {for_dataset.name}")
+                raise Exception(f"{class_name} cannot be set to {value} according to {for_dataset.entity_id}")
 
         # Set value
         if for_binary:
@@ -430,7 +417,7 @@ class Subject(JsonClass):
         if extra_info is not None:
             meta["extra"] = extra_info
 
-        self.add_binary(binary_name, res, b_type=BinaryType.ImageStack.value, meta_data=meta)
+        self.add_bin(binary_name, res, b_type=BinaryType.ImageStack.value, meta_data=meta)
 
     def delete_gt(self, mask_of: str = None, frame_number=0):
         print(f"Deleting ground truth of {mask_of} at frame {frame_number}")
@@ -465,7 +452,7 @@ class Subject(JsonClass):
             "structures": structure_names
         }
         gt_name = f"gt_{mask_of}_{frame_number}"  # naming convention
-        self.add_binary(gt_name, gt_arr, b_type=BinaryType.ImageMask.value, meta_data=meta)
+        self.add_bin(gt_name, gt_arr, b_type=BinaryType.ImageMask.value, meta_data=meta)
 
         # TODO set class for this binary if a pixel is non zero in the corresponding binary
         return gt_name
@@ -514,7 +501,7 @@ class Subject(JsonClass):
         return res, n
 
 
-class Dataset(JsonClass):
+class Dataset(Entity):
 
     @classmethod
     def build_new(cls, name: str, dir_path: str, example_class=True):
@@ -542,7 +529,7 @@ class Dataset(JsonClass):
 
     def update_weights(self, struct_name: str, weights: np.ndarray):
         print(f"Updating the weights for {struct_name}")
-        self.add_binary(struct_name, weights)
+        self.add_bin(struct_name, weights)
 
     def add_class(self, class_name: str, class_type: ClassType, values: List[str]):
         """
@@ -579,7 +566,7 @@ class Dataset(JsonClass):
             te.to_disk(self.get_working_directory())
             if vis:
                 sg.OneLineProgressMeter('My Meter', i + 1, len(self.json_model['subjects']), 'key',
-                                        f'Subject: {te.name}')
+                                        f'Subject: {te.entity_id}')
 
     def get_structure_template_names(self):
         return list(self.json_model["structure_templates"].keys())
@@ -597,8 +584,8 @@ class Dataset(JsonClass):
         :return:
         """
         # Add the name of the subject into the model
-        if s.name not in self.json_model["subjects"]:
-            self.json_model["subjects"].append(s.name)
+        if s.entity_id not in self.json_model["subjects"]:
+            self.json_model["subjects"].append(s.entity_id)
 
         # Save it as a child directory to this dataset
         s.to_disk(self.get_working_directory())
@@ -607,7 +594,7 @@ class Dataset(JsonClass):
             self.append_subject_to_split(s, split)
 
         if auto_save:
-            self.to_disk(self._last_used_parent_dir)
+            self.to_disk(self.parent_folder)
 
     def get_subject_name_list(self, split='') -> List[str]:
         """
@@ -626,7 +613,7 @@ class Dataset(JsonClass):
         if split not in self.json_model["splits"]:
             self.json_model["splits"][split] = []
 
-        self.json_model["splits"][split].append(s.name)
+        self.json_model["splits"][split].append(s.entity_id)
 
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """
@@ -639,12 +626,12 @@ class Dataset(JsonClass):
         for i, s_name in enumerate(self.json_model["subjects"]):
             te = self.get_subject_by_name(s_name)
             if filterer(te):
-                res.append(te.name)
+                res.append(te.entity_id)
             if viz:
                 sg.OneLineProgressMeter("Filtering subjects", i + 1,
                                         len(self.json_model['subjects']),
                                         'key',
-                                        f'Subject: {te.name}')
+                                        f'Subject: {te.entity_id}')
         return res
 
     def delete_subjects(self, del_ls: List[Subject]) -> None:
@@ -660,7 +647,7 @@ class Dataset(JsonClass):
             for split in self.json_model["splits"]:
                 if del_name in self.json_model["splits"][split]:
                     self.json_model["splits"][split].remove(del_name)
-        self.to_disk(self._last_used_parent_dir)
+        self.to_disk(self.parent_folder)
 
     def get_subject_by_name(self, s_name: str):
         if s_name not in self.json_model['subjects']:
@@ -696,8 +683,8 @@ class Dataset(JsonClass):
                     for structure in structures:
                         if structure not in seg_structs:
                             seg_structs[structure] = set()
-                        if te.name not in seg_structs[structure]:
-                            seg_structs[structure] = seg_structs[structure] | {te.name}
+                        if te.entity_id not in seg_structs[structure]:
+                            seg_structs[structure] = seg_structs[structure] | {te.entity_id}
                 return True
 
             stacks = te.get_binary_list_filtered(struct_appender)

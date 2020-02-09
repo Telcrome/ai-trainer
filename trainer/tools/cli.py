@@ -95,7 +95,7 @@ def dataset_train(dataset_path: str):
             3.1 -> trains them for one epoch
             3.2 -> saves the weights and metadata into the dataset.
     """
-    if not lib.dir_is_json_class(dataset_path):
+    if not lib.dir_is_valid_entity(dataset_path):
         raise Exception("The given directory is not a valid Dataset")
     raise NotImplementedError()
     # d = ml.Dataset.from_disk(dataset_path)

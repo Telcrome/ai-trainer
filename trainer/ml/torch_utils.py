@@ -175,12 +175,12 @@ class TrainerModel(ABC):
             self.save_to_dataset('bone', epoch)
 
     def save_to_dataset(self, structure_template: str, epoch: int):
-        self.ds.add_binary(
+        self.ds.add_bin(
             f'model_{self.name}_{structure_template}_{epoch}',
             self.model.state_dict(),
             lib.BinaryType.TorchStateDict.value
         )
-        self.ds.add_binary(
+        self.ds.add_bin(
             f'optim_{self.name}_{structure_template}_{epoch}',
             self.optimizer.state_dict(),
             lib.BinaryType.TorchStateDict.value
