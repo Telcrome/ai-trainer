@@ -121,6 +121,28 @@ class Entity:
     An entity allows inheriting classes to store files into
     TODO: Code snippet for finding out working directory.
     The only reserved names are for the json files and the folder for binaries.
+
+    Usage Example:
+    >>> import os
+    >>> import shutil
+    >>> import tempfile
+    >>> import skimage
+    >>> import trainer.lib as lib
+    >>> data_path = tempfile.gettempdir()
+    >>> if os.path.exists(os.path.join(data_path, 'e1')):
+    >>>     print("Removing old e1")
+    >>>     shutil.rmtree(os.path.join(data_path, 'e1'))
+    >>> e1 = lib.Entity('e1', data_path)
+    >>> e1.add_attr('asdf', {'a': 5})
+    >>> e2 = e1.create_child('e2')
+    >>> e2.add_attr('qwer')
+    >>> e2.load_attr('qwer')['a'] = 5
+    >>> test_bin = skimage.data.astronaut()
+    >>> e2.add_bin('astronaut', test_bin, b_type=lib.BinaryType.NumpyArray.value)
+    >>> e1.add_bin('e1stronaut', test_bin, b_type=lib.BinaryType.Unknown.value)
+    >>> e1.to_disk()
+    >>> e_load = lib.Entity.from_disk(os.path.join(data_path, 'e1'))
+    >>> c2 = e_load.get_child('e2')
     """
 
     def __init__(self, entity_id: str, parent_folder: str):
@@ -556,19 +578,21 @@ class Subject(Entity):
 
 
 class Dataset(Entity):
+    CLASSDEFINITIONS_ATTR = 'class_definitions'
 
     @classmethod
     def build_new(cls, name: str, dir_path: str, example_class=True):
         if os.path.exists(os.path.join(dir_path, name)):
             raise Exception("The directory for this Dataset already exists, use from_disk to load it.")
-        res = cls(name, model={
+        res = cls(name, dir_path)
+        res.add_attr('splits', content={
             "subjects": [],
             "splits": {},
-            "classes": {},
-            "structure_templates": {
-                "basic": {"foreground": MaskType.Blob.value,
-                          "outline": MaskType.Line.value}
-            }
+        })
+        res.add_attr(cls.CLASSDEFINITIONS_ATTR, content={})
+        res.add_attr('structure_templates', content={
+            "basic": {"foreground": MaskType.Blob.value,
+                      "outline": MaskType.Line.value}
         })
         if example_class:
             res.add_class("example_class", class_type=ClassType.Nominal,
@@ -597,7 +621,7 @@ class Dataset(Entity):
             "class_type": class_type.value,
             "values": values
         }
-        self.json_model['classes'][class_name] = obj
+        self.load_attr(self.CLASSDEFINITIONS_ATTR)[class_name] = obj
 
     def get_class_names(self):
         return list(self.json_model['classes'].keys())
