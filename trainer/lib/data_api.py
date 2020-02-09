@@ -123,27 +123,29 @@ class Entity:
     The only reserved names are for the json files and the folder for binaries.
     """
 
-    def __init__(self, entity_id: str, attrs: List[str], parent_folder: str):
+    def __init__(self, entity_id: str, parent_folder: str):
 
         self.entity_id = entity_id
-        self.parent: Entity = None
-        self._attrs: Dict[str, Union[Dict, None]] = {key: None for key in attrs}
+        self._attrs: Dict[str, Union[Dict, None]] = {}
         self._children: Dict[str, Entity] = {}
         self._binaries: Dict[str, Any] = {}
         self._binaries_model: Dict[str, Dict] = {}
         self.parent_folder = parent_folder
+        if not os.path.exists(self.get_working_directory()):
+            self.to_disk()  # Creates directories
 
     @classmethod
-    def from_disk(cls, working_dir: str):
+    def from_disk(cls, working_dir: str) -> Entity:
         if not dir_is_valid_entity(working_dir):
             raise Exception(f"{working_dir} is not a valid directory.")
 
         parent_folder, entity_id = os.path.dirname(working_dir), os.path.basename(working_dir)
         with open(os.path.join(parent_folder, entity_id, ENTITY_DIRNAME, ENTITY_JSON), 'r') as f:
             json_content = json.load(f)
-            attrs = json_content['attrs']
-        res = cls(entity_id, attrs, parent_folder)
-
+        res = cls(entity_id, parent_folder)
+        res._attrs = {key: None for key in json_content['attrs']}
+        res._children = {key: None for key in json_content['children']}
+        res._binaries_model = json_content['bins']
         # json_file_paths = os.path.join(working_dir, JSON_MODEL_FILENAME)
 
         return res
@@ -163,12 +165,23 @@ class Entity:
         self._write_binaries()
         self._save_children()
 
-    def create_child(self, entity_id: str, attrs: List[str]):
+    def create_child(self, entity_id: str):
         # self.to_disk()
-        child = Entity(entity_id, attrs, self.get_working_directory())
+        child = Entity(entity_id, self.get_working_directory())
         child.parent = self
         self._children[child.entity_id] = child
         return child
+
+    def get_child(self, child_id: str, store_in_mem=False) -> Entity:
+        if self._children[child_id] is not None:
+            return self._children[child_id]
+
+        child = Entity.from_disk(os.path.join(self.get_working_directory(), child_id))
+        if store_in_mem:
+            self._children[child_id] = child
+            return self._children[child_id]
+        else:
+            return child
 
     def _save_json_model(self, properly_formatted=True):
         # Write the json model file
@@ -177,8 +190,6 @@ class Entity:
             "bins": self._binaries_model,
             "children": list(self._children.keys())
         }
-        if self.parent is not None:
-            save_json["parent"] = self.parent.entity_id
         with open(self.get_json_path(), 'w+') as f:
             if properly_formatted:
                 json.dump(save_json, f, indent=4)
@@ -201,13 +212,18 @@ class Entity:
         for binary_key in self._binaries:  # TODO: check if necessary
             self.save_binary(binary_key)
 
+    def add_attr(self, attr_id, content=None):
+        self._attrs[attr_id] = content
+        self._save_json_model()
+
     def load_attr(self, attr_id):
         """
         Returns a dict, which is a mutable python object.
         This means that changes will be saved to memory, but not implicitly to disk.
         Call to_disk() for writing changes to disk.
+
         :param attr_id:
-        :return:
+        :return: The respective dictionary
         """
         if self._attrs[attr_id] is None:
             attr_path = os.path.join(self.get_working_directory(), f'{attr_id}.json')
@@ -219,7 +235,7 @@ class Entity:
         return self._attrs[attr_id]
 
     def load_binary(self, binary_id) -> None:
-        path_no_ext = os.path.join(self.binaries_dir_path, binary_id)
+        path_no_ext = os.path.join(self.get_bin_dir(), binary_id)
         if self.get_bin_provider(binary_id) == BinarySaveProvider.Pickle:
             with open(f'{path_no_ext}.{PICKLE_EXT}', 'rb') as f:
                 binary_payload = pickle.load(f)
@@ -336,13 +352,13 @@ class Entity:
         res = f"Representation of {self.entity_id}:\n"
         if self.parent_folder is not None:
             res += f"Last saved at {self.get_working_directory()}\n"
-        res += f"Binaries: {len(self._binaries.keys())}\n"
+        res += f"Loaded Binaries: {list(self._binaries.keys())}\n"
         # for binary in self._binaries.keys():
         #     res += f"{binary}: shape: {self._binaries[binary].shape} (type: {self._binaries[binary].dtype})\n"
         #     res += f"{json.dumps(self._binaries_model[binary], indent=4)}\n"
-        for attr_id in self._attrs:
-            self.load_attr(attr_id)
-        res += json.dumps(self._attrs, indent=4)
+        res += f'Attrs: {list(self._attrs.keys())}\n'
+        res += f'Children: {list(self._children.keys())}\n'
+        res += f'Bins: {list(self._binaries_model.keys())}\n'
         return res
 
     def __repr__(self):
