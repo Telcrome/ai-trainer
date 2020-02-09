@@ -5,6 +5,6 @@ from trainer.lib.misc import get_img_from_fig, create_identifier, standalone_fol
     load_grayscale_from_disk, slugify, download_and_extract
 
 try:
-    from trainer.lib.demo_data import get_test_logits, get_dummy_jsonclass
+    from trainer.lib.demo_data import get_test_logits, get_dummy_entity
 except ImportError:
     print("Please install all requirements")

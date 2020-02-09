@@ -26,6 +26,7 @@ import json
 import os
 import pickle
 import shutil
+from abc import ABC
 from enum import Enum
 from typing import Dict, Callable, Union, List, Tuple, Set, Any
 
@@ -110,7 +111,7 @@ def dir_is_valid_entity(dir_name: str):
     return True
 
 
-class Entity:
+class Entity(ABC):
     """
     Intended to be subclassed by classes which need to persist their state
     in the form of binaries (Video, images...) and json metadata (name, attributes...).
@@ -121,31 +122,9 @@ class Entity:
     An entity allows inheriting classes to store files into
     TODO: Code snippet for finding out working directory.
     The only reserved names are for the json files and the folder for binaries.
-
-    Usage Example:
-    >>> import os
-    >>> import shutil
-    >>> import tempfile
-    >>> import skimage
-    >>> import trainer.lib as lib
-    >>> data_path = tempfile.gettempdir()
-    >>> if os.path.exists(os.path.join(data_path, 'e1')):
-    >>>     print("Removing old e1")
-    >>>     shutil.rmtree(os.path.join(data_path, 'e1'))
-    >>> e1 = lib.Entity('e1', data_path)
-    >>> e1.add_attr('asdf', {'a': 5})
-    >>> e2 = e1.create_child('e2')
-    >>> e2.add_attr('qwer')
-    >>> e2.load_attr('qwer')['a'] = 5
-    >>> test_bin = skimage.data.astronaut()
-    >>> e2.add_bin('astronaut', test_bin, b_type=lib.BinaryType.NumpyArray.value)
-    >>> e1.add_bin('e1stronaut', test_bin, b_type=lib.BinaryType.Unknown.value)
-    >>> e1.to_disk()
-    >>> e_load = lib.Entity.from_disk(os.path.join(data_path, 'e1'))
-    >>> c2 = e_load.get_child('e2')
     """
 
-    def __init__(self, entity_id: str, parent_folder: str):
+    def __init__(self, entity_id: str, parent_folder: str = ''):
 
         self.entity_id = entity_id
         self._attrs: Dict[str, Union[Dict, None]] = {}
@@ -153,8 +132,8 @@ class Entity:
         self._binaries: Dict[str, Any] = {}
         self._binaries_model: Dict[str, Dict] = {}
         self.parent_folder = parent_folder
-        if not os.path.exists(self.get_working_directory()):
-            self.to_disk()  # Creates directories
+        # if not os.path.exists(self.get_working_directory()):
+        #     self.to_disk()  # Creates directories
 
     @classmethod
     def from_disk(cls, working_dir: str) -> Entity:
@@ -187,12 +166,11 @@ class Entity:
         self._write_binaries()
         self._save_children()
 
-    def create_child(self, entity_id: str):
+    def _add_child(self, child: Entity) -> None:
         # self.to_disk()
-        child = Entity(entity_id, self.get_working_directory())
-        child.parent = self
+        # child = Entity(entity_id, self.get_working_directory())
+        child.to_disk(self.get_working_directory())
         self._children[child.entity_id] = child
-        return child
 
     def get_child(self, child_id: str, store_in_mem=False) -> Entity:
         if self._children[child_id] is not None:
@@ -234,9 +212,8 @@ class Entity:
         for binary_key in self._binaries:  # TODO: check if necessary
             self.save_binary(binary_key)
 
-    def add_attr(self, attr_id, content=None):
+    def _add_attr(self, attr_id, content=None):
         self._attrs[attr_id] = content
-        self._save_json_model()
 
     def load_attr(self, attr_id):
         """
@@ -271,7 +248,7 @@ class Entity:
         The provider is the software that is used for saving.
 
         >>> import trainer.lib as lib
-        >>> jc = lib.get_dummy_jsonclass()
+        >>> jc = lib.get_dummy_entity()
         >>> jc.get_bin_provider('b1')
         <BinarySaveProvider.Numpy: 1>
         """
@@ -399,12 +376,9 @@ class Subject(Entity):
     In future releases a complete changelog will be saved in a format suitable for process mining.
     """
 
-    @classmethod
-    def build_empty(cls, name: str):
-        res = cls(name=name, model={
-            "classes": {}
-        })
-        return res
+    def __init__(self, entity_id: str, parent_folder=''):
+        super().__init__(entity_id, parent_folder=parent_folder)
+        self._add_attr('classes')
 
     def set_class(self, class_name: str, value: str, for_dataset: Dataset = None, for_binary=""):
         """
@@ -578,27 +552,26 @@ class Subject(Entity):
 
 
 class Dataset(Entity):
-    CLASSDEFINITIONS_ATTR = 'class_definitions'
+    ATTR_CLASSDEFINITIONS = 'class_definitions'
+    ATTR_SPLITS = 'splits'
 
-    @classmethod
-    def build_new(cls, name: str, dir_path: str, example_class=True):
+    def __init__(self, name: str, dir_path: str, example_class=True):
         if os.path.exists(os.path.join(dir_path, name)):
             raise Exception("The directory for this Dataset already exists, use from_disk to load it.")
-        res = cls(name, dir_path)
-        res.add_attr('splits', content={
+        super().__init__(name, dir_path)
+        self._add_attr(self.ATTR_SPLITS, content={
             "subjects": [],
             "splits": {},
         })
-        res.add_attr(cls.CLASSDEFINITIONS_ATTR, content={})
-        res.add_attr('structure_templates', content={
+        self._add_attr(self.ATTR_CLASSDEFINITIONS, content={})
+        self._add_attr('structure_templates', content={
             "basic": {"foreground": MaskType.Blob.value,
                       "outline": MaskType.Line.value}
         })
         if example_class:
-            res.add_class("example_class", class_type=ClassType.Nominal,
-                          values=["Unknown", "Tiger", "Elephant", "Mouse"])
-        res.to_disk(dir_path)
-        return res
+            self.add_class("example_class", class_type=ClassType.Nominal,
+                           values=["Unknown", "Tiger", "Elephant", "Mouse"])
+        self.to_disk(dir_path)
 
     @classmethod
     def download(cls, url: str, local_path='.', dataset_name: str = None):
@@ -621,7 +594,7 @@ class Dataset(Entity):
             "class_type": class_type.value,
             "values": values
         }
-        self.load_attr(self.CLASSDEFINITIONS_ATTR)[class_name] = obj
+        self.load_attr(self.ATTR_CLASSDEFINITIONS)[class_name] = obj
 
     def get_class_names(self):
         return list(self.json_model['classes'].keys())
@@ -652,27 +625,19 @@ class Dataset(Entity):
     def get_structure_template_by_name(self, tpl_name):
         return self.json_model["structure_templates"][tpl_name]
 
-    def save_subject(self, s: Subject, split=None, auto_save=True):
+    def save_subject(self, s: Subject, auto_save=True) -> None:
         """
+        Creates a new subject in this dataset
 
-
-        :param s: The subject to be saved into this dataset
-        :param split:
-        :param auto_save: If True, the subject is immediately written to disk
-        :return:
+        :param s: Unique identifier of the new subject
+        :param auto_save: Immediately saves the dataset details to disk after adding the subject
         """
-        # Add the name of the subject into the model
-        if s.entity_id not in self.json_model["subjects"]:
-            self.json_model["subjects"].append(s.entity_id)
-
-        # Save it as a child directory to this dataset
-        s.to_disk(self.get_working_directory())
-
-        if split is not None:
-            self.append_subject_to_split(s, split)
-
+        self._add_child(s)
+        # Add the name of the subject into the splits
+        if s.entity_id not in self.load_attr(self.ATTR_SPLITS)['subjects']:
+            self.load_attr(self.ATTR_SPLITS)["subjects"].append(s.entity_id)
         if auto_save:
-            self.to_disk(self.parent_folder)
+            self.to_disk()
 
     def get_subject_name_list(self, split='') -> List[str]:
         """

@@ -59,13 +59,13 @@ class SourceData:
         return x, y
 
 
-def get_dummy_jsonclass(jc_name="Test Json Class"):
+def get_dummy_entity(jc_name="Test Json Class"):
     """
     Intended to be used for testing functionality concerned with the basic Jsonclass.
 
     >>> import trainer.lib as lib
-    >>> jc = lib.get_dummy_jsonclass()
-    >>> jc.name
+    >>> jc = lib.get_dummy_entity()
+    >>> jc.entity_id
     'Test Json Class'
     >>> jc.get_binary('b1')  # A small array is contained in the example
     array([1, 2, 3])
@@ -77,13 +77,15 @@ def get_dummy_jsonclass(jc_name="Test Json Class"):
     """
     dir_path = tempfile.gettempdir()
 
-    res = lib.Entity(jc_name, {
+    res = lib.Entity(jc_name, dir_path)
+
+    res._add_attr('some_attributes', content={
         'Attribute 1': "Value 1"
     })
     res.to_disk(dir_path)
     res.add_bin('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
 
-    res.add_bin('picture', skimage.data.retina(), b_type=lib.BinaryType.ImageStack.value)
+    res.add_bin('picture', skimage.data.retina(), b_type=lib.BinaryType.NumpyArray.value)
 
     python_obj = {
         "this": "is",
@@ -92,6 +94,10 @@ def get_dummy_jsonclass(jc_name="Test Json Class"):
     res.add_bin('obj', python_obj, lib.BinaryType.Unknown.value)
 
     return res
+
+
+def get_dummy_subject(subject_id='s'):
+    res = lib.Subject(subject_id)
 
 
 def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
