@@ -4,31 +4,10 @@ import cv2
 import imageio
 import numpy as np
 import torch
-from torch.utils import data
 
 import trainer.lib as lib
 import trainer.ml as ml
-from trainer.ml.torch_utils import device, ModelMode
-
-
-def train_model():
-    for epoch in range(50):
-        with torch.no_grad():
-            # Visualize model output
-            for fig in seg_network.visualize_prediction(machine_loader):
-                fig.suptitle("B8 Stuff")
-                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, B8')
-            for fig in seg_network.visualize_prediction(test_loader):
-                fig.suptitle("Test Set")
-                visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Test')
-            # for fig in seg_network.visualize_prediction(train_loader):
-            #     fig.suptitle("Train Set")
-            #     visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Train')
-        seg_network.run_epoch(train_loader, epoch, N, batch_size=BATCH_SIZE)
-
-        # Save model weights
-        seg_network.save_to_dataset('gt', epoch)
-        # torch.save(seg_network.model.state_dict(), f'./model_weights/epoch{epoch}.pt')
+from trainer.ml.torch_utils import device
 
 
 def save_predictions(dir_path: str, split='machine'):
@@ -67,7 +46,7 @@ if __name__ == '__main__':
     #                          )
     ds = lib.Dataset.from_disk(r'C:\Users\rapha\Desktop\data\old_b8')
 
-    structure_name = 'gt'  # The structure that we now train for
+    structure_name = 'bone'  # The structure that we now train for
 
     BATCH_SIZE = 4
     EPOCHS = 60
@@ -78,27 +57,19 @@ if __name__ == '__main__':
 
     visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
     seg_network = ml.seg_network.SegNetwork("SegNetwork", 3, 2, ds, batch_size=BATCH_SIZE, vis_board=visboard)
-    # seg_network.model.load_state_dict(torch.load(f'./model_weights/epoch{28}.pt'))
-    from trainer.ml.torch_utils import get_capacity
+    seg_network.print_summary()
 
-    print(f"Capacity of the network: {get_capacity(seg_network.model)}")
+    # test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test', mode=ModelMode.Eval),
+    #                               batch_size=BATCH_SIZE, shuffle=True)
+    # machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine', mode=ModelMode.Usage),
+    #                                  batch_size=BATCH_SIZE,
+    #                                  shuffle=True)
 
-    train_loader = data.DataLoader(
-        seg_network.get_torch_dataset(split='train', mode=ModelMode.Train),
-        batch_size=BATCH_SIZE,
-        shuffle=True,
-        num_workers=4)
-    test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test', mode=ModelMode.Eval),
-                                  batch_size=BATCH_SIZE, shuffle=True)
-    machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine', mode=ModelMode.Usage),
-                                     batch_size=BATCH_SIZE,
-                                     shuffle=True)
-    # for x, y in g_train:
-    #     print(x.shape)
-    #     print(y.shape)
-    #     break
-    seg_network.load_from_dataset('gt')
-    train_model()
+    seg_network.train_supervised(
+        'bone',
+        train_split='train',
+        max_epochs=50,
+        load_latest_state=True)
     # save_predictions('./out2/', split='train')
     # save_predictions('./out2/', split='test')
     # save_predictions('./out2/', split='machine')

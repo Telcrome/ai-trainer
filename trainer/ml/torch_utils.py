@@ -96,6 +96,9 @@ class TrainerModel(ABC):
         }
         self.vis_board = vis_board
 
+    def print_summary(self):
+        print(f"Capacity of the network: {get_capacity(self.model)}")
+
     def get_torch_dataset(self, split='', mode=ModelMode.Train):
         if not split:
             split = ALL_TORCHSET_KEY
@@ -136,11 +139,51 @@ class TrainerModel(ABC):
             self.vis_board.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
         print(f"Epoch result: {epoch_loss_sum / n}")
 
+    def train_supervised(self,
+                         structure_template: str,
+                         train_split='',
+                         max_epochs=50,
+                         batch_size=4,
+                         load_latest_state=True,
+                         num_workers=2):
+        train_loader = data.DataLoader(
+            self.get_torch_dataset(split=train_split, mode=ModelMode.Train),
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers)
+
+        N = self.ds.get_subject_count(split=train_split)
+
+        if load_latest_state:
+            self.load_from_dataset(structure_template=structure_template)
+
+        for epoch in range(max_epochs):
+            # with torch.no_grad():
+            #     # Visualize model output
+            #     for fig in self.visualize_prediction(machine_loader):
+            #         fig.suptitle("B8 Stuff")
+            #         self.visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, B8')
+            #     for fig in self.visualize_prediction(test_loader):
+            #         fig.suptitle("Test Set")
+            #         self.visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Test')
+            # for fig in seg_network.visualize_prediction(train_loader):
+            #     fig.suptitle("Train Set")
+            #     visboard.add_figure(fig, group_name=f'Before Epoch{epoch}, Train')
+            self.run_epoch(train_loader, epoch, N, batch_size=batch_size)
+
+            # Save model weights
+            self.save_to_dataset('bone', epoch)
+
     def save_to_dataset(self, structure_template: str, epoch: int):
         self.ds.add_binary(
             f'model_{self.name}_{structure_template}_{epoch}',
             self.model.state_dict(),
-            lib.BinaryType.TorchStateDict.value,
+            lib.BinaryType.TorchStateDict.value
+        )
+        self.ds.add_binary(
+            f'optim_{self.name}_{structure_template}_{epoch}',
+            self.optimizer.state_dict(),
+            lib.BinaryType.TorchStateDict.value
         )
         # TODO: Save metrics using binary meta info
 
@@ -152,10 +195,15 @@ class TrainerModel(ABC):
         print(weights)
         weight_binary_id = f'model_{self.name}_{structure_template}'
         if epoch == -1:
-            epoch = max([int(weight_id[-1]) for weight_id in weights if weight_id.startswith(weight_binary_id)])
-        weight_binary_id = f'model_{self.name}_{structure_template}_{epoch}'
-        state_dict = self.ds.get_binary(weight_binary_id)
-        self.model.load_state_dict(state_dict)
+            possible_weights = [int(weight_id[-1]) for weight_id in weights if weight_id.startswith(weight_binary_id)]
+            if len(possible_weights) > 0:
+                epoch = max(possible_weights)
+                weight_binary_id = f'model_{self.name}_{structure_template}_{epoch}'
+                optim_binary_id = f'optim_{self.name}_{structure_template}_{epoch}'
+                model_state_dict = self.ds.get_binary(weight_binary_id)
+                optim_state_dict = self.ds.get_binary(optim_binary_id)
+                self.model.load_state_dict(model_state_dict)
+                self.optimizer.load_state_dict(optim_state_dict)
 
     @staticmethod
     @abstractmethod
