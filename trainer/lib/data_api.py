@@ -123,12 +123,14 @@ class Entity:
     The only reserved names are for the json files and the folder for binaries.
     """
 
-    def __init__(self, entity_id: str, attrs: List[str], children: List[str], parent_folder: str):
+    def __init__(self, entity_id: str, attrs: List[str], parent_folder: str):
 
         self.entity_id = entity_id
+        self.parent: Entity = None
         self._attrs: Dict[str, Union[Dict, None]] = {key: None for key in attrs}
-        self._children: Dict[str, Union[Entity, None]] = {key: None for key in children}
+        self._children: Dict[str, Entity] = {}
         self._binaries: Dict[str, Any] = {}
+        self._binaries_model: Dict[str, Dict] = {}
         self.parent_folder = parent_folder
 
     @classmethod
@@ -161,17 +163,22 @@ class Entity:
         self._write_binaries()
         self._save_children()
 
-    def create_child(self, entity_id: str, attrs: List[str], children: List[str]):
+    def create_child(self, entity_id: str, attrs: List[str]):
         # self.to_disk()
-        child = Entity(entity_id, attrs, children, self.get_working_directory())
+        child = Entity(entity_id, attrs, self.get_working_directory())
+        child.parent = self
         self._children[child.entity_id] = child
         return child
 
     def _save_json_model(self, properly_formatted=True):
         # Write the json model file
         save_json = {
-            "attrs": list(self._attrs.keys())
+            "attrs": list(self._attrs.keys()),
+            "bins": self._binaries_model,
+            "children": list(self._children.keys())
         }
+        if self.parent is not None:
+            save_json["parent"] = self.parent.entity_id
         with open(self.get_json_path(), 'w+') as f:
             if properly_formatted:
                 json.dump(save_json, f, indent=4)
@@ -239,7 +246,7 @@ class Entity:
         """
         if self.parent_folder is None:
             raise Exception(f"Before saving {bin_key}, save {self.entity_id} to disk!")
-        path_no_ext = os.path.join(self.binaries_dir_path, bin_key)
+        path_no_ext = os.path.join(self.get_bin_dir(), bin_key)
         if self.get_bin_provider(bin_key) == BinarySaveProvider.Pickle:
             with open(f'{path_no_ext}.{PICKLE_EXT}', 'wb') as f:
                 pickle.dump(self._binaries[bin_key], f)
