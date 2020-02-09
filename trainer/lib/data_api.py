@@ -215,7 +215,7 @@ class Entity(ABC):
     def _add_attr(self, attr_id, content=None):
         self._attrs[attr_id] = content
 
-    def load_attr(self, attr_id):
+    def _load_attr(self, attr_id):
         """
         Returns a dict, which is a mutable python object.
         This means that changes will be saved to memory, but not implicitly to disk.
@@ -408,7 +408,7 @@ class Subject(Entity):
                 self._binaries_model[for_binary]["meta_data"]["classes"] = {}
             self._binaries_model[for_binary]["meta_data"]["classes"][class_name] = value
         else:
-            self.json_model['classes'][class_name] = value
+            self._load_attr('classes')[class_name] = value
 
     def get_class_value(self, class_name: str, for_binary=''):
         if for_binary:
@@ -417,15 +417,15 @@ class Subject(Entity):
             if class_name in self._binaries_model[for_binary]["meta_data"]["classes"]:
                 return self._binaries_model[for_binary]["meta_data"]["classes"][class_name]
         else:
-            if class_name in self.json_model['classes']:
-                return self.json_model['classes'][class_name]
+            if class_name in self._load_attr('classes'):
+                return self._load_attr('classes')[class_name]
         return "--Removed--"
 
     def remove_class(self, class_name: str, for_binary=''):
         if for_binary:
             self._binaries_model[for_binary]["meta_data"]["classes"].pop(class_name)
         else:
-            self.json_model['classes'].pop(class_name)
+            self._load_attr('classes').pop(class_name)
 
     def get_image_stack_keys(self):
         raise NotImplementedError()
@@ -554,6 +554,7 @@ class Subject(Entity):
 class Dataset(Entity):
     ATTR_CLASSDEFINITIONS = 'class_definitions'
     ATTR_SPLITS = 'splits'
+    ATTR_STRUCTURE_TEMPLATES = 'structure_templates'
 
     def __init__(self, name: str, dir_path: str, example_class=True):
         if os.path.exists(os.path.join(dir_path, name)):
@@ -564,7 +565,7 @@ class Dataset(Entity):
             "splits": {},
         })
         self._add_attr(self.ATTR_CLASSDEFINITIONS, content={})
-        self._add_attr('structure_templates', content={
+        self._add_attr(self.ATTR_STRUCTURE_TEMPLATES, content={
             "basic": {"foreground": MaskType.Blob.value,
                       "outline": MaskType.Line.value}
         })
@@ -590,36 +591,25 @@ class Dataset(Entity):
             "class_type": class_type.value,
             "values": values
         }
-        self.load_attr(self.ATTR_CLASSDEFINITIONS)[class_name] = obj
+        self._load_attr(self.ATTR_CLASSDEFINITIONS)[class_name] = obj
 
     def get_class_names(self):
-        return list(self.json_model['classes'].keys())
+        return list(self._load_attr(self.ATTR_CLASSDEFINITIONS).keys())
 
     def get_class(self, class_name: str) -> Union[Dict, None]:
-        if class_name in self.json_model['classes']:
-            return self.json_model['classes'][class_name]
+        if class_name in self._load_attr(self.ATTR_CLASSDEFINITIONS):
+            return self._load_attr(self.ATTR_CLASSDEFINITIONS)[class_name]
         else:
             return None
 
     def remove_class(self, class_name: str):
-        self.json_model['classes'].pop(class_name)
-
-    def save_into(self, dir_path: str, properly_formatted=True, vis=True) -> None:
-        old_working_dir = self.get_working_directory()
-        super().to_disk(dir_path, properly_formatted=properly_formatted)
-        for i, te_key in enumerate(self.json_model["subjects"]):
-            te_path = os.path.join(old_working_dir, te_key)
-            te = Subject.from_disk(te_path)
-            te.to_disk(self.get_working_directory())
-            if vis:
-                sg.OneLineProgressMeter('My Meter', i + 1, len(self.json_model['subjects']), 'key',
-                                        f'Subject: {te.entity_id}')
+        self._load_attr(self.ATTR_CLASSDEFINITIONS).pop(class_name)
 
     def get_structure_template_names(self):
-        return list(self.json_model["structure_templates"].keys())
+        return list(self._load_attr(self.ATTR_CLASSDEFINITIONS).keys())
 
     def get_structure_template_by_name(self, tpl_name):
-        return self.json_model["structure_templates"][tpl_name]
+        return self._load_attr(self.ATTR_STRUCTURE_TEMPLATES)[tpl_name]
 
     def save_subject(self, s: Subject, auto_save=True) -> None:
         """
@@ -630,8 +620,8 @@ class Dataset(Entity):
         """
         self._add_child(s)
         # Add the name of the subject into the splits
-        if s.entity_id not in self.load_attr(self.ATTR_SPLITS)['subjects']:
-            self.load_attr(self.ATTR_SPLITS)["subjects"].append(s.entity_id)
+        if s.entity_id not in self._load_attr(self.ATTR_SPLITS)['subjects']:
+            self._load_attr(self.ATTR_SPLITS)["subjects"].append(s.entity_id)
         if auto_save:
             self.to_disk()
 
@@ -642,17 +632,17 @@ class Dataset(Entity):
         :return: List of the names of the subjects
         """
         if not split:
-            subjects = self.json_model["subjects"]
+            subjects = self._load_attr(self.ATTR_SPLITS)["subjects"]
         else:
-            subjects = self.json_model["splits"][split]
+            subjects = self._load_attr(self.ATTR_SPLITS)["splits"][split]
         return subjects
 
     def append_subject_to_split(self, s: Subject, split: str):
         # Create the split if it does not exist
-        if split not in self.json_model["splits"]:
-            self.json_model["splits"][split] = []
+        if split not in self._load_attr(self.ATTR_SPLITS)["splits"]:
+            self._load_attr(self.ATTR_SPLITS)["splits"][split] = []
 
-        self.json_model["splits"][split].append(s.entity_id)
+        self._load_attr(self.ATTR_SPLITS)["splits"][split].append(s.entity_id)
 
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """
@@ -662,13 +652,13 @@ class Dataset(Entity):
         :return: The list of subjects of interest
         """
         res: List[str] = []
-        for i, s_name in enumerate(self.json_model["subjects"]):
+        for i, s_name in enumerate(self._load_attr(self.ATTR_SPLITS)["subjects"]):
             te = self.get_subject_by_name(s_name)
             if filterer(te):
                 res.append(te.entity_id)
             if viz:
                 sg.OneLineProgressMeter("Filtering subjects", i + 1,
-                                        len(self.json_model['subjects']),
+                                        self.get_subject_count(),
                                         'key',
                                         f'Subject: {te.entity_id}')
         return res
@@ -682,21 +672,21 @@ class Dataset(Entity):
         for s in tqdm(del_ls, desc="Deleting subjects"):
             del_name = s.name
             s.delete_on_disk()
-            self.json_model["subjects"].remove(del_name)
-            for split in self.json_model["splits"]:
-                if del_name in self.json_model["splits"][split]:
-                    self.json_model["splits"][split].remove(del_name)
+            self._load_attr(self.ATTR_SPLITS)["subjects"].remove(del_name)
+            for split in self._load_attr(self.ATTR_SPLITS)["splits"]:
+                if del_name in self._load_attr(self.ATTR_SPLITS)["splits"][split]:
+                    self._load_attr(self.ATTR_SPLITS)["splits"][split].remove(del_name)
         self.to_disk(self.parent_folder)
 
     def get_subject_by_name(self, s_name: str):
-        if s_name not in self.json_model['subjects']:
+        if s_name not in self._load_attr(self.ATTR_SPLITS)['subjects']:
             raise Exception('This dataset does not contain a subject with this name')
         res = Subject.from_disk(os.path.join(self.get_working_directory(), s_name))
         return res
 
     def get_summary(self) -> str:
         split_summary = ""
-        for split in self.json_model["splits"]:
+        for split in self._load_attr(self.ATTR_SPLITS)["splits"]:
             split_summary += f"""{split}: {self.get_subject_count(split=split)}\n"""
         return f"Saved at {self.get_working_directory()}\nN: {len(self)}\n{split_summary}"
 
@@ -734,9 +724,9 @@ class Dataset(Entity):
 
     def get_subject_count(self, split=''):
         if not split:
-            return len(self.json_model["subjects"])
+            return len(self._load_attr(self.ATTR_SPLITS)["subjects"])
         else:
-            return len(self.json_model["splits"][split])
+            return len(self._load_attr(self.ATTR_SPLITS)["splits"][split])
 
     def __len__(self):
         return self.get_subject_count()
