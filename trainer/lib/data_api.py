@@ -93,6 +93,7 @@ class ClassSelectionLevel(Enum):
     FrameLevel = "Frame Level"
 
 
+ENTITY_DIRNAME = '.entity'
 BINARIES_DIRNAME = "binaries"
 ENTITY_JSON = "entity.json"
 BINARY_TYPE_KEY = "binary_type"
@@ -104,19 +105,9 @@ def build_full_filepath(name: str, dir_path: str):
     return os.path.join(dir_path, f"{basename}.json")
 
 
-def dir_is_valid_entity(dir_name: str, json_checker: Callable[[str], bool] = None):
-    if json_checker is None:
-        def json_checker(json_val: str) -> bool:
-            return True
-    # Check if the json exists:
-    json_path = os.path.join(dir_name, ENTITY_JSON)
-    if os.path.exists(json_path):
-        with open(json_path, 'r') as f:
-            json_content = json.load(f)
-        if json_checker(json_content):
-            return True
-    # TODO Check other constraints (binaries)
-    return False
+def dir_is_valid_entity(dir_name: str):
+    assert (os.path.exists(os.path.join(dir_name, ENTITY_DIRNAME)))
+    return True
 
 
 class Entity:
@@ -132,11 +123,11 @@ class Entity:
     The only reserved names are for the json files and the folder for binaries.
     """
 
-    def __init__(self, entity_id: str, attrs: List[str], parent_folder):
-        self.children: List[Entity] = []
+    def __init__(self, entity_id: str, attrs: List[str], children: List[str], parent_folder: str):
 
         self.entity_id = entity_id
         self._attrs: Dict[str, Union[Dict, None]] = {key: None for key in attrs}
+        self._children: Dict[str, Union[Entity, None]] = {key: None for key in children}
         self._binaries: Dict[str, Any] = {}
         self.parent_folder = parent_folder
 
@@ -146,7 +137,7 @@ class Entity:
             raise Exception(f"{working_dir} is not a valid directory.")
 
         parent_folder, entity_id = os.path.dirname(working_dir), os.path.basename(working_dir)
-        with open(os.path.join(parent_folder, entity_id, ENTITY_JSON), 'r') as f:
+        with open(os.path.join(parent_folder, entity_id, ENTITY_DIRNAME, ENTITY_JSON), 'r') as f:
             json_content = json.load(f)
             attrs = json_content['attrs']
         res = cls(entity_id, attrs, parent_folder)
@@ -163,8 +154,18 @@ class Entity:
         if not os.path.exists(self.get_working_directory()):
             os.mkdir(self.get_working_directory())
 
+        if not os.path.exists(self.get_entity_directory()):
+            os.mkdir(self.get_entity_directory())
+
         self._save_json_model(properly_formatted=properly_formatted)
         self._write_binaries()
+        self._save_children()
+
+    def create_child(self, entity_id: str, attrs: List[str], children: List[str]):
+        # self.to_disk()
+        child = Entity(entity_id, attrs, children, self.get_working_directory())
+        self._children[child.entity_id] = child
+        return child
 
     def _save_json_model(self, properly_formatted=True):
         # Write the json model file
@@ -182,6 +183,10 @@ class Entity:
                     json.dump(self._attrs[attr_id], f, indent=4)
                 else:
                     json.dump(self._attrs[attr_id], f)
+
+    def _save_children(self):
+        for child_key in filter(lambda x: self._children[x] is not None, self._children.keys()):
+            self._children[child_key].to_disk(parent_folder=self.get_working_directory())
 
     def _write_binaries(self):
         if not os.path.exists(self.get_bin_dir()):
@@ -254,11 +259,14 @@ class Entity:
     def get_working_directory(self):
         return os.path.join(self.parent_folder, self.entity_id)
 
+    def get_entity_directory(self):
+        return os.path.join(self.get_working_directory(), ENTITY_DIRNAME)
+
     def get_bin_dir(self):
-        return os.path.join(self.get_working_directory(), BINARIES_DIRNAME)
+        return os.path.join(self.get_entity_directory(), BINARIES_DIRNAME)
 
     def get_json_path(self):
-        return os.path.join(self.get_working_directory(), ENTITY_JSON)
+        return os.path.join(self.get_entity_directory(), ENTITY_JSON)
 
     def add_bin(self,
                 binary_id: str,
