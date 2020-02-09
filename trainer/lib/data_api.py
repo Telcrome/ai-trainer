@@ -73,15 +73,11 @@ class BinaryType(Enum):
         return {
             BinaryType.Unknown.value: BinarySaveProvider.Pickle,
             BinaryType.NumpyArray.value: BinarySaveProvider.Numpy,
-            BinaryType.ImageStack.value: BinarySaveProvider.Numpy,
-            BinaryType.ImageMask.value: BinarySaveProvider.Numpy,
             BinaryType.TorchStateDict.value: BinarySaveProvider.Pickle
         }
 
     Unknown = 'unknown'  # pickle
     NumpyArray = 'numpy_array'
-    ImageStack = 'image_stack'
-    ImageMask = 'img_mask'
     TorchStateDict = 'torch_state_dict'
 
 
@@ -113,7 +109,7 @@ def dir_is_valid_entity(dir_name: str, json_checker: Callable[[str], bool] = Non
         def json_checker(json_val: str) -> bool:
             return True
     # Check if the json exists:
-    json_path = os.path.join(dir_name, JSON_MODEL_FILENAME)
+    json_path = os.path.join(dir_name, ENTITY_JSON)
     if os.path.exists(json_path):
         with open(json_path, 'r') as f:
             json_content = json.load(f)
@@ -136,11 +132,11 @@ class Entity:
     The only reserved names are for the json files and the folder for binaries.
     """
 
-    def __init__(self, entity_id: str, parent_folder):
+    def __init__(self, entity_id: str, attrs: List[str], parent_folder):
         self.children: List[Entity] = []
 
         self.entity_id = entity_id
-        self.attrs: Dict[str, Dict] = {}
+        self._attrs: Dict[str, Union[Dict, None]] = {key: None for key in attrs}
         self._binaries: Dict[str, Any] = {}
         self.parent_folder = parent_folder
 
@@ -150,13 +146,65 @@ class Entity:
             raise Exception(f"{working_dir} is not a valid directory.")
 
         parent_folder, entity_id = os.path.dirname(working_dir), os.path.basename(working_dir)
-        res = cls(entity_id, parent_folder)
-
-        json_file_paths = os.path.join(working_dir, JSON_MODEL_FILENAME)
-        with open(full_file_path, 'r') as f:
+        with open(os.path.join(parent_folder, entity_id, ENTITY_JSON), 'r') as f:
             json_content = json.load(f)
+            attrs = json_content['attrs']
+        res = cls(entity_id, attrs, parent_folder)
+
+        # json_file_paths = os.path.join(working_dir, JSON_MODEL_FILENAME)
 
         return res
+
+    def to_disk(self, parent_folder: str = "", properly_formatted=True) -> None:
+        if parent_folder:
+            self.parent_folder = parent_folder
+
+        # Create the parent directory for this instance
+        if not os.path.exists(self.get_working_directory()):
+            os.mkdir(self.get_working_directory())
+
+        self._save_json_model(properly_formatted=properly_formatted)
+        self._write_binaries()
+
+    def _save_json_model(self, properly_formatted=True):
+        # Write the json model file
+        save_json = {
+            "attrs": list(self._attrs.keys())
+        }
+        with open(self.get_json_path(), 'w+') as f:
+            if properly_formatted:
+                json.dump(save_json, f, indent=4)
+            else:
+                json.dump(save_json, f)
+        for attr_id in filter(lambda x: self._attrs[x] is not None, self._attrs.keys()):
+            with open(os.path.join(self.get_working_directory(), f'{attr_id}.json'), 'w+') as f:
+                if properly_formatted:
+                    json.dump(self._attrs[attr_id], f, indent=4)
+                else:
+                    json.dump(self._attrs[attr_id], f)
+
+    def _write_binaries(self):
+        if not os.path.exists(self.get_bin_dir()):
+            os.mkdir(self.get_bin_dir())
+        for binary_key in self._binaries:  # TODO: check if necessary
+            self.save_binary(binary_key)
+
+    def load_attr(self, attr_id):
+        """
+        Returns a dict, which is a mutable python object.
+        This means that changes will be saved to memory, but not implicitly to disk.
+        Call to_disk() for writing changes to disk.
+        :param attr_id:
+        :return:
+        """
+        if self._attrs[attr_id] is None:
+            attr_path = os.path.join(self.get_working_directory(), f'{attr_id}.json')
+            if os.path.exists(attr_path):
+                with open(attr_path, 'r') as f:
+                    self._attrs[attr_id] = json.load(f)
+            else:
+                self._attrs[attr_id] = {}
+        return self._attrs[attr_id]
 
     def load_binary(self, binary_id) -> None:
         path_no_ext = os.path.join(self.binaries_dir_path, binary_id)
@@ -166,34 +214,6 @@ class Entity:
         else:
             binary_payload = np.load(f'{path_no_ext}.npy', allow_pickle=False)
         self._binaries[binary_id] = binary_payload
-
-    def to_disk(self, parent_folder: str = "", properly_formatted=True) -> None:
-        if not parent_folder:
-            parent_folder = self.parent_folder
-
-        # Create the parent directory for this instance
-        if not os.path.exists(self.get_working_directory()):
-            os.mkdir(self.get_working_directory())
-
-        self._save_json_model()
-        self._write_binaries()
-
-    def _save_json_model(self, properly_formatted=True):
-        # Write the json model file
-        with open(self.get_json_path(), 'w+') as f:
-            save_json = {
-                "attrs": list(self.attrs.keys())
-            }
-            if properly_formatted:
-                json.dump(save_json, f, indent=4)
-            else:
-                json.dump(save_json, f)
-
-    def _write_binaries(self):
-        if not os.path.exists(self.get_bin_dir()):
-            os.mkdir(self.get_bin_dir())
-        for binary_key in self._binaries:  # TODO: check if necessary
-            self.save_binary(binary_key)
 
     def get_bin_provider(self, binary_key: str):
         """
@@ -291,9 +311,6 @@ class Entity:
     def get_binary_list_filtered(self, key_filterer: Callable[[Dict], bool]):
         return [i for i in self._binaries_model if key_filterer(self._binaries_model[i])]
 
-    def get_image_stack_keys(self):
-        return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
-
     def count_binaries_memory(self) -> int:
         """
         :return: The memory occupied by all the binaries together.
@@ -308,7 +325,9 @@ class Entity:
         # for binary in self._binaries.keys():
         #     res += f"{binary}: shape: {self._binaries[binary].shape} (type: {self._binaries[binary].dtype})\n"
         #     res += f"{json.dumps(self._binaries_model[binary], indent=4)}\n"
-        res += json.dumps(self.attrs, indent=4)
+        for attr_id in self._attrs:
+            self.load_attr(attr_id)
+        res += json.dumps(self._attrs, indent=4)
         return res
 
     def __repr__(self):
@@ -380,6 +399,10 @@ class Subject(Entity):
             self._binaries_model[for_binary]["meta_data"]["classes"].pop(class_name)
         else:
             self.json_model['classes'].pop(class_name)
+
+    def get_image_stack_keys(self):
+        raise NotImplementedError()
+        # return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
 
     def add_source_image_by_arr(self,
                                 src_im,
