@@ -578,10 +578,6 @@ class Dataset(Entity):
         working_dir_path = download_and_extract(url, parent_dir=local_path, dir_name=dataset_name)
         return Dataset.from_disk(working_dir_path)
 
-    def update_weights(self, struct_name: str, weights: np.ndarray):
-        print(f"Updating the weights for {struct_name}")
-        self.add_bin(struct_name, weights)
-
     def add_class(self, class_name: str, class_type: ClassType, values: List[str]):
         """
         Adds a class on a dataset level.
