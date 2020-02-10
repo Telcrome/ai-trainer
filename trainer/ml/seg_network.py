@@ -61,7 +61,7 @@ class SegNetwork(ml.TrainerModel):
         model = smp.PAN(in_channels=in_channels, classes=n_classes)
         opti = optim.Adam(model.parameters(), lr=5e-3)
         crit = SegCrit(1., 2., (0.5, 0.5))
-        super().__init__(model_name, model, opti, crit, ds, batch_size=batch_size, vis_board=vis_board)
+        super().__init__(model_name, model, opti, crit, ds, vis_board=vis_board)
         self.in_channels, self.n_classes = in_channels, n_classes
 
     def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
@@ -89,7 +89,7 @@ class SegNetwork(ml.TrainerModel):
         return figs
 
     @staticmethod
-    def preprocess(s: lib.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+    def preprocess_segmap(s: lib.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
         is_names = s.get_image_stack_keys()
         is_name = random.choice(is_names)
         available_structures = s.get_structure_list(image_stack_key=is_name)

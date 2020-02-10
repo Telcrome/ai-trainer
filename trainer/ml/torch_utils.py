@@ -85,14 +85,13 @@ class TrainerModel(ABC):
                  opti: optimizer.Optimizer,
                  crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module],
                  ds: lib.Dataset,
-                 batch_size=4,
                  vis_board=None):
         super().__init__()
         self.name = model_name
-        self.model, self.optimizer, self.criterion, self.ds, self.batch_size = model, opti, crit, ds, batch_size
+        self.model, self.optimizer, self.criterion, self.ds = model, opti, crit, ds
         self.model = self.model.to(device)
         self._torch_sets = {
-            ALL_TORCHSET_KEY: TorchDataset(self.ds.get_working_directory(), self.preprocess, split='')
+            ALL_TORCHSET_KEY: TorchDataset(self.ds.get_working_directory(), self.preprocess_segmap, split='')
         }
         self.vis_board = vis_board
 
@@ -104,7 +103,8 @@ class TrainerModel(ABC):
             split = ALL_TORCHSET_KEY
         if split not in self._torch_sets:
             self._torch_sets[split] = TorchDataset(self.ds.get_working_directory(),
-                                                   partial(self.preprocess, mode=mode),  # Python cant pickle lambda
+                                                   partial(self.preprocess_segmap, mode=mode),
+                                                   # Python cant pickle lambda
                                                    split=split)
         return self._torch_sets[split]
 
@@ -146,6 +146,7 @@ class TrainerModel(ABC):
                          batch_size=4,
                          load_latest_state=True,
                          num_workers=2):
+
         train_loader = data.DataLoader(
             self.get_torch_dataset(split=train_split, mode=ModelMode.Train),
             batch_size=batch_size,
@@ -175,16 +176,11 @@ class TrainerModel(ABC):
             self.save_to_dataset('bone', epoch)
 
     def save_to_dataset(self, structure_template: str, epoch: int):
-        self.ds._add_bin(
-            f'model_{self.name}_{structure_template}_{epoch}',
-            self.model.state_dict(),
-            lib.BinaryType.TorchStateDict.value
-        )
-        self.ds._add_bin(
-            f'optim_{self.name}_{structure_template}_{epoch}',
-            self.optimizer.state_dict(),
-            lib.BinaryType.TorchStateDict.value
-        )
+        save_obj = {
+            'model': self.model.state_dict(),
+            'optim': self.optimizer.state_dict()
+        }
+        self.ds.save_model_state()
         # TODO: Save metrics using binary meta info
 
     def load_from_dataset(self, structure_template: str, epoch=-1):
@@ -207,13 +203,24 @@ class TrainerModel(ABC):
 
     @staticmethod
     @abstractmethod
-    def preprocess(s: lib.Subject, mode: ModelMode = ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+    def preprocess_segmap(s: lib.Subject, mode: ModelMode = ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
         """
         Provides the preprocessing chain to extract a training example from a subject.
 
         :param s: One subject
         :param mode: ModelMode for the preprocessor. Train is used for training, eval is used for testing, Usage for use
         :return: The training example (x, y), of type torch.Tensor
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def preprocess_class(s: lib.Subject, mode: ModelMode = ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
+        """
+
+        :param s: One subject
+        :param mode: ModelMode for the preprocessor. Train is used for training, eval is used for testing, Usage for use
+        :return:
         """
         pass
 

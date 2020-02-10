@@ -25,6 +25,7 @@ from __future__ import annotations  # Important for function annotations of symb
 import json
 import os
 import pickle
+import shutil
 import tempfile
 from abc import ABC
 from enum import Enum
@@ -188,6 +189,7 @@ class Entity(ABC):
             json_content = json.load(f)
         res = cls(entity_id, parent_folder)
         res._attrs = {key: None for key in json_content['attrs']}
+        res._child_types = json_content['children']
         res._children = {key: None for key in json_content['children']}
         res._binaries_model = json_content['bins']
         res.saved_to_disk = True
@@ -196,6 +198,9 @@ class Entity(ABC):
     def to_disk(self, parent_folder: str = "", properly_formatted=True) -> None:
         if parent_folder:
             self.parent_folder = parent_folder
+
+        # The entity uses this flag to keep track of its state on disk without querying the hard drive
+        self.saved_to_disk = True
 
         # Create the parent directory for this instance
         if not os.path.exists(self.get_working_directory()):
@@ -210,7 +215,19 @@ class Entity(ABC):
         self._save_json_model(properly_formatted=properly_formatted)
         self._write_binaries()
         self._save_children()
-        self.saved_to_disk = True
+
+    def remove_from_disk(self):
+        assert (os.path.exists(self.get_working_directory()))
+        shutil.rmtree(self.get_working_directory())
+        while os.path.exists(self.get_working_directory()):
+            pass
+
+    def stop_auto_save(self) -> None:
+        """
+        For disk intensive operations that still fit in memory it might be useful to disable the auto-save mechanism.
+        Calling to_disk() will revert the operation and the entity will resume auto-saving.
+        """
+        self.saved_to_disk = False
 
     def _add_child(self, child: Entity) -> None:
         self._child_types[child.entity_id] = child.entity_type
@@ -311,6 +328,8 @@ class Entity(ABC):
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
 
     def _is_saved_to_disk(self) -> bool:
+        if not self.saved_to_disk:
+            return False
         return self.parent_folder is not None and self.parent_folder and os.path.exists(self.get_working_directory())
 
     def _save_binary(self, bin_key) -> None:
@@ -707,17 +726,17 @@ class Dataset(Entity):
         :return: List of the names of the subjects
         """
         if not split:
-            subjects = self._load_attr(self.ATTR_SPLITS)["subjects"]
+            subjects = self._get_children_keys(entity_type='subject')
         else:
             subjects = self._load_attr(self.ATTR_SPLITS)["splits"][split]
         return subjects
 
-    def append_subject_to_split(self, s: Subject, split: str):
+    def append_subject_to_split(self, s_id: str, split: str):
         # Create the split if it does not exist
         if split not in self._load_attr(self.ATTR_SPLITS)["splits"]:
             self._load_attr(self.ATTR_SPLITS)["splits"][split] = []
 
-        self._load_attr(self.ATTR_SPLITS)["splits"][split].append(s.entity_id)
+        self._load_attr(self.ATTR_SPLITS)["splits"][split].append(s_id)
 
     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
         """
@@ -783,10 +802,14 @@ class Dataset(Entity):
         return seg_structs
 
     def get_subject_count(self, split=''):
-        if not split:
-            return len(self._load_attr(self.ATTR_SPLITS)["subjects"])
-        else:
-            return len(self._load_attr(self.ATTR_SPLITS)["splits"][split])
+        return len(self.get_subject_name_list(split=split))
+
+    def save_model_state(self, weight_id: str, bin: Any) -> None:
+        self._add_bin(
+            weight_id,
+            bin,
+            BinaryType.TorchStateDict.value
+        )
 
     def __len__(self):
         return self.get_subject_count()
