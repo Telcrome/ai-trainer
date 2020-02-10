@@ -95,7 +95,7 @@ class SegNetwork(ml.TrainerModel):
         available_structures = s.get_structure_list(image_stack_key=is_name)
         # TODO: Doesnt make sense for multiple structures
         selected_struct = random.choice(list(available_structures.keys()))
-        im = s.get_binary(is_name)
+        im = s._get_binary(is_name)
         if not mode == ml.ModelMode.Usage:
             possible_frames = s.get_masks_of(is_name, frame_numbers=True)
             selected_frame = random.choice(possible_frames)

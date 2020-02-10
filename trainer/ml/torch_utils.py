@@ -175,12 +175,12 @@ class TrainerModel(ABC):
             self.save_to_dataset('bone', epoch)
 
     def save_to_dataset(self, structure_template: str, epoch: int):
-        self.ds.add_bin(
+        self.ds._add_bin(
             f'model_{self.name}_{structure_template}_{epoch}',
             self.model.state_dict(),
             lib.BinaryType.TorchStateDict.value
         )
-        self.ds.add_bin(
+        self.ds._add_bin(
             f'optim_{self.name}_{structure_template}_{epoch}',
             self.optimizer.state_dict(),
             lib.BinaryType.TorchStateDict.value
@@ -191,7 +191,7 @@ class TrainerModel(ABC):
         def b_filter(d: Dict) -> bool:
             return d['binary_type'] == lib.BinaryType.TorchStateDict.value
 
-        weights = self.ds.get_binary_list_filtered(b_filter)
+        weights = self.ds._get_binary_list_filtered(b_filter)
         print(weights)
         weight_binary_id = f'model_{self.name}_{structure_template}'
         if epoch == -1:
@@ -200,8 +200,8 @@ class TrainerModel(ABC):
                 epoch = max(possible_weights)
                 weight_binary_id = f'model_{self.name}_{structure_template}_{epoch}'
                 optim_binary_id = f'optim_{self.name}_{structure_template}_{epoch}'
-                model_state_dict = self.ds.get_binary(weight_binary_id)
-                optim_state_dict = self.ds.get_binary(optim_binary_id)
+                model_state_dict = self.ds._get_binary(weight_binary_id)
+                optim_state_dict = self.ds._get_binary(optim_binary_id)
                 self.model.load_state_dict(model_state_dict)
                 self.optimizer.load_state_dict(optim_state_dict)
 

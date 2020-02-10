@@ -67,9 +67,9 @@ def get_dummy_entity(jc_name="Test Json Class"):
     >>> jc = lib.get_dummy_entity()
     >>> jc.entity_id
     'Test Json Class'
-    >>> jc.get_binary('b1')  # A small array is contained in the example
+    >>> jc._get_binary('b1')  # A small array is contained in the example
     array([1, 2, 3])
-    >>> jc.get_binary('obj')
+    >>> jc._get_binary('obj')
     {'this': 'is', 'an': 'object'}
 
     :param jc_name: Name of the Jsonclass
@@ -78,20 +78,23 @@ def get_dummy_entity(jc_name="Test Json Class"):
     dir_path = tempfile.gettempdir()
 
     res = lib.Entity(jc_name, dir_path)
+    res.to_disk(dir_path)
 
     res._add_attr('some_attributes', content={
         'Attribute 1': "Value 1"
     })
-    res.to_disk(dir_path)
-    res.add_bin('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
 
-    res.add_bin('picture', skimage.data.retina(), b_type=lib.BinaryType.NumpyArray.value)
+    res._add_bin('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
+
+    res._add_bin('picture', skimage.data.retina(), b_type=lib.BinaryType.NumpyArray.value)
 
     python_obj = {
         "this": "is",
         "an": "object"
     }
-    res.add_bin('obj', python_obj, lib.BinaryType.Unknown.value)
+    res._add_bin('obj', python_obj, lib.BinaryType.Unknown.value)
+
+    res.to_disk(dir_path)
 
     return res
 
@@ -114,20 +117,22 @@ def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     return np.random.randint(low=low, high=high, size=shape) + np.random.rand(*shape)
 
 
-def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=5) -> lib.Subject:
+def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=(1, 5)) -> lib.Subject:
     """
     Samples a random subject.
     """
-    s = lib.Subject(lib.create_identifier())
-
     digit_class = random.randint(0, 9)
+    s = lib.Subject(lib.create_identifier())
+    s.set_class(digit_class)
 
     # digit classification
-    for i in range(random.randint(1, max_digit_ims)):
+    for i in range(random.randint(*max_digit_ims)):
         x, y = src_manager.sample_digit(digit=digit_class)
-        s.add_source_image_by_arr(x, binary_name=lib.create_identifier(f"mnist{i}"))
-        s.set_class('digit', str(digit_class), for_dataset=d)
+        im_stack = lib.ImageStack.from_np(lib.create_identifier(f"mnist{i}"), x)
+        im_stack.set_class('digit', str(digit_class), for_dataset=d)
+        s.add_image_stack(im_stack)
 
-    s.add_source_image_by_arr(src_im=skimage.data.astronaut(), binary_name="astronaut_image")
+    astr_im = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
+    s.add_image_stack(astr_im)
 
     return s

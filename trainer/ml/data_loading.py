@@ -63,7 +63,7 @@ def random_subject_generator(ds: Dataset, preprocessor: Callable[[Subject], Tupl
 
 
 def get_mask_for_frame(s: Subject, binary_name: str, struct_name: str, frame_number=-1):
-    struct_index = list(s.get_binary_model(binary_name)["meta_data"]["structures"].keys()).index(struct_name)
+    struct_index = list(s._get_binary_model(binary_name)["meta_data"]["structures"].keys()).index(struct_name)
 
     def mask_condition(binary_model):
         if binary_model['binary_type'] == lib.BinaryType.ImageMask.value:
@@ -72,9 +72,9 @@ def get_mask_for_frame(s: Subject, binary_name: str, struct_name: str, frame_num
                     return True
         return False
 
-    mask_names = s.get_binary_list_filtered(mask_condition)
+    mask_names = s._get_binary_list_filtered(mask_condition)
     if mask_names:
-        mask = s.get_binary(mask_names[0])[:, :, struct_index]
+        mask = s._get_binary(mask_names[0])[:, :, struct_index]
         return mask
     return None
 
@@ -87,7 +87,7 @@ def get_img_mask_pair(s: Subject, binary_name: str, struct_name: str, frame_numb
     If no valid frame is specified for a video, an exception is raised.
     If no mask exists, (image, None) is returned
     """
-    frame = s.get_binary(binary_name)[frame_number]
+    frame = s._get_binary(binary_name)[frame_number]
     return frame, get_mask_for_frame(s, binary_name, struct_name, frame_number)
 
 
@@ -114,6 +114,6 @@ def random_struct_generator(ds: Dataset, struct_name: str, split=None, verbose=T
         b_name = random.choice(list(annotations[s_name].keys()))
         m_name = random.choice(annotations[s_name][b_name])
         # Build the training example with context
-        struct_index = list(s.get_binary_model(b_name)["meta_data"]["structures"].keys()).index(struct_name)
-        yield s.get_binary(b_name), s.get_binary(m_name)[:, :, struct_index], \
-              s.get_binary_model(m_name)["meta_data"]['frame_number']
+        struct_index = list(s._get_binary_model(b_name)["meta_data"]["structures"].keys()).index(struct_name)
+        yield s._get_binary(b_name), s._get_binary(m_name)[:, :, struct_index], \
+              s._get_binary_model(m_name)["meta_data"]['frame_number']

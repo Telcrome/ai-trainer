@@ -21,7 +21,7 @@ def save_predictions(dir_path: str, split='machine'):
         is_names = s.get_image_stack_keys()
         print(is_names)
         for is_name in is_names:
-            im = s.get_binary(is_name)
+            im = s._get_binary(is_name)
             print(f'Exporting {is_name}')
             for frame_i in range(im.shape[0]):
                 frame = im[frame_i, :, :, 0]

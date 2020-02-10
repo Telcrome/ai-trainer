@@ -44,7 +44,7 @@ def append_dicom_to_subject(s_path: str,
     s.add_source_image_by_arr(img_data, binary_name, structures=seg_structs, extra_info=meta)
 
     if auto_save:
-        s.to_disk(s.get_parent_directory())
+        s.to_disk(s._get_parent_directory())
 
     return s
 
@@ -220,7 +220,7 @@ def append_subject(ds: lib.Dataset,
     ds.save_subject(s, split=split, auto_save=False)
 
     add_imagestack(s, im_path, binary_id=im_name, structures=seg_structs)
-    im_arr = s.get_binary(im_name)
+    im_arr = s._get_binary(im_name)
 
     if gt_paths:
         gt_arr = np.zeros((im_arr.shape[1], im_arr.shape[2], len(gt_paths)), dtype=np.bool)
@@ -229,7 +229,7 @@ def append_subject(ds: lib.Dataset,
             if artefact_threshold is not None:
                 arr = arr > artefact_threshold
             gt_arr[:, :, i] = arr
-        s.add_semantic_segmentation(gt_arr, structure_names=[v for (_, v) in gt_paths], mask_of=im_name, frame_number=0)
+        s.add_sem_seg(gt_arr, structure_names=[v for (_, v) in gt_paths], mask_of=im_name, frame_number=0)
 
     # print(f'File path: {im_path} with name: {im_name}')
 

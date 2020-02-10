@@ -219,8 +219,8 @@ class AnnotationGui(TWindow):
             print(f"Selecting next subject: {next_subject_name}")
 
     def save_to_disk(self):
-        print(f"Saving to {self.current_subject.get_parent_directory()}")
-        self.current_subject.to_disk(self.current_subject.get_parent_directory())
+        print(f"Saving to {self.current_subject._get_parent_directory()}")
+        self.current_subject.to_disk(self.current_subject._get_parent_directory())
 
     def add_image_data_from_disk(self):
         layout = [[sg.Text(text="Select from Disk")],
@@ -264,7 +264,7 @@ class AnnotationGui(TWindow):
 
     def inspect_on_disk(self, open_file=False):
         if open_file:
-            os.startfile(self.current_subject.get_json_path())
+            os.startfile(self.current_subject._get_json_path())
         else:
             os.startfile(self.current_subject.get_working_directory())
 
@@ -292,7 +292,7 @@ class AnnotationGui(TWindow):
         # Load the list of source binaries into GUI
         self.lst_source_binaries.clear()
         self.lst_gt_binaries.clear()
-        src_names = self.current_subject.get_binary_list_filtered(lambda x: x['binary_type'] == 'image_stack')
+        src_names = self.current_subject._get_binary_list_filtered(lambda x: x['binary_type'] == 'image_stack')
         if src_names:
             for b in src_names:
                 self.lst_source_binaries.addItem(str(b))
@@ -306,17 +306,17 @@ class AnnotationGui(TWindow):
             self.save_to_disk()
         self.mask_data, self.mask_name, self.frame_number = None, name, 0
 
-        self.img_data, self._selected_source_binary = self.current_subject.get_binary(name), name
+        self.img_data, self._selected_source_binary = self.current_subject._get_binary(name), name
         self.seg_tool.set_img_stack(self.img_data)
         # Load the possible structures into lst_gt
         self.lst_gt_binaries.clear()
-        meta = self.current_subject.get_binary_model(name)
+        meta = self.current_subject._get_binary_model(name)
         self.seg_structs = list(meta["meta_data"]["structures"].keys())
         for s in self.seg_structs:
             self.lst_gt_binaries.addItem(f'{s}: {meta["meta_data"]["structures"][s]}')
 
         # Preselect a mask if there is only one structure anyway
-        if self.current_subject.get_binary_list_filtered(lambda x: binary_filter(x, name, self.frame_number)):
+        if self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, name, self.frame_number)):
             self.select_gt_binary(self.seg_structs[0], for_name=name)
         else:
             self._selected_gt_binary, self.mask_data = None, None
@@ -339,7 +339,7 @@ class AnnotationGui(TWindow):
         """
 
         # See if this structure already is described in one of the masks of this frame number
-        gt_names = self.current_subject.get_binary_list_filtered(lambda x: binary_filter(x, for_name, frame_number))
+        gt_names = self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, for_name, frame_number))
 
         # Currently assume that only one masks exists for every frame, which describes all structs
         assert len(gt_names) <= 1
@@ -350,8 +350,8 @@ class AnnotationGui(TWindow):
             :param gt_name: The name of the ground truth binary that contains masks of all structures.
             :return:
             """
-            gt = self.current_subject.get_binary_model(gt_name)
-            gt_arr = self.current_subject.get_binary(gt_name)
+            gt = self.current_subject._get_binary_model(gt_name)
+            gt_arr = self.current_subject._get_binary(gt_name)
             i = gt['meta_data']['structures'].index(structure_name)
             return gt_name, structure_name, i, gt_arr
 
@@ -359,7 +359,7 @@ class AnnotationGui(TWindow):
             self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(gt_names[0])
         elif auto_create:
             # Create a new ground truth for this frame
-            src_b = self.current_subject.get_binary(for_name)
+            src_b = self.current_subject._get_binary(for_name)
             new_gt_name = self.current_subject.add_new_gt_by_arr(
                 np.zeros((src_b.shape[1], src_b.shape[2], len(self.seg_structs)), dtype=np.bool),
                 structure_names=self.seg_structs,
@@ -381,7 +381,7 @@ class AnnotationGui(TWindow):
         ns = [i.text() for i in self.lst_source_binaries.selectedItems()]
         for n in ns:
             print(f"Deleting binary {n}")
-            self.current_subject.remove_binary(n)
+            self.current_subject._remove_binary(n)
         self.set_current_subject(self.current_subject)
 
     def delete_selected_mask(self):
@@ -398,7 +398,7 @@ class AnnotationGui(TWindow):
         for p in ps:
             self.add_point(p, add=add)
 
-        self.seg_tool.set_mask(self.mask_data, self.current_subject.get_binary_model(self._selected_source_binary))
+        self.seg_tool.set_mask(self.mask_data, self.current_subject._get_binary_model(self._selected_source_binary))
         self.seg_tool.display_mask(self._struct_name)
         self._made_changes = True
 
@@ -441,7 +441,7 @@ class AnnotationGui(TWindow):
     def update(self):
         self.seg_tool.display_img_stack(frame_number=self.frame_number)
         self.seg_tool.set_mask(self.mask_data,
-                               self.current_subject.get_binary_model(self._selected_source_binary))
+                               self.current_subject._get_binary_model(self._selected_source_binary))
         self.seg_tool.display_mask(self._struct_name)
         self.frame_controller.set_frame_number(self.frame_number, self.img_data.shape[0])
 
@@ -451,7 +451,8 @@ class AnnotationGui(TWindow):
         if self._selected_source_binary in annos:
             bs = annos[self._selected_source_binary]
             res = f"{struct_name} is segmented in {len(bs)} frames:\n"
-            f_str = [f"{self.current_subject.get_binary_model(b_name)['meta_data']['frame_number']}\n" for b_name in bs]
+            f_str = [f"{self.current_subject._get_binary_model(b_name)['meta_data']['frame_number']}\n" for b_name in
+                     bs]
             for f in f_str:
                 res += f
             sg.Popup(res)

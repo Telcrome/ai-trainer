@@ -25,14 +25,12 @@ from __future__ import annotations  # Important for function annotations of symb
 import json
 import os
 import pickle
-import shutil
 from abc import ABC
 from enum import Enum
 from typing import Dict, Callable, Union, List, Tuple, Set, Any
 
 import PySimpleGUI as sg
 import numpy as np
-from tqdm import tqdm
 
 from trainer.lib.misc import download_and_extract
 
@@ -156,8 +154,8 @@ class Entity(ABC):
         if not os.path.exists(self.get_working_directory()):
             os.mkdir(self.get_working_directory())
 
-        if not os.path.exists(self.get_entity_directory()):
-            os.mkdir(self.get_entity_directory())
+        if not os.path.exists(self._get_entity_directory()):
+            os.mkdir(self._get_entity_directory())
 
         self._save_json_model(properly_formatted=properly_formatted)
         self._write_binaries()
@@ -188,7 +186,7 @@ class Entity(ABC):
             "bins": self._binaries_model,
             "children": self._child_types
         }
-        with open(self.get_json_path(), 'w+') as f:
+        with open(self._get_json_path(), 'w+') as f:
             if properly_formatted:
                 json.dump(save_json, f, indent=4)
             else:
@@ -205,15 +203,21 @@ class Entity(ABC):
             self._children[child_key].to_disk(parent_folder=self.get_working_directory())
 
     def _get_children(self, entity_type='') -> List[str]:
+        """
+        Use for finding and iterating through children of this entity.
+
+        :param entity_type: Filter by this entity type
+        :return: The names of the children
+        """
         if entity_type:
             return list(filter(lambda x: self._child_types[x] == entity_type, self._child_types.keys()))
         return list(self._child_types.keys())
 
     def _write_binaries(self):
-        if not os.path.exists(self.get_bin_dir()):
-            os.mkdir(self.get_bin_dir())
+        if not os.path.exists(self._get_bin_dir()):
+            os.mkdir(self._get_bin_dir())
         for binary_key in self._binaries:  # TODO: check if necessary
-            self.save_binary(binary_key)
+            self._save_binary(binary_key)
 
     def _add_attr(self, attr_id, content=None):
         self._attrs[attr_id] = content
@@ -236,69 +240,63 @@ class Entity(ABC):
                 self._attrs[attr_id] = {}
         return self._attrs[attr_id]
 
-    def load_binary(self, binary_id) -> None:
-        path_no_ext = os.path.join(self.get_bin_dir(), binary_id)
-        if self.get_bin_provider(binary_id) == BinarySaveProvider.Pickle:
+    def _load_binary(self, binary_id) -> None:
+        path_no_ext = os.path.join(self._get_bin_dir(), binary_id)
+        if self._get_bin_provider(binary_id) == BinarySaveProvider.Pickle:
             with open(f'{path_no_ext}.{PICKLE_EXT}', 'rb') as f:
                 binary_payload = pickle.load(f)
         else:
             binary_payload = np.load(f'{path_no_ext}.npy', allow_pickle=False)
         self._binaries[binary_id] = binary_payload
 
-    def get_bin_provider(self, binary_key: str):
+    def _get_bin_provider(self, binary_key: str):
         """
         Returns the provider for the respective binary.
         The provider is the software that is used for saving.
 
         >>> import trainer.lib as lib
         >>> jc = lib.get_dummy_entity()
-        >>> jc.get_bin_provider('b1')
+        >>> jc._get_bin_provider('b1')
         <BinarySaveProvider.Numpy: 1>
         """
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
 
-    def save_binary(self, bin_key) -> None:
+    def _save_binary(self, bin_key) -> None:
         """
         Writes the selected binary on disk.
         :param bin_key: identifier of the binary
         """
         if self.parent_folder is None:
             raise Exception(f"Before saving {bin_key}, save {self.entity_id} to disk!")
-        path_no_ext = os.path.join(self.get_bin_dir(), bin_key)
-        if self.get_bin_provider(bin_key) == BinarySaveProvider.Pickle:
+        path_no_ext = os.path.join(self._get_bin_dir(), bin_key)
+        if self._get_bin_provider(bin_key) == BinarySaveProvider.Pickle:
             with open(f'{path_no_ext}.{PICKLE_EXT}', 'wb') as f:
                 pickle.dump(self._binaries[bin_key], f)
         else:
             np.save(path_no_ext, self._binaries[bin_key])
         self._save_json_model()
 
-    def delete_on_disk(self, blocking=True):
-        shutil.rmtree(self.get_working_directory(), ignore_errors=True)
-        if blocking:
-            while os.path.exists(self.get_working_directory()):
-                pass
-
-    def get_parent_directory(self):
+    def _get_parent_directory(self):
         return self.parent_folder
 
     def get_working_directory(self):
         return os.path.join(self.parent_folder, self.entity_id)
 
-    def get_entity_directory(self):
+    def _get_entity_directory(self):
         return os.path.join(self.get_working_directory(), ENTITY_DIRNAME)
 
-    def get_bin_dir(self):
-        return os.path.join(self.get_entity_directory(), BINARIES_DIRNAME)
+    def _get_bin_dir(self):
+        return os.path.join(self._get_entity_directory(), BINARIES_DIRNAME)
 
-    def get_json_path(self):
-        return os.path.join(self.get_entity_directory(), ENTITY_JSON)
+    def _get_json_path(self):
+        return os.path.join(self._get_entity_directory(), ENTITY_JSON)
 
-    def add_bin(self,
-                binary_id: str,
-                binary: Union[Any, np.ndarray],
-                b_type: str = BinaryType.Unknown.value,
-                meta_data=None,
-                overwrite=True) -> None:
+    def _add_bin(self,
+                 binary_id: str,
+                 binary: Union[Any, np.ndarray],
+                 b_type: str = BinaryType.Unknown.value,
+                 meta_data=None,
+                 overwrite=True) -> None:
         """
         Adds a numpy array or a pickled object.
 
@@ -321,9 +319,9 @@ class Entity(ABC):
             self._binaries_model[binary_id]["meta_data"] = {}
         else:
             self._binaries_model[binary_id]["meta_data"] = meta_data
-        self.save_binary(binary_id)
+        self._save_binary(binary_id)
 
-    def remove_binary(self, binary_name):
+    def _remove_binary(self, binary_name):
         # Remove the numpy array from class and disk
         p = os.path.join(self.get_working_directory(), BINARIES_DIRNAME, f"{binary_name}.npy")
         os.remove(p)
@@ -333,22 +331,25 @@ class Entity(ABC):
         self._binaries.pop(binary_name)
         self.to_disk(self.parent_folder)
 
-    def get_binary(self, binary_name):
+    def _get_binary(self, binary_name):
         if binary_name not in self._binaries:
-            self.load_binary(binary_name)
+            self._load_binary(binary_name)
         return self._binaries[binary_name]
 
-    def get_binary_model(self, binary_name):
+    def _get_binary_model(self, binary_name):
         return self._binaries_model[binary_name]
 
-    def get_binary_list_filtered(self, key_filterer: Callable[[Dict], bool]):
+    def _get_binary_list_filtered(self, key_filterer: Callable[[Dict], bool]):
         return [i for i in self._binaries_model if key_filterer(self._binaries_model[i])]
 
     def count_binaries_memory(self) -> int:
         """
         :return: The memory occupied by all the binaries together.
         """
-        return sum([self._binaries[k].nbytes for k in self._binaries.keys()])
+        c_mem = 0
+        for c_key in self._get_children():
+            c_mem += self._get_child(c_key)
+        return sum([self._binaries[k].nbytes for k in self._binaries.keys()]) + c_mem
 
     def __str__(self):
         res = f"Representation of {self.entity_id}:\n"
@@ -411,22 +412,22 @@ class ImageStack(ClassyEntity):
     def __init__(self, entity_id: str, parent_folder=''):
         super().__init__(entity_id, entity_type='image_stack', parent_folder=parent_folder)
 
-    def add_source_image_by_arr(self,
-                                src_im: np.ndarray,
-                                structures: (str, str) = None,
-                                extra_info: Dict = None):
+    @classmethod
+    def from_np(cls, entity_id: str, src_im: np.ndarray, extra_info: Dict = None):
         """
         Only adds images, not volumes or videos! Unless it is already in shape (frames, width, height, channels).
         Multi-channel images are assumed to be channels last.
-        Grayscale images are assumed to be of shape (width, height)
-        :param src_im:
-        :param binary_name:
-        :param structures:
+        Grayscale images are assumed to be of shape (width, height).
+
+        The array is saved using type np.uint8 and is expected to have intensities in the range of [0, 255]
+
+        :param entity_id: Unique identifier of this image stack
+        :param src_im: Numpy Array. Can be of shape (W, H), (W, H, #C) or (#F, W, H, #C)
         :param extra_info: Extra info for a human. Must contain only standard types to be json serializable
-        :return:
         """
+        cls_instance = cls(entity_id)
         # Save corresponding json metadata
-        meta = {} if structures is None else {"structures": structures}
+        meta = {}
         if len(src_im.shape) == 2:
             # Assumption: This is a grayscale image
             res = np.reshape(src_im, (1, src_im.shape[0], src_im.shape[1], 1))
@@ -437,7 +438,7 @@ class ImageStack(ClassyEntity):
             meta["image_type"] = "multichannel"
         elif len(src_im.shape) == 4:
             # It is assumed that the array is already in correct shape
-            res = src_im.astype(np.uint8) if src_im.dtype != np.uint8 else src_im
+            res = src_im
             meta["image_type"] = "video"
         else:
             raise Exception("This array can not be an image, check shape!")
@@ -446,7 +447,8 @@ class ImageStack(ClassyEntity):
         if extra_info is not None:
             meta["extra"] = extra_info
 
-        self.add_bin('src_im', res, b_type=BinaryType.NumpyArray.value, meta_data=meta)
+        cls_instance._add_bin('src_im', res.astype(np.uint8), b_type=BinaryType.NumpyArray.value, meta_data=meta)
+        return cls_instance
 
     @staticmethod
     def get_sem_seg_naming_conv(sem_seg_tpl: str, frame_number=0):
@@ -454,12 +456,12 @@ class ImageStack(ClassyEntity):
 
     def delete_gt(self, sem_seg_tpl: str, frame_number=0):
         print(f"Deleting ground truth of {sem_seg_tpl} at frame {frame_number}")
-        self.remove_binary(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number))
+        self._remove_binary(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number))
 
-    def add_semantic_segmentation(self,
-                                  gt_arr: np.ndarray,
-                                  sem_seg_tpl: str,
-                                  frame_number=0) -> None:
+    def add_sem_seg(self,
+                    gt_arr: np.ndarray,
+                    sem_seg_tpl: str,
+                    frame_number=0) -> None:
         """
         Adds a semantic segmentation mask
 
@@ -467,7 +469,6 @@ class ImageStack(ClassyEntity):
         :param sem_seg_tpl: Key/name/identifier of the semantic segmentation template
         :param frame_number: Frame that this mask should be assigned to. Keep 0 for single images.
         """
-        err_msg = "#structures must correspond to the #channels or be 1 in the case of a single indicated structure"
         assert gt_arr.dtype == np.bool, "Semantic segmentation assumes binary masks!"
 
         if len(gt_arr.shape) == 2:
@@ -478,8 +479,8 @@ class ImageStack(ClassyEntity):
             "frame_number": frame_number,
             "sem_seg_tpl": sem_seg_tpl
         }
-        self.add_bin(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number), gt_arr,
-                     b_type=BinaryType.NumpyArray.value, meta_data=meta)
+        self._add_bin(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number), gt_arr,
+                      b_type=BinaryType.NumpyArray.value, meta_data=meta)
 
     def get_structure_list(self, image_stack_key: str = ''):
         """
@@ -497,10 +498,10 @@ class ImageStack(ClassyEntity):
 
     def get_masks_of(self, b_name: str, frame_numbers=False):
         res = []
-        for m_name in self.get_binary_list_filtered(
+        for m_name in self._get_binary_list_filtered(
                 lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
             if frame_numbers:
-                res.append(self.get_binary_model(m_name)['meta_data']['frame_number'])
+                res.append(self._get_binary_model(m_name)['meta_data']['frame_number'])
             else:
                 res.append(m_name)
         return res
@@ -537,7 +538,7 @@ class Subject(ClassyEntity):
             return is_img_stack and contains_struct
 
         # Iterate over image stacks that contain the structure
-        for b_name in self.get_binary_list_filtered(filter_imgstack_structs):
+        for b_name in self._get_binary_list_filtered(filter_imgstack_structs):
             # Find the masks of this binary and list them
 
             bs = self.get_masks_of(b_name)
@@ -660,21 +661,6 @@ class Dataset(Entity):
                                         f'Subject: {te.entity_id}')
         return res
 
-    def delete_subjects(self, del_ls: List[Subject]) -> None:
-        """
-        Deletes a list of subjects
-        :param del_ls: List of instances of subjects
-        :return:
-        """
-        for s in tqdm(del_ls, desc="Deleting subjects"):
-            del_name = s.name
-            s.delete_on_disk()
-            self._load_attr(self.ATTR_SPLITS)["subjects"].remove(del_name)
-            for split in self._load_attr(self.ATTR_SPLITS)["splits"]:
-                if del_name in self._load_attr(self.ATTR_SPLITS)["splits"][split]:
-                    self._load_attr(self.ATTR_SPLITS)["splits"][split].remove(del_name)
-        self.to_disk(self.parent_folder)
-
     def get_subject_by_name(self, s_name: str):
         if s_name not in self._load_attr(self.ATTR_SPLITS)['subjects']:
             raise Exception('This dataset does not contain a subject with this name')
@@ -713,7 +699,7 @@ class Dataset(Entity):
                             seg_structs[structure] = seg_structs[structure] | {te.entity_id}
                 return True
 
-            stacks = te.get_binary_list_filtered(struct_appender)
+            stacks = te._get_binary_list_filtered(struct_appender)
             return len(stacks) != 0
 
         self.filter_subjects(lambda x: te_filterer(x))
