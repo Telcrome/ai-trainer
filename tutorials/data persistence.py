@@ -15,12 +15,15 @@ if __name__ == '__main__':
         shutil.rmtree(os.path.join(data_path, e_name))
         while os.path.exists(os.path.join(data_path, e_name)):
             pass
+
     d = lib.Dataset.build_new(e_name, data_path)
 
-    d.save_subject(demo_data.build_random_subject(d, sd))
+    s = demo_data.build_random_subject(sd)
 
-    # d.save_subject(s)
-    d.to_disk()
+    d.save_subject(s)
+
     # s = build_random_subject(d, sd)
     # d.save_subject(s)
-    d_load = lib.Dataset.from_disk(os.path.join(data_path, e_name))
+    # d_load = lib.Dataset.from_disk(os.path.join(data_path, e_name))
+
+    # s = demo_data.build_random_subject(d, sd)

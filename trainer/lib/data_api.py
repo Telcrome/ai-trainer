@@ -176,6 +176,7 @@ class Entity(ABC):
         self._child_types: Dict[str, str] = {}
         self._binaries: Dict[str, Any] = {}
         self._binaries_model: Dict[str, Dict] = {}
+        self.saved_to_disk = False
 
     @classmethod
     def from_disk(cls, working_dir: str) -> Entity:
@@ -189,8 +190,7 @@ class Entity(ABC):
         res._attrs = {key: None for key in json_content['attrs']}
         res._children = {key: None for key in json_content['children']}
         res._binaries_model = json_content['bins']
-        # json_file_paths = os.path.join(working_dir, JSON_MODEL_FILENAME)
-
+        res.saved_to_disk = True
         return res
 
     def to_disk(self, parent_folder: str = "", properly_formatted=True) -> None:
@@ -210,12 +210,14 @@ class Entity(ABC):
         self._save_json_model(properly_formatted=properly_formatted)
         self._write_binaries()
         self._save_children()
+        self.saved_to_disk = True
 
     def _add_child(self, child: Entity) -> None:
-        # self.to_disk()
-        # child = Entity(entity_id, self.get_working_directory())
         self._child_types[child.entity_id] = child.entity_type
         self._children[child.entity_id] = child
+        if self._is_saved_to_disk():
+            child.to_disk(self.get_working_directory())
+            self._save_json_model()
 
     def _get_child(self, child_id: str, store_in_mem=False) -> Entity:
         if self._children[child_id] is not None:
@@ -263,9 +265,7 @@ class Entity(ABC):
         return list(self._child_types.keys())
 
     def _write_binaries(self):
-        if not os.path.exists(self._get_bin_dir()):
-            os.mkdir(self._get_bin_dir())
-        for binary_key in self._binaries:  # TODO: check if necessary
+        for binary_key in self._binaries:
             self._save_binary(binary_key)
 
     def _add_attr(self, attr_id, content=None):
@@ -280,7 +280,7 @@ class Entity(ABC):
         :param attr_id:
         :return: The respective dictionary
         """
-        if self._attrs[attr_id] is None:
+        if self._is_saved_to_disk() and self._attrs[attr_id] is None:
             attr_path = os.path.join(self.get_working_directory(), f'{attr_id}.json')
             if os.path.exists(attr_path):
                 with open(attr_path, 'r') as f:
@@ -311,7 +311,7 @@ class Entity(ABC):
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
 
     def _is_saved_to_disk(self) -> bool:
-        return self.parent_folder is not None and os.path.exists(self.get_working_directory())
+        return self.parent_folder is not None and self.parent_folder and os.path.exists(self.get_working_directory())
 
     def _save_binary(self, bin_key) -> None:
         """
@@ -332,7 +332,10 @@ class Entity(ABC):
         return self.parent_folder
 
     def get_working_directory(self):
-        return os.path.join(self.parent_folder, self.entity_id)
+        if self.parent_folder:
+            return os.path.join(self.parent_folder, self.entity_id)
+        else:
+            raise Exception(f"No working directory can be stated for {self.entity_id}")
 
     def _get_entity_directory(self):
         return os.path.join(self.get_working_directory(), ENTITY_DIRNAME)
@@ -373,16 +376,18 @@ class Entity(ABC):
             self._binaries_model[binary_id]["meta_data"] = meta_data
         if self._is_saved_to_disk():
             self._save_binary(binary_id)
+            self._save_json_model()
 
     def _remove_binary(self, binary_name):
-        # Remove the numpy array from class and disk
-        p = os.path.join(self.get_working_directory(), BINARIES_DIRNAME, f"{binary_name}.npy")
-        os.remove(p)
-
         # Remove the key in model
         self._binaries_model.pop(binary_name)
         self._binaries.pop(binary_name)
-        self.to_disk(self.parent_folder)
+
+        # Remove from disk if saved to disk
+        if self._is_saved_to_disk():
+            p = os.path.join(self._get_bin_dir(), f"{binary_name}.npy")
+            os.remove(p)
+            self.to_disk()
 
     def _get_binary(self, binary_name):
         if binary_name not in self._binaries:
@@ -418,13 +423,19 @@ class Entity(ABC):
         summary = str(self)
         return summary
 
+    def __getitem__(self, item):
+        if type(item) == str:
+            return self._get_child(item)
+        elif type(item) == int:
+            return self._get_child(list(self._children.keys())[0])
+
 
 class ClassyEntity(Entity):
     ATTR_CLASSES = 'classes'
 
     def __init__(self, entity_id: str, entity_type: str, parent_folder: str = ''):
         super().__init__(entity_id, entity_type, parent_folder=parent_folder)
-        self._add_attr(self.ATTR_CLASSES)
+        self._add_attr(self.ATTR_CLASSES, content={})
 
     def set_class(self, class_id: str, value: str, for_dataset: Dataset = None) -> None:
         """
@@ -457,6 +468,7 @@ class ClassyEntity(Entity):
 
 
 class ImageStack(ClassyEntity):
+    SRC_KEY = 'src_im'
 
     def __init__(self, entity_id: str, parent_folder=''):
         super().__init__(entity_id, entity_type='image_stack', parent_folder=parent_folder)
@@ -496,12 +508,16 @@ class ImageStack(ClassyEntity):
         if extra_info is not None:
             meta["extra"] = extra_info
 
-        cls_instance._add_bin('src_im', res.astype(np.uint8), b_type=BinaryType.NumpyArray.value, meta_data=meta)
+        cls_instance._add_bin(cls_instance.SRC_KEY, res.astype(np.uint8), b_type=BinaryType.NumpyArray.value,
+                              meta_data=meta)
         return cls_instance
 
     @staticmethod
     def get_sem_seg_naming_conv(sem_seg_tpl: str, frame_number=0):
         return f"gt_{sem_seg_tpl}_{frame_number}"
+
+    def get_src(self) -> np.ndarray:
+        return self._get_binary(self.SRC_KEY)
 
     def delete_gt(self, sem_seg_tpl: str, frame_number=0):
         print(f"Deleting ground truth of {sem_seg_tpl} at frame {frame_number}")
@@ -545,15 +561,12 @@ class ImageStack(ClassyEntity):
         else:
             raise NotImplementedError()
 
-    def get_masks_of(self, b_name: str, frame_numbers=False):
-        res = []
-        for m_name in self._get_binary_list_filtered(
-                lambda x: x['binary_type'] == BinaryType.ImageMask.value and x['meta_data']['mask_of'] == b_name):
-            if frame_numbers:
-                res.append(self._get_binary_model(m_name)['meta_data']['frame_number'])
-            else:
-                res.append(m_name)
-        return res
+    def get_sem_seg_frames(self, sem_seg_tpl):
+
+        # Find out which frames contain the semantic segmentation ground truths
+        frame_num = self.get_src().shape[0]
+        for f_i in range(frame_num):
+            pass
 
 
 class Subject(ClassyEntity):
@@ -587,9 +600,9 @@ class Subject(ClassyEntity):
             return is_img_stack and contains_struct
 
         # Iterate over image stacks that contain the structure
-        for b_name in self._get_binary_list_filtered(filter_imgstack_structs):
+        for b_name in self.get_image_stack_keys():
             # Find the masks of this binary and list them
-
+            image_stack = self._get_child(b_name)
             bs = self.get_masks_of(b_name)
             n += len(bs)
             if bs:
@@ -601,7 +614,7 @@ class Subject(ClassyEntity):
 class Dataset(Entity):
     ATTR_CLASSDEFINITIONS = 'class_definitions'
     ATTR_SPLITS = 'splits'
-    ATTR_STRUCTURE_TEMPLATES = 'structure_templates'
+    ATTR_SEM_SEG_TPL = 'sem_seg_tpl'
 
     def __init__(self, name: str, parent_folder: str):
         super().__init__(name, entity_type='dataset', parent_folder=parent_folder)
@@ -614,14 +627,14 @@ class Dataset(Entity):
             "splits": {},
         })
         res._add_attr(res.ATTR_CLASSDEFINITIONS, content={})
-        res._add_attr(res.ATTR_STRUCTURE_TEMPLATES, content={
+        res._add_attr(res.ATTR_SEM_SEG_TPL, content={
             "basic": {"foreground": MaskType.Blob.value,
                       "outline": MaskType.Line.value}
         })
         if example_class:
             res.add_class("example_class", class_type=ClassType.Nominal,
                           values=["Unknown", "Tiger", "Elephant", "Mouse"])
-        res.to_disk(dir_path)
+        res.to_disk()
         return res
 
     @classmethod
@@ -632,6 +645,8 @@ class Dataset(Entity):
     def add_class(self, class_name: str, class_type: ClassType, values: List[str]):
         """
         Adds a class on a dataset level.
+        This allows children to just specify a classname and from the dataset the class details can be inferred.
+
         :param class_name:
         :param class_type:
         :param values:
@@ -659,7 +674,7 @@ class Dataset(Entity):
         return list(self._load_attr(self.ATTR_CLASSDEFINITIONS).keys())
 
     def get_structure_template_by_name(self, tpl_name):
-        return self._load_attr(self.ATTR_STRUCTURE_TEMPLATES)[tpl_name]
+        return self._load_attr(self.ATTR_SEM_SEG_TPL)[tpl_name]
 
     def save_subject(self, s: Subject) -> None:
         """
