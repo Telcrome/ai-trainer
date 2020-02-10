@@ -432,6 +432,15 @@ class Entity(ABC):
     def __len__(self):
         return len(self._children)
 
+    def __setitem__(self, key: str, value: Entity) -> None:
+        """
+        Adds a child entity.
+
+        :param key: Unused parameter, existing for python consistency reason. Use anything, e.g. 0
+        :param value: A child entity. Its entity_id will be used as the key.
+        """
+        self._add_child(value)
+
 
 class ClassyEntity(Entity):
     ATTR_CLASSES = 'classes'
