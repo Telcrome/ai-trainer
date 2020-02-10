@@ -14,7 +14,6 @@ import random
 import tempfile
 
 import numpy as np
-import skimage
 from torchvision import datasets
 
 import trainer.lib as lib
@@ -59,46 +58,6 @@ class SourceData:
         return x, y
 
 
-def get_dummy_entity(jc_name="Test Json Class"):
-    """
-    Intended to be used for testing functionality concerned with the basic Jsonclass.
-
-    >>> import trainer.lib as lib
-    >>> jc = lib.get_dummy_entity()
-    >>> jc.entity_id
-    'Test Json Class'
-    >>> jc._get_binary('b1')  # A small array is contained in the example
-    array([1, 2, 3])
-    >>> jc._get_binary('obj')
-    {'this': 'is', 'an': 'object'}
-
-    :param jc_name: Name of the Jsonclass
-    :return: A reference to a Jsonclass
-    """
-    dir_path = tempfile.gettempdir()
-
-    res = lib.Entity(jc_name, dir_path)
-    res.to_disk(dir_path)
-
-    res._add_attr('some_attributes', content={
-        'Attribute 1': "Value 1"
-    })
-
-    res._add_bin('b1', np.array([1, 2, 3]), b_type=lib.BinaryType.NumpyArray.value)
-
-    res._add_bin('picture', skimage.data.retina(), b_type=lib.BinaryType.NumpyArray.value)
-
-    python_obj = {
-        "this": "is",
-        "an": "object"
-    }
-    res._add_bin('obj', python_obj, lib.BinaryType.Unknown.value)
-
-    res.to_disk(dir_path)
-
-    return res
-
-
 def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     """
     Returns a demo array for testing functionality with logits.
@@ -123,16 +82,16 @@ def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=
     """
     digit_class = random.randint(0, 9)
     s = lib.Subject(lib.create_identifier())
-    s.set_class(digit_class)
+    s.set_class('digit', str(digit_class))
 
     # digit classification
-    for i in range(random.randint(*max_digit_ims)):
-        x, y = src_manager.sample_digit(digit=digit_class)
-        im_stack = lib.ImageStack.from_np(lib.create_identifier(f"mnist{i}"), x)
-        im_stack.set_class('digit', str(digit_class), for_dataset=d)
-        s.add_image_stack(im_stack)
-
-    astr_im = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
-    s.add_image_stack(astr_im)
+    # for i in range(random.randint(*max_digit_ims)):
+    #     x, y = src_manager.sample_digit(digit=digit_class)
+    #     im_stack = lib.ImageStack.from_np(lib.create_identifier(f"mnist{i}"), x)
+    #     im_stack.set_class('digit', str(digit_class))
+    #     s.add_image_stack(im_stack)
+    #
+    # astr_im = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
+    # s.add_image_stack(astr_im)
 
     return s

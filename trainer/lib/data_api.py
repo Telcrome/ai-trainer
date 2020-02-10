@@ -25,12 +25,14 @@ from __future__ import annotations  # Important for function annotations of symb
 import json
 import os
 import pickle
+import tempfile
 from abc import ABC
 from enum import Enum
 from typing import Dict, Callable, Union, List, Tuple, Set, Any
 
 import PySimpleGUI as sg
 import numpy as np
+import skimage
 
 from trainer.lib.misc import download_and_extract
 
@@ -120,7 +122,52 @@ class Entity(ABC):
     An entity allows inheriting classes to store files into
     TODO: Code snippet for finding out working directory.
     The only reserved names are for the json files and the folder for binaries.
+
+    An entity writes all changes immediately to disk after the first to_disk() call.
+    Beforehand, nothing is written to disk.
+
+    Children, binaries and attributes are loaded on demand.
     """
+
+    @staticmethod
+    def get_dummy_entity(jc_name="Test Json Class"):
+        """
+        Intended to be used for testing functionality concerned with the basic Jsonclass.
+
+        >>> from trainer.lib.data_api import Entity
+        >>> jc = Entity.get_dummy_entity()
+        >>> jc.entity_id
+        'Test Json Class'
+        >>> jc._get_binary('b1')  # A small array is contained in the example
+        array([1, 2, 3])
+        >>> jc._get_binary('obj')
+        {'this': 'is', 'an': 'object'}
+
+        :param jc_name: Name of the Jsonclass
+        :return: A reference to a Jsonclass
+        """
+        dir_path = tempfile.gettempdir()
+
+        res = Entity(jc_name, dir_path)
+        res.to_disk(dir_path)
+
+        res._add_attr('some_attributes', content={
+            'Attribute 1': "Value 1"
+        })
+
+        res._add_bin('b1', np.array([1, 2, 3]), b_type=BinaryType.NumpyArray.value)
+
+        res._add_bin('picture', skimage.data.retina(), b_type=BinaryType.NumpyArray.value)
+
+        python_obj = {
+            "this": "is",
+            "an": "object"
+        }
+        res._add_bin('obj', python_obj, BinaryType.Unknown.value)
+
+        res.to_disk(dir_path)
+
+        return res
 
     def __init__(self, entity_id: str, entity_type: str, parent_folder: str = ''):
         self.entity_id, self.entity_type, self.parent_folder = entity_id, entity_type, parent_folder
@@ -156,6 +203,9 @@ class Entity(ABC):
 
         if not os.path.exists(self._get_entity_directory()):
             os.mkdir(self._get_entity_directory())
+
+        if not os.path.exists(self._get_bin_dir()):
+            os.mkdir(self._get_bin_dir())
 
         self._save_json_model(properly_formatted=properly_formatted)
         self._write_binaries()
@@ -254,19 +304,22 @@ class Entity(ABC):
         Returns the provider for the respective binary.
         The provider is the software that is used for saving.
 
-        >>> import trainer.lib as lib
-        >>> jc = lib.get_dummy_entity()
+        >>> from trainer.lib.data_api import Entity
+        >>> jc = Entity.get_dummy_entity()
         >>> jc._get_bin_provider('b1')
         <BinarySaveProvider.Numpy: 1>
         """
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
+
+    def _is_saved_to_disk(self) -> bool:
+        return self.parent_folder is not None and os.path.exists(self.get_working_directory())
 
     def _save_binary(self, bin_key) -> None:
         """
         Writes the selected binary on disk.
         :param bin_key: identifier of the binary
         """
-        if self.parent_folder is None:
+        if not self._is_saved_to_disk():
             raise Exception(f"Before saving {bin_key}, save {self.entity_id} to disk!")
         path_no_ext = os.path.join(self._get_bin_dir(), bin_key)
         if self._get_bin_provider(bin_key) == BinarySaveProvider.Pickle:
@@ -319,7 +372,8 @@ class Entity(ABC):
             self._binaries_model[binary_id]["meta_data"] = {}
         else:
             self._binaries_model[binary_id]["meta_data"] = meta_data
-        self._save_binary(binary_id)
+        if self._is_saved_to_disk():
+            self._save_binary(binary_id)
 
     def _remove_binary(self, binary_name):
         # Remove the numpy array from class and disk
@@ -352,20 +406,18 @@ class Entity(ABC):
         return sum([self._binaries[k].nbytes for k in self._binaries.keys()]) + c_mem
 
     def __str__(self):
-        res = f"Representation of {self.entity_id}:\n"
+        res = f"Entity ID: {self.entity_id}:\n"
         if self.parent_folder is not None:
             res += f"Last saved at {self.get_working_directory()}\n"
-        res += f"Loaded Binaries: {list(self._binaries.keys())}\n"
-        # for binary in self._binaries.keys():
-        #     res += f"{binary}: shape: {self._binaries[binary].shape} (type: {self._binaries[binary].dtype})\n"
-        #     res += f"{json.dumps(self._binaries_model[binary], indent=4)}\n"
+        res += f"Binaries in memory: {list(self._binaries.keys())}\n"
         res += f'Attrs: {list(self._attrs.keys())}\n'
         res += f'Children: {list(self._children.keys())}\n'
         res += f'Bins: {list(self._binaries_model.keys())}\n'
         return res
 
     def __repr__(self):
-        return str(self)
+        summary = str(self)
+        return summary
 
 
 class ClassyEntity(Entity):
@@ -609,7 +661,7 @@ class Dataset(Entity):
     def get_structure_template_by_name(self, tpl_name):
         return self._load_attr(self.ATTR_STRUCTURE_TEMPLATES)[tpl_name]
 
-    def save_subject(self, s: Subject, auto_save=True) -> None:
+    def save_subject(self, s: Subject) -> None:
         """
         Creates a new subject in this dataset
 
@@ -620,8 +672,6 @@ class Dataset(Entity):
         # Add the name of the subject into the splits
         if s.entity_id not in self._load_attr(self.ATTR_SPLITS)['subjects']:
             self._load_attr(self.ATTR_SPLITS)["subjects"].append(s.entity_id)
-        if auto_save:
-            self.to_disk()
 
     def get_subject_name_list(self, split='') -> List[str]:
         """
