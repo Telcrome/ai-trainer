@@ -429,6 +429,9 @@ class Entity(ABC):
         elif type(item) == int:
             return self._get_child(list(self._children.keys())[0])
 
+    def __len__(self):
+        return len(self._children)
+
 
 class ClassyEntity(Entity):
     ATTR_CLASSES = 'classes'
