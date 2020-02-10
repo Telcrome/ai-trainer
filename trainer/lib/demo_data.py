@@ -14,6 +14,7 @@ import random
 import tempfile
 
 import numpy as np
+import skimage
 from torchvision import datasets
 
 import trainer.lib as lib
@@ -81,17 +82,17 @@ def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=
     Samples a random subject.
     """
     digit_class = random.randint(0, 9)
-    s = lib.Subject(lib.create_identifier())
+    s = lib.Subject(lib.create_identifier('subject'))
     s.set_class('digit', str(digit_class))
 
     # digit classification
-    # for i in range(random.randint(*max_digit_ims)):
-    #     x, y = src_manager.sample_digit(digit=digit_class)
-    #     im_stack = lib.ImageStack.from_np(lib.create_identifier(f"mnist{i}"), x)
-    #     im_stack.set_class('digit', str(digit_class))
-    #     s.add_image_stack(im_stack)
-    #
-    # astr_im = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
-    # s.add_image_stack(astr_im)
+    for i in range(random.randint(*max_digit_ims)):
+        x, y = src_manager.sample_digit(digit=digit_class)
+        im_stack = lib.ImageStack.from_np(lib.create_identifier(f"mnist{i}"), x)
+        im_stack.set_class('digit', str(digit_class))
+        s.add_image_stack(im_stack)
+
+    astr_im = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
+    s.add_image_stack(astr_im)
 
     return s

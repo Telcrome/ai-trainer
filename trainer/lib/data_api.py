@@ -214,7 +214,6 @@ class Entity(ABC):
     def _add_child(self, child: Entity) -> None:
         # self.to_disk()
         # child = Entity(entity_id, self.get_working_directory())
-        child.to_disk(self.get_working_directory())
         self._child_types[child.entity_id] = child.entity_type
         self._children[child.entity_id] = child
 
@@ -252,7 +251,7 @@ class Entity(ABC):
         for child_key in filter(lambda x: self._children[x] is not None, self._children.keys()):
             self._children[child_key].to_disk(parent_folder=self.get_working_directory())
 
-    def _get_children(self, entity_type='') -> List[str]:
+    def _get_children_keys(self, entity_type='') -> List[str]:
         """
         Use for finding and iterating through children of this entity.
 
@@ -401,7 +400,7 @@ class Entity(ABC):
         :return: The memory occupied by all the binaries together.
         """
         c_mem = 0
-        for c_key in self._get_children():
+        for c_key in self._get_children_keys():
             c_mem += self._get_child(c_key)
         return sum([self._binaries[k].nbytes for k in self._binaries.keys()]) + c_mem
 
@@ -427,7 +426,7 @@ class ClassyEntity(Entity):
         super().__init__(entity_id, entity_type, parent_folder=parent_folder)
         self._add_attr(self.ATTR_CLASSES)
 
-    def set_class(self, class_name: str, value: str, for_dataset: Dataset = None) -> None:
+    def set_class(self, class_id: str, value: str, for_dataset: Dataset = None) -> None:
         """
         Set a class to true. Classes are stored by their unique string.
         A class is only fully defined in complement with a dataset's information about that class.
@@ -437,18 +436,16 @@ class ClassyEntity(Entity):
         Hint: If two states of one class can be true to the same time, do not model them as one class.
         Instead of modelling ligament tear as one class, define a binary class for each different ligament.
 
-        :param class_name: Unique string that is used to identify the class.
+        :param class_id: Unique string that is used to identify the class.
         :param value: boolean indicating
         :param for_dataset: If provided, set_class checks for compliance with the dataset.
         """
         if for_dataset is not None:
-            class_obj = for_dataset.get_class(class_name)
-            # print(f"Setting {class_name} to {value}")
-            # print(f"{for_dataset.name} tells us about the class:\n{class_obj}")
-            if value not in class_obj['values']:
-                raise Exception(f"{class_name} cannot be set to {value} according to {for_dataset.entity_id}")
+            class_obj = for_dataset.get_class(class_id)
+            assert_error = f"{class_id} cannot be set to {value} according to {for_dataset.entity_id}"
+            assert (value not in class_obj['values']), assert_error
 
-        self._load_attr(self.ATTR_CLASSES)[class_name] = value
+        self._load_attr(self.ATTR_CLASSES)[class_id] = value
 
     def get_class_value(self, class_name: str):
         if class_name in self._load_attr(self.ATTR_CLASSES):
@@ -575,7 +572,7 @@ class Subject(ClassyEntity):
         super().__init__(entity_id, entity_type='subject', parent_folder=parent_folder)
 
     def get_image_stack_keys(self):
-        return self._get_children(entity_type='image_stack')
+        return self._get_children_keys(entity_type='image_stack')
         # return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
 
     def add_image_stack(self, e: ImageStack):
@@ -606,23 +603,26 @@ class Dataset(Entity):
     ATTR_SPLITS = 'splits'
     ATTR_STRUCTURE_TEMPLATES = 'structure_templates'
 
-    def __init__(self, name: str, dir_path: str, example_class=True):
-        if os.path.exists(os.path.join(dir_path, name)):
-            raise Exception("The directory for this Dataset already exists, use from_disk to load it.")
-        super().__init__(name, entity_type='dataset', parent_folder=dir_path)
-        self._add_attr(self.ATTR_SPLITS, content={
+    def __init__(self, name: str, parent_folder: str):
+        super().__init__(name, entity_type='dataset', parent_folder=parent_folder)
+
+    @classmethod
+    def build_new(cls, name: str, dir_path: str, example_class=True):
+        res = cls(name, dir_path)
+        res._add_attr(res.ATTR_SPLITS, content={
             "subjects": [],
             "splits": {},
         })
-        self._add_attr(self.ATTR_CLASSDEFINITIONS, content={})
-        self._add_attr(self.ATTR_STRUCTURE_TEMPLATES, content={
+        res._add_attr(res.ATTR_CLASSDEFINITIONS, content={})
+        res._add_attr(res.ATTR_STRUCTURE_TEMPLATES, content={
             "basic": {"foreground": MaskType.Blob.value,
                       "outline": MaskType.Line.value}
         })
         if example_class:
-            self.add_class("example_class", class_type=ClassType.Nominal,
-                           values=["Unknown", "Tiger", "Elephant", "Mouse"])
-        self.to_disk(dir_path)
+            res.add_class("example_class", class_type=ClassType.Nominal,
+                          values=["Unknown", "Tiger", "Elephant", "Mouse"])
+        res.to_disk(dir_path)
+        return res
 
     @classmethod
     def download(cls, url: str, local_path='.', dataset_name: str = None):
