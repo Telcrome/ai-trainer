@@ -124,16 +124,13 @@ class Entity(ABC):
     The only reserved names are for the json files and the folder for binaries.
     """
 
-    def __init__(self, entity_id: str, parent_folder: str = ''):
-
-        self.entity_id = entity_id
+    def __init__(self, entity_id: str, entity_type: str, parent_folder: str = ''):
+        self.entity_id, self.entity_type, self.parent_folder = entity_id, entity_type, parent_folder
         self._attrs: Dict[str, Union[Dict, None]] = {}
         self._children: Dict[str, Entity] = {}
+        self._child_types: Dict[str, str] = {}
         self._binaries: Dict[str, Any] = {}
         self._binaries_model: Dict[str, Dict] = {}
-        self.parent_folder = parent_folder
-        # if not os.path.exists(self.get_working_directory()):
-        #     self.to_disk()  # Creates directories
 
     @classmethod
     def from_disk(cls, working_dir: str) -> Entity:
@@ -170,9 +167,10 @@ class Entity(ABC):
         # self.to_disk()
         # child = Entity(entity_id, self.get_working_directory())
         child.to_disk(self.get_working_directory())
+        self._child_types[child.entity_id] = child.entity_type
         self._children[child.entity_id] = child
 
-    def get_child(self, child_id: str, store_in_mem=False) -> Entity:
+    def _get_child(self, child_id: str, store_in_mem=False) -> Entity:
         if self._children[child_id] is not None:
             return self._children[child_id]
 
@@ -188,7 +186,7 @@ class Entity(ABC):
         save_json = {
             "attrs": list(self._attrs.keys()),
             "bins": self._binaries_model,
-            "children": list(self._children.keys())
+            "children": self._child_types
         }
         with open(self.get_json_path(), 'w+') as f:
             if properly_formatted:
@@ -205,6 +203,11 @@ class Entity(ABC):
     def _save_children(self):
         for child_key in filter(lambda x: self._children[x] is not None, self._children.keys()):
             self._children[child_key].to_disk(parent_folder=self.get_working_directory())
+
+    def _get_children(self, entity_type='') -> List[str]:
+        if entity_type:
+            return list(filter(lambda x: self._child_types[x] == entity_type, self._child_types.keys()))
+        return list(self._child_types.keys())
 
     def _write_binaries(self):
         if not os.path.exists(self.get_bin_dir()):
@@ -364,27 +367,19 @@ class Entity(ABC):
         return str(self)
 
 
-class Subject(Entity):
-    """
-    In a medical context a subject is concerned with the data of one patient.
-    For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
-    text (symptom description, history) and structured data (date of birth, nationality...).
+class ClassyEntity(Entity):
+    ATTR_CLASSES = 'classes'
 
-    Wherever possible the data is saved in json format, but for example for imaging only the metadata is saved
-    as json, the actual image file can be found in the binaries-list.
+    def __init__(self, entity_id: str, entity_type: str, parent_folder: str = ''):
+        super().__init__(entity_id, entity_type, parent_folder=parent_folder)
+        self._add_attr(self.ATTR_CLASSES)
 
-    In future releases a complete changelog will be saved in a format suitable for process mining.
-    """
-
-    def __init__(self, entity_id: str, parent_folder=''):
-        super().__init__(entity_id, parent_folder=parent_folder)
-        self._add_attr('classes')
-
-    def set_class(self, class_name: str, value: str, for_dataset: Dataset = None, for_binary=""):
+    def set_class(self, class_name: str, value: str, for_dataset: Dataset = None) -> None:
         """
         Set a class to true. Classes are stored by their unique string.
+        A class is only fully defined in complement with a dataset's information about that class.
 
-        Absence of a class indicates an unknown.
+        Complete absence of a class indicates an unknown.
 
         Hint: If two states of one class can be true to the same time, do not model them as one class.
         Instead of modelling ligament tear as one class, define a binary class for each different ligament.
@@ -392,8 +387,6 @@ class Subject(Entity):
         :param class_name: Unique string that is used to identify the class.
         :param value: boolean indicating
         :param for_dataset: If provided, set_class checks for compliance with the dataset.
-        :param for_binary: If provided, only set the class of the binary and not the whole subject
-        :return:
         """
         if for_dataset is not None:
             class_obj = for_dataset.get_class(class_name)
@@ -402,38 +395,24 @@ class Subject(Entity):
             if value not in class_obj['values']:
                 raise Exception(f"{class_name} cannot be set to {value} according to {for_dataset.entity_id}")
 
-        # Set value
-        if for_binary:
-            if "classes" not in self._binaries_model[for_binary]["meta_data"]:
-                self._binaries_model[for_binary]["meta_data"]["classes"] = {}
-            self._binaries_model[for_binary]["meta_data"]["classes"][class_name] = value
-        else:
-            self._load_attr('classes')[class_name] = value
+        self._load_attr(self.ATTR_CLASSES)[class_name] = value
 
-    def get_class_value(self, class_name: str, for_binary=''):
-        if for_binary:
-            if "classes" not in self._binaries_model[for_binary]["meta_data"]:
-                return "--Removed--"
-            if class_name in self._binaries_model[for_binary]["meta_data"]["classes"]:
-                return self._binaries_model[for_binary]["meta_data"]["classes"][class_name]
-        else:
-            if class_name in self._load_attr('classes'):
-                return self._load_attr('classes')[class_name]
+    def get_class_value(self, class_name: str):
+        if class_name in self._load_attr(self.ATTR_CLASSES):
+            return self._load_attr(self.ATTR_CLASSES)[class_name]
         return "--Removed--"
 
-    def remove_class(self, class_name: str, for_binary=''):
-        if for_binary:
-            self._binaries_model[for_binary]["meta_data"]["classes"].pop(class_name)
-        else:
-            self._load_attr('classes').pop(class_name)
+    def remove_class(self, class_name: str):
+        self._load_attr(self.ATTR_CLASSES).pop(class_name)
 
-    def get_image_stack_keys(self):
-        raise NotImplementedError()
-        # return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
+
+class ImageStack(ClassyEntity):
+
+    def __init__(self, entity_id: str, parent_folder=''):
+        super().__init__(entity_id, entity_type='image_stack', parent_folder=parent_folder)
 
     def add_source_image_by_arr(self,
-                                src_im,
-                                binary_name: str = "src",
+                                src_im: np.ndarray,
                                 structures: (str, str) = None,
                                 extra_info: Dict = None):
         """
@@ -467,45 +446,40 @@ class Subject(Entity):
         if extra_info is not None:
             meta["extra"] = extra_info
 
-        self.add_bin(binary_name, res, b_type=BinaryType.ImageStack.value, meta_data=meta)
+        self.add_bin('src_im', res, b_type=BinaryType.NumpyArray.value, meta_data=meta)
 
-    def delete_gt(self, mask_of: str = None, frame_number=0):
-        print(f"Deleting ground truth of {mask_of} at frame {frame_number}")
-        gt_name = f"gt_{mask_of}_{frame_number}"  # naming convention
-        self.remove_binary(gt_name)
+    @staticmethod
+    def get_sem_seg_naming_conv(sem_seg_tpl: str, frame_number=0):
+        return f"gt_{sem_seg_tpl}_{frame_number}"
 
-    def add_new_gt_by_arr(self,
-                          gt_arr: np.ndarray,
-                          structure_names: List[str] = None,
-                          mask_of: str = None,
-                          frame_number=0):
+    def delete_gt(self, sem_seg_tpl: str, frame_number=0):
+        print(f"Deleting ground truth of {sem_seg_tpl} at frame {frame_number}")
+        self.remove_binary(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number))
+
+    def add_semantic_segmentation(self,
+                                  gt_arr: np.ndarray,
+                                  sem_seg_tpl: str,
+                                  frame_number=0) -> None:
         """
+        Adds a semantic segmentation mask
 
-        :param gt_arr:
-        :param structure_names:
-        :param mask_of:
-        :param frame_number:
-        :return: The identifier of this binary
+        :param gt_arr: An array of type np.bool
+        :param sem_seg_tpl: Key/name/identifier of the semantic segmentation template
+        :param frame_number: Frame that this mask should be assigned to. Keep 0 for single images.
         """
         err_msg = "#structures must correspond to the #channels or be 1 in the case of a single indicated structure"
-        assert len(gt_arr.shape) == 2 or gt_arr.shape[2] == len(structure_names), err_msg
-        assert gt_arr.dtype == np.bool, "Convert to bool, because the ground truth is assumed to be binary!"
-        assert mask_of is not None, "Currently for_src can not be inferred, set a value!"
+        assert gt_arr.dtype == np.bool, "Semantic segmentation assumes binary masks!"
 
         if len(gt_arr.shape) == 2:
             # This is a single indicated structure without a last dimension, add it!
             gt_arr = np.reshape(gt_arr, (gt_arr.shape[0], gt_arr.shape[1], 1))
 
         meta = {
-            "mask_of": mask_of,
             "frame_number": frame_number,
-            "structures": structure_names
+            "sem_seg_tpl": sem_seg_tpl
         }
-        gt_name = f"gt_{mask_of}_{frame_number}"  # naming convention
-        self.add_bin(gt_name, gt_arr, b_type=BinaryType.ImageMask.value, meta_data=meta)
-
-        # TODO set class for this binary if a pixel is non zero in the corresponding binary
-        return gt_name
+        self.add_bin(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number), gt_arr,
+                     b_type=BinaryType.NumpyArray.value, meta_data=meta)
 
     def get_structure_list(self, image_stack_key: str = ''):
         """
@@ -530,6 +504,29 @@ class Subject(Entity):
             else:
                 res.append(m_name)
         return res
+
+
+class Subject(ClassyEntity):
+    """
+    In a medical context a subject is concerned with the data of one patient.
+    For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
+    text (symptom description, history) and structured data (date of birth, nationality...).
+
+    Wherever possible the data is saved in json format, but for example for imaging only the metadata is saved
+    as json, the actual image file can be found in the binaries-list.
+
+    In future releases a complete changelog will be saved in a format suitable for process mining.
+    """
+
+    def __init__(self, entity_id: str, parent_folder=''):
+        super().__init__(entity_id, entity_type='subject', parent_folder=parent_folder)
+
+    def get_image_stack_keys(self):
+        return self._get_children(entity_type='image_stack')
+        # return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
+
+    def add_image_stack(self, e: ImageStack):
+        self._add_child(e)
 
     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
         res, n = {}, 0
@@ -559,7 +556,7 @@ class Dataset(Entity):
     def __init__(self, name: str, dir_path: str, example_class=True):
         if os.path.exists(os.path.join(dir_path, name)):
             raise Exception("The directory for this Dataset already exists, use from_disk to load it.")
-        super().__init__(name, dir_path)
+        super().__init__(name, entity_type='dataset', parent_folder=dir_path)
         self._add_attr(self.ATTR_SPLITS, content={
             "subjects": [],
             "splits": {},

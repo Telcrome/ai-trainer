@@ -96,10 +96,6 @@ def get_dummy_entity(jc_name="Test Json Class"):
     return res
 
 
-def get_dummy_subject(subject_id='s'):
-    res = lib.Subject(subject_id)
-
-
 def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     """
     Returns a demo array for testing functionality with logits.
@@ -122,7 +118,7 @@ def build_random_subject(d: lib.Dataset, src_manager: SourceData, max_digit_ims=
     """
     Samples a random subject.
     """
-    s = lib.Subject.build_empty(lib.create_identifier())
+    s = lib.Subject(lib.create_identifier())
 
     digit_class = random.randint(0, 9)
 
