@@ -87,7 +87,7 @@ class TrainerModel(ABC):
                  ds: lib.Dataset,
                  vis_board=None):
         super().__init__()
-        self.name = model_name
+        self.model_name = model_name
         self.model, self.optimizer, self.criterion, self.ds = model, opti, crit, ds
         self.model = self.model.to(device)
         self._torch_sets = {
@@ -180,7 +180,7 @@ class TrainerModel(ABC):
             'model': self.model.state_dict(),
             'optim': self.optimizer.state_dict()
         }
-        self.ds.save_model_state(self.name, save_obj)
+        self.ds.save_model_state(self.model_name, save_obj)
 
     def load_from_dataset(self, structure_template: str, epoch=-1):
         raise NotImplementedError()
