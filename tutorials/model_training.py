@@ -1,4 +1,16 @@
+from typing import Tuple
+
+import numpy as np
+from tqdm import tqdm
+
+import trainer.lib as lib
 import trainer.lib.demo_data as demo_data
+import trainer.ml as ml
+
+
+def preprocessor(s: lib.Subject, m: ml.ModelMode) -> Tuple[np.ndarray, np.ndarray]:
+    return np.zeros(1), np.zeros(1)
+
 
 if __name__ == '__main__':
     data_path = r'C:\Users\rapha\Desktop\data'
@@ -6,9 +18,22 @@ if __name__ == '__main__':
     ds = demo_data.build_mnist(data_path, sd)
 
     class_name = 'digit'  # The structure that we now train for
+    train_loader = ml.TorchDataset(
+        ds.get_working_directory(),
+        f=preprocessor,
+        split='train',
+        mode=ml.ModelMode.Train
+    )
 
     BATCH_SIZE = 32
     EPOCHS = 60
+
+    x = 0
+    data_loader = train_loader.get_torch_dataloader(batch_size=32, num_workers=2)
+
+    for epoch in range(5):
+        for i, v in tqdm(enumerate(iter(data_loader))):
+            x += 1
 
     # N = ds.get_subject_count(split='train')
 

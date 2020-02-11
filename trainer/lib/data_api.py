@@ -108,6 +108,8 @@ def build_full_filepath(name: str, dir_path: str):
 
 
 def dir_is_valid_entity(dir_name: str):
+    if not os.path.exists(os.path.join(dir_name, ENTITY_DIRNAME)):
+        print(14)
     assert (os.path.exists(os.path.join(dir_name, ENTITY_DIRNAME)))
     return True
 
@@ -430,7 +432,7 @@ class Entity(ABC):
 
     def __str__(self):
         res = f"Entity ID: {self.entity_id}:\n"
-        if self.parent_folder is not None:
+        if self._is_saved_to_disk():
             res += f"Last saved at {self.get_working_directory()}\n"
         res += f"Binaries in memory: {list(self._binaries.keys())}\n"
         res += f'Attrs: {list(self._attrs.keys())}\n'
@@ -496,6 +498,9 @@ class ClassyEntity(Entity):
 
     def remove_class(self, class_name: str):
         self._load_attr(self.ATTR_CLASSES).pop(class_name)
+
+    def contains_class(self, class_name: str):
+        return class_name in self._load_attr(self.ATTR_CLASSES)
 
 
 class ImageStack(ClassyEntity):
@@ -621,6 +626,9 @@ class Subject(ClassyEntity):
 
     def add_image_stack(self, e: ImageStack):
         self._add_child(e)
+
+    def get_image_stack(self, im_stack_key):
+        return self._get_child(im_stack_key)
 
     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
         res, n = {}, 0

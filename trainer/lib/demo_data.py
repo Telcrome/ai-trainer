@@ -79,6 +79,16 @@ def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     return np.random.randint(low=low, high=high, size=shape) + np.random.rand(*shape)
 
 
+def build_test_subject() -> lib.Subject:
+    res = lib.Subject('test_subject')
+
+    im_stack = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
+    im_stack.set_class('occupation', 'astronaut')
+    res.add_image_stack(im_stack)
+
+    return res
+
+
 def build_mnist_subject(src_manager: SourceData, max_digit_ims=(1, 5)) -> lib.Subject:
     """
     Samples a random subject.

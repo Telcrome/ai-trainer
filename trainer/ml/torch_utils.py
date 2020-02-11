@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Tuple, Union, Callable, Dict
+from typing import Tuple, Union, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -42,15 +42,24 @@ class TorchDataset(data.Dataset):
 
     def __init__(self,
                  ds_path: str,
-                 f: Union[Callable[[lib.Subject], Tuple[np.ndarray, np.ndarray]], partial],
-                 split=''):
+                 f: Union[Callable[[lib.Subject, ModelMode], Tuple[np.ndarray, np.ndarray]], partial],
+                 split='',
+                 mode: ModelMode = ModelMode.Train):
         super().__init__()
         self.ds = lib.Dataset.from_disk(ds_path)
         self.preprocessor = f
         self.split = split
         self.ss = self.ds.get_subject_name_list(split=self.split)
+        self.mode = mode
 
-    def __getitem__(self, item):
+    def get_torch_dataloader(self, batch_size=32, num_workers=1):
+        return data.DataLoader(
+            self,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers)
+
+    def __getitem__(self, item) -> Tuple[np.ndarray, np.ndarray]:
         """
         Uses the preprocessor that converts a subject to a training example.
 
@@ -59,7 +68,7 @@ class TorchDataset(data.Dataset):
         """
         # print(f'item: {item}')
         s = self.ds.get_subject_by_name(self.ss[item])
-        x, y = self.preprocessor(s)
+        x, y = self.preprocessor(s, self.mode)
         # Cannot transformed to cuda tensors at this point,
         # because they do not seem to work in shared memory. Return numpy arrays instead.
         return x, y
@@ -175,7 +184,7 @@ class TrainerModel(ABC):
             # Save model weights
             self.save_to_dataset('bone', epoch)
 
-    def save_to_dataset(self, structure_template: str, epoch: int):
+    def save_to_dataset(self):
         save_obj = {
             'model': self.model.state_dict(),
             'optim': self.optimizer.state_dict()
