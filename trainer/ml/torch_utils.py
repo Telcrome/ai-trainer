@@ -180,26 +180,10 @@ class TrainerModel(ABC):
             'model': self.model.state_dict(),
             'optim': self.optimizer.state_dict()
         }
-        self.ds.save_model_state()
-        # TODO: Save metrics using binary meta info
+        self.ds.save_model_state(self.name, save_obj)
 
     def load_from_dataset(self, structure_template: str, epoch=-1):
-        def b_filter(d: Dict) -> bool:
-            return d['binary_type'] == lib.BinaryType.TorchStateDict.value
-
-        weights = self.ds._get_binary_list_filtered(b_filter)
-        print(weights)
-        weight_binary_id = f'model_{self.name}_{structure_template}'
-        if epoch == -1:
-            possible_weights = [int(weight_id[-1]) for weight_id in weights if weight_id.startswith(weight_binary_id)]
-            if len(possible_weights) > 0:
-                epoch = max(possible_weights)
-                weight_binary_id = f'model_{self.name}_{structure_template}_{epoch}'
-                optim_binary_id = f'optim_{self.name}_{structure_template}_{epoch}'
-                model_state_dict = self.ds._get_binary(weight_binary_id)
-                optim_state_dict = self.ds._get_binary(optim_binary_id)
-                self.model.load_state_dict(model_state_dict)
-                self.optimizer.load_state_dict(optim_state_dict)
+        raise NotImplementedError()
 
     @staticmethod
     @abstractmethod
