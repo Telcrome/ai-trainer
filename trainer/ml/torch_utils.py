@@ -131,7 +131,7 @@ class TrainerModel(ABC):
 
             if steps != -1 and i == steps - 1:
                 break
-        print(f"Epoch result: {epoch_loss_sum / len(torch_loader)}")
+        print(f"Epoch result: {epoch_loss_sum / len(torch_loader)}\n")
 
 
 def get_capacity(model: nn.Module) -> int:

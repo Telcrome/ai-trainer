@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     net = MnistNetwork()
 
-    data_loader = train_loader.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=1)
+    data_loader = train_loader.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=4)
     visboard = ml.VisBoard(run_name=lib.create_identifier('run'))
     for epoch in range(EPOCHS):
         net.run_epoch(
