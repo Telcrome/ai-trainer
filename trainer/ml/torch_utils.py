@@ -115,12 +115,14 @@ class TrainerModel(ABC):
         return batch_loss
 
     def run_epoch(self, torch_loader: data.DataLoader, visboard: ml.VisBoard, epoch: int, batch_size: int, steps=-1):
-        print(f'Starting epoch: {epoch} with {len(torch_loader)} training examples')
+        print(f'Starting epoch: {epoch} with {len(torch_loader)} training examples\n')
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
         # for i, (x, y) in tqdm(enumerate(torch_loader), desc=f'Epoch {epoch}', total=len(torch_loader)):
-        for i, (x, y) in tqdm(enumerate(torch_loader)):
+        loader_iterator = iter(torch_loader)
+        for i in tqdm(range(steps)):
+            x, y = next(loader_iterator)
             x, y = x.to(device), y.to(device)
 
             loss = self.train_on_minibatch((x, y))
@@ -129,9 +131,9 @@ class TrainerModel(ABC):
             epoch_loss = epoch_loss_sum / (i + 1)
             visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
 
-            if steps != -1 and i == steps - 1:
-                break
-        print(f"Epoch result: {epoch_loss_sum / len(torch_loader)}\n")
+            # if steps != -1 and i == steps - 1:
+            #     break
+        print(f"\nEpoch result: {epoch_loss_sum / len(torch_loader)}\n")
 
 
 def get_capacity(model: nn.Module) -> int:
