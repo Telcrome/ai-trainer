@@ -46,6 +46,7 @@
       <w>testset</w>
       <w>thresholding</w>
       <w>torchset</w>
+      <w>tqdm</w>
       <w>visboard</w>
     </words>
   </dictionary>

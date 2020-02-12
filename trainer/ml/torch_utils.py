@@ -115,25 +115,28 @@ class TrainerModel(ABC):
         return batch_loss
 
     def run_epoch(self, torch_loader: data.DataLoader, visboard: ml.VisBoard, epoch: int, batch_size: int, steps=-1):
-        print(f'Starting epoch: {epoch} with {len(torch_loader)} training examples\n')
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
-        # for i, (x, y) in tqdm(enumerate(torch_loader), desc=f'Epoch {epoch}', total=len(torch_loader)):
+        print(f'Starting epoch: {epoch} with {len(torch_loader) * batch_size} training examples and {steps} steps\n')
         loader_iterator = iter(torch_loader)
-        for i in tqdm(range(steps)):
-            x, y = next(loader_iterator)
-            x, y = x.to(device), y.to(device)
+        with tqdm(total=steps, maxinterval=steps / 100) as pbar:
+            for i in range(steps):
+                x, y = next(loader_iterator)
+                x, y = x.to(device), y.to(device)
 
-            loss = self.train_on_minibatch((x, y))
+                loss = self.train_on_minibatch((x, y))
 
-            epoch_loss_sum += (loss / batch_size)
-            epoch_loss = epoch_loss_sum / (i + 1)
-            visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
+                # Log metrics and loss
+                epoch_loss_sum += (loss / batch_size)
+                epoch_loss = epoch_loss_sum / (i + 1)
+                visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
 
-            # if steps != -1 and i == steps - 1:
-            #     break
-        print(f"\nEpoch result: {epoch_loss_sum / len(torch_loader)}\n")
+                # Handle progress bar
+                pbar.update()
+                display_loss = epoch_loss_sum / (i + 1)
+                pbar.set_description(f'Loss: {display_loss:05f}')
+        print(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
 
 def get_capacity(model: nn.Module) -> int:
