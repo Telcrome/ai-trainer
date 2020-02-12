@@ -1,15 +1,30 @@
 from typing import Tuple
 
 import numpy as np
-from tqdm import tqdm
+import torch.nn as nn
+import torch.optim as optim
 
 import trainer.lib as lib
 import trainer.lib.demo_data as demo_data
 import trainer.ml as ml
+from trainer.ml.multi_network import SmallClassNet
+
+
+class MnistNetwork(ml.TrainerModel):
+    def __init__(self):
+        model = SmallClassNet()
+        opti = optim.Adam(model.parameters(), lr=5e-3)
+        crit = nn.CrossEntropyLoss()
+        super().__init__(model_name='multi_model',
+                         model=model,
+                         opti=opti,
+                         crit=crit)
 
 
 def preprocessor(s: lib.Subject, m: ml.ModelMode) -> Tuple[np.ndarray, np.ndarray]:
-    return np.zeros(1), np.zeros(1)
+    im_stack = ml.image_stack_classification_preprocessor(s, 'digit')
+    x, y = np.rollaxis(im_stack.get_src()[0], 2), np.array(int(im_stack.get_class_value('digit')))
+    return x.astype(np.float32) / 127.5 - 1, y
 
 
 if __name__ == '__main__':
@@ -29,31 +44,16 @@ if __name__ == '__main__':
     EPOCHS = 60
 
     x = 0
-    data_loader = train_loader.get_torch_dataloader(batch_size=32, num_workers=2)
 
-    for epoch in range(5):
-        for i, v in tqdm(enumerate(iter(data_loader))):
-            x += 1
+    net = MnistNetwork()
 
-    # N = ds.get_subject_count(split='train')
-
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
-
-    # visboard = ml.VisBoard(run_name=lib.create_identifier('test'))
-    # seg_network = ml.seg_network.SegNetwork("SegNetwork", 3, 2, ds, batch_size=BATCH_SIZE, vis_board=visboard)
-    # seg_network.print_summary()
-
-    # test_loader = data.DataLoader(seg_network.get_torch_dataset(split='test', mode=ModelMode.Eval),
-    #                               batch_size=BATCH_SIZE, shuffle=True)
-    # machine_loader = data.DataLoader(seg_network.get_torch_dataset(split='machine', mode=ModelMode.Usage),
-    #                                  batch_size=BATCH_SIZE,
-    #                                  shuffle=True)
-
-    # seg_network.train_supervised(
-    #     'bone',
-    #     train_split='train',
-    #     max_epochs=50,
-    #     load_latest_state=True)
-    # save_predictions('./out2/', split='train')
-    # save_predictions('./out2/', split='test')
-    # save_predictions('./out2/', split='machine')
+    data_loader = train_loader.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=1)
+    visboard = ml.VisBoard(run_name=lib.create_identifier('run'))
+    for epoch in range(EPOCHS):
+        net.run_epoch(
+            data_loader,
+            visboard,
+            epoch=epoch,
+            batch_size=BATCH_SIZE,
+            steps=-1
+        )

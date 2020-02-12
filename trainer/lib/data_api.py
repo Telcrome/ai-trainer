@@ -243,6 +243,10 @@ class Entity(ABC):
             return self._children[child_id]
 
         child = Entity.from_disk(os.path.join(self.get_working_directory(), child_id))
+
+        if self._is_saved_to_disk():
+            child.parent_folder = self.get_working_directory()
+
         if store_in_mem:
             self._children[child_id] = child
             return self._children[child_id]
@@ -330,8 +334,8 @@ class Entity(ABC):
         return BinaryType.provider_map()[self._binaries_model[binary_key][BINARY_TYPE_KEY]]
 
     def _is_saved_to_disk(self) -> bool:
-        if not self.saved_to_disk:
-            return False
+        if self.saved_to_disk:
+            return True
         return self.parent_folder is not None and self.parent_folder and os.path.exists(self.get_working_directory())
 
     def _save_binary(self, bin_key) -> None:
@@ -627,8 +631,10 @@ class Subject(ClassyEntity):
     def add_image_stack(self, e: ImageStack):
         self._add_child(e)
 
-    def get_image_stack(self, im_stack_key):
-        return self._get_child(im_stack_key)
+    def get_image_stack(self, im_stack_key) -> ImageStack:
+        res = self._get_child(im_stack_key)
+        res.__class__ = ImageStack
+        return res
 
     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
         res, n = {}, 0
@@ -720,7 +726,6 @@ class Dataset(Entity):
         Creates a new subject in this dataset
 
         :param s: Unique identifier of the new subject
-        :param auto_save: Immediately saves the dataset details to disk after adding the subject
         """
         self._add_child(s)
         # Add the name of the subject into the splits
@@ -765,10 +770,11 @@ class Dataset(Entity):
                                         f'Subject: {te.entity_id}')
         return res
 
-    def get_subject_by_name(self, s_name: str):
+    def get_subject_by_name(self, s_name: str) -> Subject:
         if s_name not in self._load_attr(self.ATTR_SPLITS)['subjects']:
             raise Exception('This dataset does not contain a subject with this name')
-        res = Subject.from_disk(os.path.join(self.get_working_directory(), s_name))
+        res = self._get_child(s_name)
+        res.__class__ = Subject
         return res
 
     def get_summary(self) -> str:
@@ -812,10 +818,10 @@ class Dataset(Entity):
     def get_subject_count(self, split=''):
         return len(self.get_subject_name_list(split=split))
 
-    def save_model_state(self, weight_id: str, bin: Any) -> None:
+    def save_model_state(self, weight_id: str, binary: Any) -> None:
         self._add_bin(
             weight_id,
-            bin,
+            binary,
             BinaryType.TorchStateDict.value
         )
 
@@ -826,5 +832,10 @@ class Dataset(Entity):
         return self.get_subject_by_name(item)
 
     def __iter__(self):
-        from trainer.ml.data_loading import get_subject_gen
-        return get_subject_gen(self)
+        """
+        Iterates through the subjects of this dataset
+        """
+
+        s_ls = self.get_subject_name_list()
+        for s_key in s_ls:
+            yield self.get_subject_by_name(s_key)
