@@ -24,7 +24,6 @@ class ModelMode(Enum):
 
     The following guidelines apply for the semantics of this enum:
 
-    TODO: Explain the enum values.
     - Train asks for augmentation and other tricks during training (batch normalization, ...)
     - Eval does not require augmentation and is used for evaluation
     - Usage does not require ground truths

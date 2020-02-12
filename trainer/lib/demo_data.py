@@ -114,7 +114,8 @@ def build_mnist_subject(src_manager: SourceData, max_digit_ims=(1, 5)) -> lib.Su
 def build_mnist(data_path: str, sd: SourceData) -> lib.Dataset:
     """
     Builds an Mnist dataset
-    :return:
+
+    :return: The lib.Dataset
     """
     if os.path.exists(os.path.join(data_path, 'mnist')):
         return lib.Dataset.from_disk(os.path.join(data_path, 'mnist'))
