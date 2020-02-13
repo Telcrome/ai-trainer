@@ -10,7 +10,8 @@ try:  # The following modules depend on torch, for CI systems without torch a tr
     from trainer.ml.utils import *
     from trainer.ml.visualization import VisBoard, LogWriter
     from trainer.ml.losses import dice_loss, FocalLoss
-    from trainer.ml.torch_utils import ModelMode, TrainerModel, TorchDataset, device as torch_device
+    from trainer.ml.torch_utils import ModelMode, TrainerModel, TorchDataset, device as torch_device, TrainerMetric, \
+        AccuracyMetric
     from trainer.ml.seg_network import SegNetwork, SegCrit
 except ImportError:
     print("Please install all requirements")
