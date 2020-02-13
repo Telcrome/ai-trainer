@@ -122,13 +122,7 @@ class AccuracyMetric(TrainerMetric):
 
 class TrainerModel(ABC):
     """
-    TorchModel is a subclass of nn.Module with added functionality:
-
-    - Name
-    - Processing chain: Subject -> Augmented subject -> Input layer
-    - Visboard
-
-    Implements standard training and evaluation methods.
+    TrainerModel is the user of a torch nn.Module model and implements common training and evaluation methods.
     """
 
     def __init__(self,
