@@ -109,12 +109,12 @@ class AccuracyMetric(TrainerMetric):
     def update(self, prediction: np.ndarray, target: np.ndarray):
         if len(prediction.shape) != len(target.shape):
             # the prediction seems to be given in logits or class probabilities
-            prediction = np.argmax(prediction)
+            prediction = np.argmax(prediction, axis=1)
             if type(prediction) != np.ndarray:
                 prediction = np.array(prediction)
 
-        self.preds.append(prediction)
-        self.targets.append(target)
+        self.preds.extend(list(prediction))
+        self.targets.extend(list(target))
 
     def get_result(self):
         return accuracy_score(self.targets, self.preds)
@@ -159,10 +159,10 @@ class TrainerModel(ABC):
 
         steps = len(torch_loader) if steps == -1 else steps
         print(f'Starting epoch: {epoch} with {len(torch_loader) * batch_size} training examples and {steps} steps\n')
-        loader_iterator = iter(torch_loader)
+        loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
-                x, y = next(loader_iterator)
+                x, y = next(loader_iter)
                 x, y = x.to(device), y.to(device)
 
                 loss = self.train_on_minibatch((x, y))
@@ -178,14 +178,14 @@ class TrainerModel(ABC):
                 pbar.set_description(f'Loss: {display_loss:05f}')
         print(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
-    def evaluate(self, eval_set: TorchDataset, evaluator: TrainerMetric, batch_size=1, num_workers=2):
+    def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric, batch_size=1, num_workers=2):
         self.model.eval()
-        steps = len(eval_set)
-        eval_loader = iter(eval_set.get_torch_dataloader(batch_size=batch_size, num_workers=num_workers))
+        steps = len(eval_loader)
+        eval_iter = iter(eval_loader)
         with torch.no_grad():  # Testing does not require gradients
             with tqdm(total=steps, maxinterval=steps / 100) as pbar:
                 for i in range(steps):
-                    x, y = next(eval_loader)
+                    x, y = next(eval_iter)
                     x = x.to(device)
                     y_ = self.model.forward(x).cpu()
 

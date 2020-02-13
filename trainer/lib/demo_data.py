@@ -111,20 +111,22 @@ def build_mnist_subject(src_manager: SourceData, max_digit_ims=(1, 5)) -> lib.Su
     return s
 
 
-def build_mnist(data_path: str, sd: SourceData) -> lib.Dataset:
+def build_mnist(data_path: str, sd: SourceData, max_training=-1) -> lib.Dataset:
     """
     Builds an Mnist dataset
 
     :return: The lib.Dataset
     """
-    if os.path.exists(os.path.join(data_path, 'mnist')):
-        return lib.Dataset.from_disk(os.path.join(data_path, 'mnist'))
-    d = lib.Dataset.build_new('mnist', data_path)
+    ds_name = f'mnist{max_training}' if max_training != -1 else f'mnist{60000}'
+    if os.path.exists(os.path.join(data_path, ds_name)):
+        return lib.Dataset.from_disk(os.path.join(data_path, ds_name))
+    d = lib.Dataset.build_new(ds_name, data_path)
     d.stop_auto_save()
     d.add_class('digit', lib.ClassType.Nominal, [str(i) for i in range(10)])
 
     def append_mnist_split(torch_dataset, split='train'):
-        for i in tqdm(range(len(torch_dataset))):
+        train_n = len(torch_dataset) if max_training == -1 or split != 'train' else max_training
+        for i in tqdm(range(train_n)):
             s = lib.Subject(f'subject_{split}_{i}')
             x, y = sd.mnist_train.__getitem__(i)
             im_stack = lib.ImageStack.from_np(f"mnist{i}", np.asarray(x))

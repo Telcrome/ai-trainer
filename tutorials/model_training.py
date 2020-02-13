@@ -40,13 +40,16 @@ def train():
 
 
 def test():
-    net.evaluate(test_set, acc_metric)
+    acc_metric = ml.AccuracyMetric()
+    test_loader = test_set.get_torch_dataloader(batch_size=64, num_workers=2)
+    net.evaluate(test_loader, acc_metric)
+    print(acc_metric.get_result())
 
 
 if __name__ == '__main__':
     data_path = r'C:\Users\rapha\Desktop\data'
     sd = demo_data.SourceData('D:\\')
-    ds = demo_data.build_mnist(data_path, sd)
+    ds = demo_data.build_mnist(data_path, sd, max_training=100)
 
     class_name = 'digit'  # The structure that we now train for
     train_set = ml.TorchDataset(
@@ -62,14 +65,14 @@ if __name__ == '__main__':
         mode=ml.ModelMode.Eval
     )
 
-    BATCH_SIZE = 64
-    EPOCHS = 1
+    BATCH_SIZE = 8
+    EPOCHS = 5
 
     x = 0
 
     net = MnistNetwork()
 
-    data_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=4)
+    data_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=1)
 
-    acc_metric = ml.AccuracyMetric()
     train()
+    test()
