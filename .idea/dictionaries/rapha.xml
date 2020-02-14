@@ -40,6 +40,7 @@
       <w>segmap</w>
       <w>segmentations</w>
       <w>segs</w>
+      <w>semseg</w>
       <w>skdata</w>
       <w>statedict</w>
       <w>tablename</w>

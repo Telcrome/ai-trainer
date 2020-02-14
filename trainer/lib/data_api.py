@@ -34,12 +34,13 @@ from __future__ import annotations  # Important for function annotations of symb
 
 from ast import literal_eval as make_tuple
 from enum import Enum
+from typing import List
 
 import numpy as np
 import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
 engine = create_engine('sqlite:///./test.db')
@@ -62,7 +63,7 @@ class NumpyBinary:
         return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
 
     def __repr__(self):
-        return f"<{self.__name__} with shape ({self.shape}) and type {self.dtype}>"
+        return f"Numpy Binary with shape ({self.shape}) and type {self.dtype}>"
 
 
 class MaskType(Enum):
@@ -84,6 +85,8 @@ class SemSegMask(NumpyBinary, Base):
 
     id = sa.Column(sa.Integer, primary_key=True)
 
+    im_stack_id = sa.Column(sa.Integer, sa.ForeignKey('imagestacks.id'))
+
     @classmethod
     def build_new(cls, gt_arr: np.ndarray):
         assert (gt_arr.dtype == np.bool and len(gt_arr.shape) == 3)
@@ -97,12 +100,17 @@ class ImageStack(NumpyBinary, Base):
 
     id = sa.Column(sa.Integer, primary_key=True)
 
+    semseg_masks: List = relationship("SemSegMask")
+
     @classmethod
     def build_new(cls, src_im: np.ndarray):
         assert (src_im.dtype == np.uint8 and len(src_im.shape) == 4)
         res = cls()
         res.set_array(src_im)
         return res
+
+    def __repr__(self):
+        return f'ImageStack with masks:\n{[mask for mask in self.semseg_masks]}\n{super().__repr__()}'
 
 
 class ClassType(Enum):
