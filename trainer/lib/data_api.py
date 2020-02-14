@@ -39,7 +39,7 @@ import numpy as np
 import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
 engine = create_engine('sqlite:///./test.db')
@@ -48,27 +48,21 @@ Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
-class NumpyBinary(Base):
-    __tablename__ = 'npy_binaries'
-
-    id = sa.Column(sa.Integer, primary_key=True)
+class NumpyBinary:
     binary = sa.Column(sa.LargeBinary)
     shape = sa.Column(sa.String())
     dtype = sa.Column(sa.String())
 
-    @classmethod
-    def from_ndarray(cls, arr: np.ndarray):
-        res = cls()
-        res.binary = arr.tobytes()
-        res.shape = str(arr.shape)[1:-1]
-        res.dtype = str(arr.dtype)
-        return res
+    def set_array(self, arr: np.ndarray) -> None:
+        self.binary = arr.tobytes()
+        self.shape = str(arr.shape)[1:-1]
+        self.dtype = str(arr.dtype)
 
     def get_ndarray(self) -> np.ndarray:
         return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
 
     def __repr__(self):
-        return f"<Numpy array with shape ({self.shape}) and type {self.dtype}>"
+        return f"<{self.__name__} with shape ({self.shape}) and type {self.dtype}>"
 
 
 class MaskType(Enum):
@@ -85,26 +79,29 @@ class MaskType(Enum):
     Line = 'line'
 
 
-# class ImageMask(Base):
-#     __tablename__ = 'imagemasks'
-#
-#     id = sa.Column(sa.Integer, primary_key=True)
-#     arr_id = sa.Column(sa.Integer, sa.ForeignKey(f'{NumpyBinary.__tablename__}.id'))
+class SemSegMask(NumpyBinary, Base):
+    __tablename__ = 'imagemasks'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    @classmethod
+    def build_new(cls, gt_arr: np.ndarray):
+        assert (gt_arr.dtype == np.bool and len(gt_arr.shape) == 3)
+        res = cls()
+        res.set_array(gt_arr)
+        return res
 
 
-class ImageStack(Base):
+class ImageStack(NumpyBinary, Base):
     __tablename__ = 'imagestacks'
 
     id = sa.Column(sa.Integer, primary_key=True)
-    arr_id = sa.Column(sa.Integer, sa.ForeignKey(f'{NumpyBinary.__tablename__}.id'))
-    arr = relationship(NumpyBinary.__name__, uselist=False)
 
     @classmethod
     def build_new(cls, src_im: np.ndarray):
-        assert (src_im.dtype == np.uint8)
-        npy = NumpyBinary.from_ndarray(src_im)
+        assert (src_im.dtype == np.uint8 and len(src_im.shape) == 4)
         res = cls()
-        res.arr = npy
+        res.set_array(src_im)
         return res
 
 
