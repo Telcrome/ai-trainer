@@ -34,7 +34,7 @@ from __future__ import annotations  # Important for function annotations of symb
 
 from ast import literal_eval as make_tuple
 from enum import Enum
-from typing import List
+from typing import List, Dict
 
 import numpy as np
 import sqlalchemy as sa
@@ -104,6 +104,9 @@ class Classifiable:
         else:
             self.classes = {class_name: class_val}
 
+    def remove_class(self, class_name: str):
+        self.classes.pop(class_name)
+
     def get_class(self, class_name: str):
         return self.classes[class_name]
 
@@ -122,7 +125,8 @@ class SemSegMask(Classifiable, NumpyBinary, Base):
 
     @classmethod
     def build_new(cls, gt_arr: np.ndarray, for_frame=0):
-        assert (gt_arr.dtype == np.bool and len(gt_arr.shape) == 3)
+        assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentatino mask'
+        assert (len(gt_arr.shape) == 3), 'Wrong shape for a semantic segmentation mask'
         res = cls()
         res.set_array(gt_arr)
         res.for_frame = for_frame
@@ -133,109 +137,46 @@ class ImStack(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_IM_STACKS
 
     id = sa.Column(sa.Integer, primary_key=True)
+    extra_info = sa.Column(pg.JSONB())
 
     semseg_masks: List = relationship("SemSegMask")
 
     @classmethod
-    def build_new(cls, src_im: np.ndarray):
-        assert (src_im.dtype == np.uint8 and len(src_im.shape) == 4)
+    def build_new(cls, src_im: np.ndarray, extra_info: Dict = None):
+        """
+        Only adds images, not volumes or videos! Unless it is already in shape (frames, width, height, channels).
+        Multi-channel images are assumed to be channels last.
+        Grayscale images are assumed to be of shape (width, height).
+
+        The array is saved using type np.uint8 and is expected to have intensities in the range of [0, 255]
+
+        :param src_im: Numpy Array. Can be of shape (W, H), (W, H, #C) or (#F, W, H, #C)
+        :param extra_info: Extra info for a human. Must contain only standard types to be json serializable
+        """
         res = cls()
+
+        if len(src_im.shape) == 2:
+            # Assumption: This is a grayscale image
+            src_im = np.reshape(src_im, (1, src_im.shape[0], src_im.shape[1], 1))
+        elif len(src_im.shape) == 3:
+            # This is the image adder function, so assume this is RGB
+            src_im = np.reshape(src_im, (1, src_im.shape[0], src_im.shape[1], src_im.shape[2]))
+        elif len(src_im.shape) == 4:
+            # It is assumed that the array is already in correct shape
+            src_im = src_im
+        else:
+            raise Exception("This array can not be an image, check shape!")
+
+        assert (src_im.dtype == np.uint8 and len(src_im.shape) == 4)
         res.set_array(src_im)
+        if extra_info:
+            res.extra_info = extra_info
         return res
 
     def __repr__(self):
         return f'ImageStack with masks:\n{[mask for mask in self.semseg_masks]}\n{super().__repr__()}'
 
 
-# class Classifiable(ABC):
-#     ATTR_CLASSES = 'classes'
-#
-#     def __init__(self, entity_id: str, entity_type: str, parent_folder: str = ''):
-#         super().__init__(entity_id, entity_type, parent_folder=parent_folder)
-#         self._add_attr(self.ATTR_CLASSES, content={})
-#
-#     def set_class(self, class_id: str, value: str, for_dataset: Dataset = None) -> None:
-#         """
-#         Set a class to true. Classes are stored by their unique string.
-#         A class is only fully defined in complement with a dataset's information about that class.
-#
-#         Complete absence of a class indicates an unknown.
-#
-#         Hint: If two states of one class can be true to the same time, do not model them as one class.
-#         Instead of modelling ligament tear as one class, define a binary class for each different ligament.
-#
-#         :param class_id: Unique string that is used to identify the class.
-#         :param value: boolean indicating
-#         :param for_dataset: If provided, set_class checks for compliance with the dataset.
-#         """
-#         if for_dataset is not None:
-#             class_obj = for_dataset.get_class(class_id)
-#             assert_error = f"{class_id} cannot be set to {value} according to {for_dataset.entity_id}"
-#             assert (value not in class_obj['values']), assert_error
-#
-#         self._load_attr(self.ATTR_CLASSES)[class_id] = value
-#
-#     def get_class_value(self, class_name: str):
-#         if class_name in self._load_attr(self.ATTR_CLASSES):
-#             return self._load_attr(self.ATTR_CLASSES)[class_name]
-#         return "--Removed--"
-#
-#     def remove_class(self, class_name: str):
-#         self._load_attr(self.ATTR_CLASSES).pop(class_name)
-#
-#     def contains_class(self, class_name: str):
-#         return class_name in self._load_attr(self.ATTR_CLASSES)
-#
-#
-# class ImageStack(Base):
-#     __tablename__ = 'imagestacks'
-#
-#     @classmethod
-#     def from_np(cls, entity_id: str, src_im: np.ndarray, extra_info: Dict = None):
-#         """
-#         Only adds images, not volumes or videos! Unless it is already in shape (frames, width, height, channels).
-#         Multi-channel images are assumed to be channels last.
-#         Grayscale images are assumed to be of shape (width, height).
-#
-#         The array is saved using type np.uint8 and is expected to have intensities in the range of [0, 255]
-#
-#         :param entity_id: Unique identifier of this image stack
-#         :param src_im: Numpy Array. Can be of shape (W, H), (W, H, #C) or (#F, W, H, #C)
-#         :param extra_info: Extra info for a human. Must contain only standard types to be json serializable
-#         """
-#         cls_instance = cls(entity_id)
-#         # Save corresponding json metadata
-#         meta = {}
-#         if len(src_im.shape) == 2:
-#             # Assumption: This is a grayscale image
-#             res = np.reshape(src_im, (1, src_im.shape[0], src_im.shape[1], 1))
-#             meta["image_type"] = "grayscale"
-#         elif len(src_im.shape) == 3:
-#             # This is the image adder function, so assume this is RGB
-#             res = np.reshape(src_im, (1, src_im.shape[0], src_im.shape[1], src_im.shape[2]))
-#             meta["image_type"] = "multichannel"
-#         elif len(src_im.shape) == 4:
-#             # It is assumed that the array is already in correct shape
-#             res = src_im
-#             meta["image_type"] = "video"
-#         else:
-#             raise Exception("This array can not be an image, check shape!")
-#
-#         # Extra info
-#         if extra_info is not None:
-#             meta["extra"] = extra_info
-#
-#         cls_instance._add_bin(cls_instance.SRC_KEY, res.astype(np.uint8), b_type=BinaryType.NumpyArray.value,
-#                               meta_data=meta)
-#         return cls_instance
-#
-#     @staticmethod
-#     def get_sem_seg_naming_conv(sem_seg_tpl: str, frame_number=0):
-#         return f"gt_{sem_seg_tpl}_{frame_number}"
-#
-#     def get_src(self) -> np.ndarray:
-#         return self._get_binary(self.SRC_KEY)
-#
 #     def delete_gt(self, sem_seg_tpl: str, frame_number=0):
 #         print(f"Deleting ground truth of {sem_seg_tpl} at frame {frame_number}")
 #         self._remove_binary(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number))
