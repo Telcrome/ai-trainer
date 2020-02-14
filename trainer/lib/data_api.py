@@ -162,20 +162,6 @@ class SemSegMask(Classifiable, NumpyBinary, Base):
     mtype = sa.Column(sa.Enum(MaskType))
     im_stack_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_IM_STACKS}.id'))
 
-    @classmethod
-    def build_new(cls, gt_arr: np.ndarray, sem_seg_tpl: SemSegTpl, for_frame=0):
-        if len(gt_arr.shape) == 2:
-            # This is a single indicated structure without a last dimension, add it!
-            gt_arr = np.reshape(gt_arr, (gt_arr.shape[0], gt_arr.shape[1], 1))
-
-        assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentation mask'
-        assert (len(gt_arr.shape) == 3), 'Wrong shape for a semantic segmentation mask'
-        res = cls()
-        res.set_array(gt_arr)
-        res.tpl = sem_seg_tpl
-        res.for_frame = for_frame
-        return res
-
 
 class ImStack(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_IM_STACKS
@@ -217,32 +203,27 @@ class ImStack(Classifiable, NumpyBinary, Base):
             res.extra_info = extra_info
         return res
 
+    def add_ss_mask(self, gt_arr: np.ndarray, sem_seg_tpl: SemSegTpl, for_frame=0):
+        if len(gt_arr.shape) == 2:
+            # This is a single indicated structure without a last dimension, add it!
+            gt_arr = np.reshape(gt_arr, (gt_arr.shape[0], gt_arr.shape[1], 1))
+
+        assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentation mask'
+        assert (len(gt_arr.shape) == 3), 'Wrong shape for a semantic segmentation mask'
+        assert (self.get_ndarray().shape[1:3] == gt_arr.shape[:2]), \
+            f'Shapes of seg mask {gt_arr.shape} and im stack {self.get_ndarray().shape} do not match'
+        # noinspection PyTypeChecker
+        tpl_classes_num = len(sem_seg_tpl.ss_classes)
+        assert (gt_arr.shape[2] == tpl_classes_num), f'{gt_arr.shape[2]} classes but {tpl_classes_num} in template'
+        m = SemSegMask()
+        m.set_array(gt_arr)
+        m.tpl = sem_seg_tpl
+        m.for_frame = for_frame
+        return m
+
     def __repr__(self):
         return f'ImageStack with masks:\n{[mask for mask in self.semseg_masks]}\n{super().__repr__()}'
 
-
-#     def get_structure_list(self, image_stack_key: str = ''):
-#         """
-#         Computes the possible structures. If no image_stack_key is provided, all possible structures are returned.
-#         :param image_stack_key:
-#         :return:
-#         """
-#         if image_stack_key:
-#             if "structures" in self._binaries_model[image_stack_key]["meta_data"]:
-#                 return self._binaries_model[image_stack_key]["meta_data"]["structures"]
-#             else:
-#                 return []
-#         else:
-#             raise NotImplementedError()
-#
-#     def get_sem_seg_frames(self, sem_seg_tpl):
-#
-#         # Find out which frames contain the semantic segmentation ground truths
-#         frame_num = self.get_src().shape[0]
-#         for f_i in range(frame_num):
-#             pass
-#
-#
 # class Subject(ClassyEntity):
 #     """
 #     In a medical context a subject is concerned with the data of one patient.
