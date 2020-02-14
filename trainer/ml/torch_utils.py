@@ -41,16 +41,14 @@ class TorchDataset(data.Dataset):
     """
 
     def __init__(self,
-                 ds_path: str,
+                 split: lib.Split,
                  f: Union[Callable[[lib.Subject, ModelMode], Tuple[np.ndarray, np.ndarray]], partial],
-                 split='',
                  mode: ModelMode = ModelMode.Train):
         super().__init__()
-        self.ds = lib.Dataset.from_disk(ds_path)
         self.preprocessor = f
         self.split = split
-        self.ss = self.ds.get_subject_name_list(split=self.split)
         self.mode = mode
+        self.session = None
 
     def get_torch_dataloader(self, batch_size=32, num_workers=1):
         return data.DataLoader(
@@ -66,15 +64,17 @@ class TorchDataset(data.Dataset):
         :param item: Name of a subject
         :return: Training example x, y
         """
-        # print(f'item: {item}')
-        s = self.ds.get_subject_by_name(self.ss[item])
+        self.session = lib.Session() if self.session is None else self.session
+        s = self.split.sbjts[item]
+        self.session.add(s)
         x, y = self.preprocessor(s, self.mode)
+        # self.session.remove(s)
         # Cannot transformed to cuda tensors at this point,
         # because they do not seem to work in shared memory. Return numpy arrays instead.
         return x, y
 
     def __len__(self):
-        return self.ds.get_subject_count(split=self.split)
+        return len(self.split.sbjts)
 
 
 ALL_TORCHSET_KEY = '_all_'

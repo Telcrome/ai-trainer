@@ -2,9 +2,9 @@ import numpy as np
 import skimage
 
 if __name__ == '__main__':
-    from trainer.lib.data_api import Session, ImStack, SemSegTpl, reset_schema, MaskType
+    from trainer.lib.data_api import Session, ImStack, SemSegTpl, reset_database, MaskType, Subject
 
-    reset_schema()
+    reset_database()
     session = Session()
 
     # Semsegtpl
@@ -27,9 +27,13 @@ if __name__ == '__main__':
 
     # Binaries
     im_stack2 = ImStack.build_new(skimage.data.astronaut())
-    mask1 = im_stack2.add_ss_mask(np.zeros_like(skimage.data.astronaut()[:, :, :2], dtype=np.bool), sem_seg_tpl=ss_tpl)
+    mask1 = im_stack2
     im_stack2.semseg_masks.append(mask1)
     im_stack2.set_class('digit', 'two')
     session.add(im_stack2)
+
+    # Subject
+    s = Subject.build_new('subject1')
+    # s.ims.append(im_stack)
 
     session.commit()

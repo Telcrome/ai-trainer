@@ -44,7 +44,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
-con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test3'
+con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test4'
 engine = create_engine(con_string)
 # engine = create_engine('sqlite:///./test.db')
 Session = sessionmaker(bind=engine)
@@ -58,6 +58,9 @@ TABLENAME_SEMSEGCLASS = 'semsegtclasses'
 TABLENAME_SEMSEGTPL = 'semsegtpls'
 TABLENAME_SEM_SEG = 'semsegmasks'
 TABLENAME_IM_STACKS = 'imagestacks'
+TABLENAME_SUBJECTS = 'subjects'
+TABLENAME_SPLITS = 'splits'
+TABLENAME_DATASETS = 'datasets'
 
 
 class NumpyBinary:
@@ -167,6 +170,7 @@ class ImStack(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_IM_STACKS
 
     id = sa.Column(sa.Integer, primary_key=True)
+    sbjt_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_SUBJECTS}.id'))
     extra_info = sa.Column(pg.JSONB())
 
     semseg_masks: List = relationship("SemSegMask")
@@ -224,243 +228,109 @@ class ImStack(Classifiable, NumpyBinary, Base):
     def __repr__(self):
         return f'ImageStack with masks:\n{[mask for mask in self.semseg_masks]}\n{super().__repr__()}'
 
-# class Subject(ClassyEntity):
-#     """
-#     In a medical context a subject is concerned with the data of one patient.
-#     For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
-#     text (symptom description, history) and structured data (date of birth, nationality...).
-#
-#     Wherever possible the data is saved in json format, but for example for imaging only the metadata is saved
-#     as json, the actual image file can be found in the binaries-list.
-#
-#     In future releases a complete changelog will be saved in a format suitable for process mining.
-#     """
-#
-#     def __init__(self, entity_id: str, parent_folder=''):
-#         super().__init__(entity_id, entity_type='subject', parent_folder=parent_folder)
-#
-#     def get_image_stack_keys(self):
-#         return self._get_children_keys(entity_type='image_stack')
-#         # return self.get_binary_list_filtered(lambda x: x["binary_type"] == BinaryType.ImageStack.value)
-#
-#     def add_image_stack(self, e: ImageStack):
-#         self._add_child(e)
-#
-#     def get_image_stack(self, im_stack_key) -> ImageStack:
-#         res = self._get_child(im_stack_key)
-#         res.__class__ = ImageStack
-#         return res
-#
-#     def get_manual_struct_segmentations(self, struct_name: str) -> Tuple[Dict[str, List[int]], int]:
-#         res, n = {}, 0
-#
-#         def filter_imgstack_structs(x: Dict):
-#             is_img_stack = x['binary_type'] == BinaryType.ImageStack.value
-#             contains_struct = struct_name in x['meta_data']['structures']
-#             return is_img_stack and contains_struct
-#
-#         # Iterate over image stacks that contain the structure
-#         for b_name in self.get_image_stack_keys():
-#             # Find the masks of this binary and list them
-#             image_stack = self._get_child(b_name)
-#             bs = self.get_masks_of(b_name)
-#             n += len(bs)
-#             if bs:
-#                 res[b_name] = bs
-#
-#         return res, n
-#
-#
-# class Dataset(Entity):
-#     ATTR_CLASSDEFINITIONS = 'class_definitions'
-#     ATTR_SPLITS = 'splits'
-#     ATTR_SEM_SEG_TPL = 'sem_seg_tpl'
-#
-#     def __init__(self, name: str, parent_folder: str):
-#         super().__init__(name, entity_type='dataset', parent_folder=parent_folder)
-#
-#     @classmethod
-#     def build_new(cls, name: str, dir_path: str, example_class=True):
-#         res = cls(name, dir_path)
-#         res._add_attr(res.ATTR_SPLITS, content={
-#             "subjects": [],
-#             "splits": {},
-#         })
-#         res._add_attr(res.ATTR_CLASSDEFINITIONS, content={})
-#         res._add_attr(res.ATTR_SEM_SEG_TPL, content={
-#             "basic": {"foreground": MaskType.Blob.value,
-#                       "outline": MaskType.Line.value}
-#         })
-#         if example_class:
-#             res.add_class("example_class", class_type=ClassType.Nominal,
-#                           values=["Unknown", "Tiger", "Elephant", "Mouse"])
-#         res.to_disk()
-#         return res
-#
-#     @classmethod
-#     def download(cls, url: str, local_path='.', dataset_name: str = None):
-#         working_dir_path = download_and_extract(url, parent_dir=local_path, dir_name=dataset_name)
-#         return Dataset.from_disk(working_dir_path)
-#
-#     def add_class(self, class_name: str, class_type: ClassType, values: List[str]):
-#         """
-#         Adds a class on a dataset level.
-#         This allows children to just specify a classname and from the dataset the class details can be inferred.
-#
-#         :param class_name:
-#         :param class_type:
-#         :param values:
-#         :return:
-#         """
-#         obj = {
-#             "class_type": class_type.value,
-#             "values": values
-#         }
-#         self._load_attr(self.ATTR_CLASSDEFINITIONS)[class_name] = obj
-#
-#     def get_class_names(self):
-#         return list(self._load_attr(self.ATTR_CLASSDEFINITIONS).keys())
-#
-#     def get_class(self, class_name: str) -> Union[Dict, None]:
-#         if class_name in self._load_attr(self.ATTR_CLASSDEFINITIONS):
-#             return self._load_attr(self.ATTR_CLASSDEFINITIONS)[class_name]
-#         else:
-#             return None
-#
-#     def remove_class(self, class_name: str):
-#         self._load_attr(self.ATTR_CLASSDEFINITIONS).pop(class_name)
-#
-#     def get_structure_template_names(self):
-#         return list(self._load_attr(self.ATTR_CLASSDEFINITIONS).keys())
-#
-#     def get_structure_template_by_name(self, tpl_name):
-#         return self._load_attr(self.ATTR_SEM_SEG_TPL)[tpl_name]
-#
-#     def save_subject(self, s: Subject) -> None:
-#         """
-#         Creates a new subject in this dataset
-#
-#         :param s: Unique identifier of the new subject
-#         """
-#         self._add_child(s)
-#         # Add the name of the subject into the splits
-#         if s.entity_id not in self._load_attr(self.ATTR_SPLITS)['subjects']:
-#             self._load_attr(self.ATTR_SPLITS)["subjects"].append(s.entity_id)
-#
-#     def get_subject_name_list(self, split='') -> List[str]:
-#         """
-#         Computes the list of subjects in this dataset.
-#         :param split: Dataset splits of the subjects
-#         :return: List of the names of the subjects
-#         """
-#         if not split:
-#             subjects = self._get_children_keys(entity_type='subject')
-#         else:
-#             subjects = self._load_attr(self.ATTR_SPLITS)["splits"][split]
-#         return subjects
-#
-#     def append_subject_to_split(self, s_id: str, split: str):
-#         # Create the split if it does not exist
-#         if split not in self._load_attr(self.ATTR_SPLITS)["splits"]:
-#             self._load_attr(self.ATTR_SPLITS)["splits"][split] = []
-#
-#         self._load_attr(self.ATTR_SPLITS)["splits"][split].append(s_id)
-#
-#     def filter_subjects(self, filterer: Callable[[Subject], bool], viz=False) -> List[str]:
-#         """
-#         Returns a list with the names of subjects of interest.
-#         :param filterer: If the filterer returns true, the subject is added to the list
-#         :param viz: Whether or not a progress meter should be displayed
-#         :return: The list of subjects of interest
-#         """
-#         res: List[str] = []
-#         for i, s_name in enumerate(self._load_attr(self.ATTR_SPLITS)["subjects"]):
-#             te = self.get_subject_by_name(s_name)
-#             if filterer(te):
-#                 res.append(te.entity_id)
-#             if viz:
-#                 sg.OneLineProgressMeter("Filtering subjects", i + 1,
-#                                         self.get_subject_count(),
-#                                         'key',
-#                                         f'Subject: {te.entity_id}')
-#         return res
-#
-#     def get_subject_by_name(self, s_name: str) -> Subject:
-#         if s_name not in self._load_attr(self.ATTR_SPLITS)['subjects']:
-#             raise Exception('This dataset does not contain a subject with this name')
-#         res = self._get_child(s_name)
-#         res.__class__ = Subject
-#         return res
-#
-#     def get_summary(self) -> str:
-#         split_summary = ""
-#         for split in self._load_attr(self.ATTR_SPLITS)["splits"]:
-#             split_summary += f"""{split}: {self.get_subject_count(split=split)}\n"""
-#         return f"Saved at {self.get_working_directory()}\nN: {len(self)}\n{split_summary}"
-#
-#     def compute_segmentation_structures(self) -> Dict[str, Set[str]]:
-#         """
-#         Returns a dictionary.
-#         Keys: All different structures.
-#         Values: The names of the subjects that can be used to train these structures with.
-#         :return: Dictionary of structures and corresponding subjects
-#         """
-#         # Segmentation Helper
-#         seg_structs: Dict[str, Set[str]] = {}  # structure_name: List_of_Training_Example_names with that structure
-#
-#         def te_filterer(te: Subject) -> bool:
-#             """
-#             Can be used to hijack the functional filtering utility
-#             and uses a side effect of struct_appender to fill seg_structs.
-#             """
-#
-#             def struct_appender(b: Dict) -> bool:
-#                 if b['binary_type'] == BinaryType.ImageStack.value:
-#                     structures = list(b['meta_data']['structures'].keys())
-#                     for structure in structures:
-#                         if structure not in seg_structs:
-#                             seg_structs[structure] = set()
-#                         if te.entity_id not in seg_structs[structure]:
-#                             seg_structs[structure] = seg_structs[structure] | {te.entity_id}
-#                 return True
-#
-#             stacks = te._get_binary_list_filtered(struct_appender)
-#             return len(stacks) != 0
-#
-#         self.filter_subjects(lambda x: te_filterer(x))
-#         return seg_structs
-#
-#     def get_subject_count(self, split=''):
-#         return len(self.get_subject_name_list(split=split))
-#
-#     def save_model_state(self, weight_id: str, binary: Any) -> None:
-#         self._add_bin(
-#             weight_id,
-#             binary,
-#             BinaryType.Pickle.value
-#         )
-#
-#     def __len__(self):
-#         return self.get_subject_count()
-#
-#     def __getitem__(self, item):
-#         return self.get_subject_by_name(item)
-#
-#     def __iter__(self):
-#         """
-#         Iterates through the subjects of this dataset
-#         """
-#
-#         s_ls = self.get_subject_name_list()
-#         for s_key in s_ls:
-#             yield self.get_subject_by_name(s_key)
 
-def reset_schema():
+class Subject(Classifiable, Base):
+    """
+    In a medical context a subject is concerned with the data of one patient.
+    For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
+    text (symptom description, history) and structured data (date of birth, nationality...).
+
+    Wherever possible the data is saved in json format, but for example for imaging only the metadata is saved
+    as json, the actual image file can be found in the binaries-list.
+
+    In future releases a complete changelog will be saved in a format suitable for process mining.
+    Currently one subject can only live in one dataset, as a result a subject cannot be shared among datasets.
+    """
+    __tablename__ = TABLENAME_SUBJECTS
+
+    id = sa.Column(sa.Integer(), primary_key=True)
+    dataset_id = sa.Column(sa.Integer(), sa.ForeignKey(f'{TABLENAME_DATASETS}.id'))
+    name = sa.Column(sa.String())
+    ims = relationship(ImStack)
+
+    @classmethod
+    def build_new(cls, name: str):
+        res = cls()
+        res.name = name
+        return res
+
+
+sbjts_splits_association_table = sa.Table(
+    'sbjtsplits_association',
+    Base.metadata,
+    sa.Column('subject_id', sa.Integer, sa.ForeignKey(f'{TABLENAME_SUBJECTS}.id')),
+    sa.Column('split_id', sa.Integer, sa.ForeignKey(f'{TABLENAME_SPLITS}.id'))
+)
+
+
+class Split(Base):
+    __tablename__ = TABLENAME_SPLITS
+
+    id = sa.Column(sa.Integer(), primary_key=True)
+    dataset_id = sa.Column(sa.Integer(), sa.ForeignKey(f'{TABLENAME_DATASETS}.id'))
+    name = sa.Column(sa.String())
+    sbjts = relationship(Subject, secondary=sbjts_splits_association_table)
+
+    def __len__(self):
+        return len(self.sbjts)
+
+    def __getitem__(self, item):
+        raise NotImplementedError()
+
+
+class Dataset(Base):
+    __tablename__ = TABLENAME_DATASETS
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    splits = relationship(Split)
+    sbjts = relationship(Subject, lazy='dynamic')
+    name = sa.Column(sa.String())
+
+    @classmethod
+    def build_new(cls, name: str):
+        res = cls()
+        res.name = name
+        return res
+
+    def add_split(self, split_name: str):
+        split = Split()
+        split.name = split_name
+        split.sbjts = []
+        # noinspection PyUnresolvedReferences
+        self.splits.append(split)
+
+    def get_split_by_name(self, split_name: str):
+        # noinspection PyTypeChecker
+        for split in self.splits:
+            if split.name == split_name:
+                return split
+        raise Exception(f"Split {split_name} does not exist")
+
+    def get_summary(self) -> str:
+        split_summary = ""
+        # noinspection PyTypeChecker
+        for split in self.splits:
+            split_summary += f'{split}\n'
+        return split_summary
+
+    def __iter__(self):
+        raise NotImplementedError()
+
+    def __len__(self):
+        # noinspection PyTypeChecker
+        return len(self.sbjts)
+
+
+def reset_database():
+    sbjts_splits_association_table.drop(bind=engine)
     mappers = [
         SemSegClass,
         SemSegTpl,
         SemSegMask,
-        ImStack]
+        ImStack,
+        Subject,
+        Split,
+        Dataset]
     # noinspection PyUnresolvedReferences
     Base.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])
     Base.metadata.create_all(engine)

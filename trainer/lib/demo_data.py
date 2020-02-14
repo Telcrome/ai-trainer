@@ -65,10 +65,10 @@ def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     """
     Returns a demo array for testing functionality with logits.
 
-    >>> import trainer.lib as lib
+    >>> from trainer.lib.demo_data import get_test_logits
     >>> import numpy as np
     >>> np.random.seed(0)
-    >>> lib.get_test_logits(shape=(2,))
+    >>> get_test_logits(shape=(2,))
     array([-5.28481063, -2.39723662])
 
     :param shape: Shape of the test data. For one-dimensional data use (w, ).
@@ -80,62 +80,40 @@ def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
 
 
 def build_test_subject() -> lib.Subject:
-    res = lib.Subject('test_subject')
+    res = lib.Subject.build_new('test_subject')
 
-    im_stack = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
+    im_stack = lib.ImStack.build_new(skimage.data.astronaut())
     im_stack.set_class('occupation', 'astronaut')
     res.add_image_stack(im_stack)
 
     return res
 
 
-def build_mnist_subject(src_manager: SourceData, max_digit_ims=(1, 5)) -> lib.Subject:
+def build_mnist(sd: SourceData, max_training=-1) -> lib.Dataset:
     """
-    Samples a random subject.
-    """
-    digit_class = random.randint(0, 9)
-    s = lib.Subject(lib.create_identifier('subject'))
-    s.set_class('digit', str(digit_class))
-
-    # digit classification
-    for i in range(random.randint(*max_digit_ims)):
-        x, y = src_manager.sample_digit(digit=digit_class)
-        im_stack = lib.ImageStack.from_np(lib.create_identifier(f"mnist{i}"), x)
-        im_stack.set_class('digit', str(digit_class))
-        s.add_image_stack(im_stack)
-
-    astr_im = lib.ImageStack.from_np('astronaut', skimage.data.astronaut())
-    # astr_im.add_sem_seg(np.zeros((astr_im.get_src().shape[1], astr_im.get_src().shape[2], 2), dtype=np.bool))
-    s.add_image_stack(astr_im)
-
-    return s
-
-
-def build_mnist(data_path: str, sd: SourceData, max_training=-1) -> lib.Dataset:
-    """
-    Builds an Mnist dataset
+    Builds two splits: mnist train and mnist test
 
     :return: The lib.Dataset
     """
-    ds_name = f'mnist{max_training}' if max_training != -1 else f'mnist{60000}'
-    if os.path.exists(os.path.join(data_path, ds_name)):
-        return lib.Dataset.from_disk(os.path.join(data_path, ds_name))
-    d = lib.Dataset.build_new(ds_name, data_path)
-    d.stop_auto_save()
-    d.add_class('digit', lib.ClassType.Nominal, [str(i) for i in range(10)])
+    session = lib.Session()
+    d = lib.Dataset.build_new('mnist')
 
-    def append_mnist_split(torch_dataset, split='train'):
-        train_n = len(torch_dataset) if max_training == -1 or split != 'train' else max_training
-        for i in tqdm(range(train_n)):
-            s = lib.Subject(f'subject_{split}_{i}')
+    def append_mnist_split(torch_dataset, split_name='train'):
+        d.add_split(split_name=split_name)
+        train_n = len(torch_dataset) if max_training == -1 or split_name != 'train' else max_training
+
+        for i in tqdm(range(train_n)):  # Build the subjects of this split and append them to the split
+            s = lib.Subject.build_new(f'subject_{split_name}_{i}')
             x, y = sd.mnist_train.__getitem__(i)
-            im_stack = lib.ImageStack.from_np(f"mnist{i}", np.asarray(x))
+            im_stack = lib.ImStack.build_new(np.asarray(x))
             im_stack.set_class('digit', str(y))
-            s.add_image_stack(im_stack)
-            d.save_subject(s)
-            d.append_subject_to_split(s.entity_id, split=split)
+            s.ims.append(im_stack)
 
-    append_mnist_split(sd.mnist_train, split='train')
-    append_mnist_split(sd.mnist_test, split='test')
-    d.to_disk()
+            d.sbjts.append(s)
+            d.get_split_by_name(split_name).sbjts.append(s)
+
+    append_mnist_split(sd.mnist_train, split_name='train')
+    append_mnist_split(sd.mnist_test, split_name='test')
+    session.add(d)
+    session.commit()
     return d

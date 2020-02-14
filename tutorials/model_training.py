@@ -24,8 +24,9 @@ class MnistNetwork(ml.TrainerModel):
 
 
 def preprocessor(s: lib.Subject, m: ml.ModelMode) -> Tuple[np.ndarray, np.ndarray]:
-    im_stack = ml.image_stack_classification_preprocessor(s, 'digit')
-    x, y = np.rollaxis(im_stack.get_src()[0], 2), np.array(int(im_stack.get_class_value('digit')))
+    # noinspection PyUnresolvedReferences
+    im_stack = s.ims[0]
+    x, y = np.rollaxis(im_stack.get_ndarray()[0], 2), np.array(int(im_stack.get_class('digit')))
     return x.astype(np.float32) / 127.5 - 1, y
 
 
@@ -47,21 +48,21 @@ def test():
 
 
 if __name__ == '__main__':
-    data_path = r'C:\Users\rapha\Desktop\data'
-    sd = demo_data.SourceData('D:\\')
-    ds = demo_data.build_mnist(data_path, sd, max_training=100)
+    sess = lib.Session()
+    ds = sess.query(lib.Dataset).filter(lib.Dataset.name == 'mnist').first()
+    if ds is None:
+        sd = demo_data.SourceData('D:\\')
+        ds = demo_data.build_mnist(sd)
 
     class_name = 'digit'  # The structure that we now train for
     train_set = ml.TorchDataset(
-        ds.get_working_directory(),
+        ds.get_split_by_name('train'),
         f=preprocessor,
-        split='train',
         mode=ml.ModelMode.Train
     )
     test_set = ml.TorchDataset(
-        ds.get_working_directory(),
+        ds.get_split_by_name('test'),
         f=preprocessor,
-        split='test',
         mode=ml.ModelMode.Eval
     )
 
@@ -75,4 +76,4 @@ if __name__ == '__main__':
     data_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=1)
 
     train()
-    test()
+    # test()
