@@ -34,19 +34,41 @@ from __future__ import annotations  # Important for function annotations of symb
 
 from ast import literal_eval as make_tuple
 from enum import Enum
-from typing import Any
 
 import numpy as np
 import sqlalchemy as sa
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
 engine = create_engine('sqlite:///./test.db')
 Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
+
+
+class NumpyBinary(Base):
+    __tablename__ = 'npy_binaries'
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    binary = sa.Column(sa.LargeBinary)
+    shape = sa.Column(sa.String())
+    dtype = sa.Column(sa.String())
+
+    @classmethod
+    def from_ndarray(cls, arr: np.ndarray):
+        res = cls()
+        res.binary = arr.tobytes()
+        res.shape = str(arr.shape)[1:-1]
+        res.dtype = str(arr.dtype)
+        return res
+
+    def get_ndarray(self) -> np.ndarray:
+        return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
+
+    def __repr__(self):
+        return f"<Numpy array with shape ({self.shape}) and type {self.dtype}>"
 
 
 class MaskType(Enum):
@@ -63,32 +85,27 @@ class MaskType(Enum):
     Line = 'line'
 
 
-class NumpyBinary(Base):
-    __tablename__ = 'npy_binaries'
+# class ImageMask(Base):
+#     __tablename__ = 'imagemasks'
+#
+#     id = sa.Column(sa.Integer, primary_key=True)
+#     arr_id = sa.Column(sa.Integer, sa.ForeignKey(f'{NumpyBinary.__tablename__}.id'))
+
+
+class ImageStack(Base):
+    __tablename__ = 'imagestacks'
 
     id = sa.Column(sa.Integer, primary_key=True)
-    binary = sa.Column(sa.LargeBinary)
-    shape = sa.Column(sa.String())
-    dtype = sa.Column(sa.String())
-
-    def __init__(self, binary: Any, shape: str, dtype: str):
-        self.binary, self.shape, self.dtype = binary, shape, dtype
+    arr_id = sa.Column(sa.Integer, sa.ForeignKey(f'{NumpyBinary.__tablename__}.id'))
+    arr = relationship(NumpyBinary.__name__, uselist=False)
 
     @classmethod
-    def from_ndarray(cls, arr: np.ndarray):
-        return cls(binary=arr.tobytes(), shape=str(arr.shape)[1:-1], dtype=str(arr.dtype))
-
-    def get_ndarray(self) -> np.ndarray:
-        return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
-
-    def __repr__(self):
-        return f"<Numpy array with shape ({self.shape}) and type {self.dtype}>"
-
-
-# def __init__(self, arr: np.ndarray):
-#     self.shape = str(arr.shape)
-#     self.type = NumpyType
-#     self.binary = arr.tobytes()
+    def build_new(cls, src_im: np.ndarray):
+        assert (src_im.dtype == np.uint8)
+        npy = NumpyBinary.from_ndarray(src_im)
+        res = cls()
+        res.arr = npy
+        return res
 
 
 class ClassType(Enum):
@@ -97,17 +114,13 @@ class ClassType(Enum):
     Ordinal = 'ordinal'
 
 
-class ClassSelectionLevel(Enum):
-    SubjectLevel = "Subject Level"
-    BinaryLevel = "Binary Level"
-    FrameLevel = "Frame Level"
+class ClassDefinition(Base):
+    __tablename__ = 'classdefinitions'
 
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String())
+    type = sa.Column(sa.Enum(ClassType))
 
-ENTITY_DIRNAME = '.entity'
-BINARIES_DIRNAME = "binaries"
-ENTITY_JSON = "entity.json"
-BINARY_TYPE_KEY = "binary_type"
-PICKLE_EXT = 'pickle'
 
 # class Classifiable(ABC):
 #     ATTR_CLASSES = 'classes'
