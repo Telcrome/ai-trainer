@@ -44,7 +44,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
-con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test2'
+con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test3'
 engine = create_engine(con_string)
 # engine = create_engine('sqlite:///./test.db')
 Session = sessionmaker(bind=engine)
@@ -54,6 +54,8 @@ Base = declarative_base()
 TABLENAME_CLASSVALUES = 'classvalues'
 TABLENAME_CLASSDEFINITIONS = 'classdefinitions'
 TABLENAME_CLASSIFICATIONS = 'classifications'
+TABLENAME_SEMSEGCLASS = 'semsegtclasses'
+TABLENAME_SEMSEGTPL = 'semsegtpls'
 TABLENAME_SEM_SEG = 'semsegmasks'
 TABLENAME_IM_STACKS = 'imagestacks'
 
@@ -81,20 +83,6 @@ class ClassType(Enum):
     Ordinal = 'ordinal'
 
 
-class MaskType(Enum):
-    """
-    Possible types that a mask can have.
-
-    - blob: straightforward region. Is used for most segmentation tasks
-    - A point is usually segmented as a small circle and then postprocessed to be the center of that circle
-    - A line is usually segmented as a sausage and then postprocessed to a single response-line
-    """
-    Unknown = 'unknown'
-    Blob = 'blob'
-    Point = 'point'
-    Line = 'line'
-
-
 class Classifiable:
     classes = sa.Column(pg.JSONB())
 
@@ -115,20 +103,76 @@ class Classifiable:
         return session.query(cls).filter(cls.classes.has_key(class_name))
 
 
+class MaskType(Enum):
+    """
+    Possible types that a mask can have.
+
+    - blob: straightforward region. Is used for most segmentation tasks
+    - A point is usually segmented as a small circle and then postprocessed to be the center of that circle
+    - A line is usually segmented as a sausage and then postprocessed to a single response-line
+    """
+    Unknown = 'unknown'
+    Blob = 'blob'
+    Point = 'point'
+    Line = 'line'
+
+
+class SemSegClass(Base):
+    __tablename__ = TABLENAME_SEMSEGCLASS
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    tpl_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_SEMSEGTPL}.id'))
+    name = sa.Column(sa.String())
+    ss_type = sa.Column(sa.Enum(MaskType))
+
+    @classmethod
+    def build_new(cls, name: str, ss_type: MaskType):
+        res = cls()
+        res.name = name
+        res.ss_type = ss_type
+        return res
+
+
+class SemSegTpl(Base):
+    __tablename__ = TABLENAME_SEMSEGTPL
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String())
+    ss_classes = relationship(SemSegClass)
+
+    @classmethod
+    def build_new(cls, tpl_name: str, seg_types: Dict[str, MaskType]):
+        res = cls()
+        res.name = tpl_name
+        res.ss_classes = []
+        for seg_type_key in seg_types:
+            res.ss_classes.append(SemSegClass.build_new(seg_type_key, seg_types[seg_type_key]))
+        return res
+
+
 class SemSegMask(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_SEM_SEG
 
     id = sa.Column(sa.Integer, primary_key=True)
+
+    tpl_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_SEMSEGTPL}.id'))
+    tpl = relationship(SemSegTpl, uselist=False)
+
     for_frame = sa.Column(sa.Integer)
     mtype = sa.Column(sa.Enum(MaskType))
     im_stack_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_IM_STACKS}.id'))
 
     @classmethod
-    def build_new(cls, gt_arr: np.ndarray, for_frame=0):
-        assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentatino mask'
+    def build_new(cls, gt_arr: np.ndarray, sem_seg_tpl: SemSegTpl, for_frame=0):
+        if len(gt_arr.shape) == 2:
+            # This is a single indicated structure without a last dimension, add it!
+            gt_arr = np.reshape(gt_arr, (gt_arr.shape[0], gt_arr.shape[1], 1))
+
+        assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentation mask'
         assert (len(gt_arr.shape) == 3), 'Wrong shape for a semantic segmentation mask'
         res = cls()
         res.set_array(gt_arr)
+        res.tpl = sem_seg_tpl
         res.for_frame = for_frame
         return res
 
@@ -177,34 +221,6 @@ class ImStack(Classifiable, NumpyBinary, Base):
         return f'ImageStack with masks:\n{[mask for mask in self.semseg_masks]}\n{super().__repr__()}'
 
 
-#     def delete_gt(self, sem_seg_tpl: str, frame_number=0):
-#         print(f"Deleting ground truth of {sem_seg_tpl} at frame {frame_number}")
-#         self._remove_binary(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number))
-#
-#     def add_sem_seg(self,
-#                     gt_arr: np.ndarray,
-#                     sem_seg_tpl: str,
-#                     frame_number=0) -> None:
-#         """
-#         Adds a semantic segmentation mask
-#
-#         :param gt_arr: An array of type np.bool
-#         :param sem_seg_tpl: Key/name/identifier of the semantic segmentation template
-#         :param frame_number: Frame that this mask should be assigned to. Keep 0 for single images.
-#         """
-#         assert gt_arr.dtype == np.bool, "Semantic segmentation assumes binary masks!"
-#
-#         if len(gt_arr.shape) == 2:
-#             # This is a single indicated structure without a last dimension, add it!
-#             gt_arr = np.reshape(gt_arr, (gt_arr.shape[0], gt_arr.shape[1], 1))
-#
-#         meta = {
-#             "frame_number": frame_number,
-#             "sem_seg_tpl": sem_seg_tpl
-#         }
-#         self._add_bin(self.get_sem_seg_naming_conv(sem_seg_tpl, frame_number), gt_arr,
-#                       b_type=BinaryType.NumpyArray.value, meta_data=meta)
-#
 #     def get_structure_list(self, image_stack_key: str = ''):
 #         """
 #         Computes the possible structures. If no image_stack_key is provided, all possible structures are returned.
@@ -459,7 +475,11 @@ class ImStack(Classifiable, NumpyBinary, Base):
 #             yield self.get_subject_by_name(s_key)
 
 def reset_schema():
-    mappers = [SemSegMask, ImStack]
+    mappers = [
+        SemSegClass,
+        SemSegTpl,
+        SemSegMask,
+        ImStack]
     # noinspection PyUnresolvedReferences
     Base.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])
     Base.metadata.create_all(engine)
