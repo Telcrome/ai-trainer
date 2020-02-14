@@ -15,6 +15,7 @@
       <w>dataloader</w>
       <w>datasets</w>
       <w>dicom</w>
+      <w>dtype</w>
       <w>fgsm</w>
       <w>foldergrab</w>
       <w>imagestack</w>
@@ -28,6 +29,7 @@
       <w>matplotlib</w>
       <w>minibatch</w>
       <w>mnist</w>
+      <w>ndarray</w>
       <w>oneshot</w>
       <w>opti</w>
       <w>optim</w>
@@ -40,6 +42,7 @@
       <w>segs</w>
       <w>skdata</w>
       <w>statedict</w>
+      <w>tablename</w>
       <w>tensorboard</w>
       <w>testcode</w>
       <w>testoutput</w>
