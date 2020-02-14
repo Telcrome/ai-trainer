@@ -18,6 +18,7 @@
       <w>dtype</w>
       <w>fgsm</w>
       <w>foldergrab</w>
+      <w>imagemasks</w>
       <w>imagestack</w>
       <w>imagestacks</w>
       <w>imgstack</w>
@@ -29,6 +30,7 @@
       <w>matplotlib</w>
       <w>minibatch</w>
       <w>mnist</w>
+      <w>mtype</w>
       <w>ndarray</w>
       <w>oneshot</w>
       <w>opti</w>
