@@ -38,17 +38,24 @@ from typing import List
 
 import numpy as np
 import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql as pg
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
-con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test'
+con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test2'
 engine = create_engine(con_string)
 # engine = create_engine('sqlite:///./test.db')
 Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
+
+TABLENAME_CLASSVALUES = 'classvalues'
+TABLENAME_CLASSDEFINITIONS = 'classdefinitions'
+TABLENAME_CLASSIFICATIONS = 'classifications'
+TABLENAME_SEM_SEG = 'semsegmasks'
+TABLENAME_IM_STACKS = 'imagestacks'
 
 
 class NumpyBinary:
@@ -74,18 +81,6 @@ class ClassType(Enum):
     Ordinal = 'ordinal'
 
 
-class ClassDefinition(Base):
-    __tablename__ = 'classdefinitions'
-
-    id = sa.Column(sa.Integer, primary_key=True)
-    name = sa.Column(sa.String())
-    type = sa.Column(sa.Enum(ClassType))
-
-
-# class Classifiable:
-#
-#     classes = sa.Column()
-
 class MaskType(Enum):
     """
     Possible types that a mask can have.
@@ -100,13 +95,30 @@ class MaskType(Enum):
     Line = 'line'
 
 
-class SemSegMask(NumpyBinary, Base):
-    __tablename__ = 'imagemasks'
+class Classifiable:
+    classes = sa.Column(pg.JSONB())
+
+    def set_class(self, class_name: str, class_val: str):
+        if self.classes:
+            self.classes[class_name] = class_val
+        else:
+            self.classes = {class_name: class_val}
+
+    def get_class(self, class_name: str):
+        return self.classes[class_name]
+
+    @classmethod
+    def query_all_with_class(cls, session: sa.orm.session.Session, class_name: str):
+        return session.query(cls).filter(cls.classes.has_key(class_name))
+
+
+class SemSegMask(Classifiable, NumpyBinary, Base):
+    __tablename__ = TABLENAME_SEM_SEG
 
     id = sa.Column(sa.Integer, primary_key=True)
     for_frame = sa.Column(sa.Integer)
     mtype = sa.Column(sa.Enum(MaskType))
-    im_stack_id = sa.Column(sa.Integer, sa.ForeignKey('imagestacks.id'))
+    im_stack_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_IM_STACKS}.id'))
 
     @classmethod
     def build_new(cls, gt_arr: np.ndarray, for_frame=0):
@@ -117,8 +129,8 @@ class SemSegMask(NumpyBinary, Base):
         return res
 
 
-class ImageStack(NumpyBinary, Base):
-    __tablename__ = 'imagestacks'
+class ImStack(Classifiable, NumpyBinary, Base):
+    __tablename__ = TABLENAME_IM_STACKS
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -505,7 +517,11 @@ class ImageStack(NumpyBinary, Base):
 #         for s_key in s_ls:
 #             yield self.get_subject_by_name(s_key)
 
-mappers = [ClassDefinition, SemSegMask, ImageStack]
-# noinspection PyUnresolvedReferences
-Base.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])
+def reset_schema():
+    mappers = [SemSegMask, ImStack]
+    # noinspection PyUnresolvedReferences
+    Base.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])
+    Base.metadata.create_all(engine)
+
+
 Base.metadata.create_all(engine)
