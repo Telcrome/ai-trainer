@@ -52,7 +52,9 @@ class InMemoryDataset(data.Dataset):
 
         self.ds = session.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
         self.split = session.query(lib.Split) \
-            .options(joinedload(lib.Split.sbjts).joinedload(lib.Subject.ims, innerjoin=True)) \
+            .options(joinedload(lib.Split.sbjts)
+                     .joinedload(lib.Subject.ims, innerjoin=True)
+                     .joinedload(lib.ImStack.semseg_masks, innerjoin=True)) \
             .filter(self.ds.id == lib.Split.dataset_id and lib.Split.name == split_name) \
             .first()
 

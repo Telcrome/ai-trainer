@@ -138,7 +138,7 @@ class SourceData:
         return d
 
     def create_arc_split(self, ss_tpl: lib.SemSegTpl, split_name='training'):
-        res = self.arc_dataset.add_split(split_name=split_name)
+        self.arc_dataset.add_split(split_name=split_name)
         p = os.path.join(self.arc_path, split_name)
         for file_path in tqdm(os.listdir(p)):
             f_name = os.path.split(file_path)[-1]
@@ -147,8 +147,8 @@ class SourceData:
             with open(os.path.join(p, f_name), 'r') as f:
                 json_content = json.load(f)
             for key in json_content:
-                extra_info = {'purpose': key}
                 for maze in json_content[key]:
+                    extra_info = {'purpose': key}
                     # Input Image
                     input_json = maze['input']
                     input_im = array_from_json(input_json, depth=10)
