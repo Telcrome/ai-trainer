@@ -43,12 +43,16 @@ class TorchDataset(data.Dataset):
     def __init__(self,
                  split: lib.Split,
                  f: Union[Callable[[lib.Subject, ModelMode], Tuple[np.ndarray, np.ndarray]], partial],
-                 mode: ModelMode = ModelMode.Train):
+                 mode: ModelMode = ModelMode.Train,
+                 in_memory=True):
         super().__init__()
         self.preprocessor = f
         self.split = split
         self.mode = mode
         self.session = None
+        self.subjects = None
+        if in_memory:
+            self.subjects = [s for s in self.split.sbjts]
 
     def get_torch_dataloader(self, batch_size=32, num_workers=1):
         return data.DataLoader(
@@ -64,9 +68,10 @@ class TorchDataset(data.Dataset):
         :param item: Name of a subject
         :return: Training example x, y
         """
-        self.session = lib.Session() if self.session is None else self.session
-        s = self.split.sbjts[item]
-        self.session.add(s)
+        # self.session = lib.Session() if self.session is None else self.session
+        # s = self.split.sbjts[item]
+        # self.session.add(s)
+        s = self.subjects[item]
         x, y = self.preprocessor(s, self.mode)
         # self.session.remove(s)
         # Cannot transformed to cuda tensors at this point,
@@ -77,7 +82,14 @@ class TorchDataset(data.Dataset):
         return len(self.split.sbjts)
 
 
-ALL_TORCHSET_KEY = '_all_'
+def bench_mark_dataset(ds: TorchDataset, extractor: Callable):
+    res = []
+    with tqdm(total=len(ds), maxinterval=len(ds) / 100) as pbar:
+        for i in range(len(ds)):
+            s = ds.__getitem__(i)
+            res.append(extractor(s))
+            pbar.update()
+    return res
 
 
 class TrainerMetric(ABC):

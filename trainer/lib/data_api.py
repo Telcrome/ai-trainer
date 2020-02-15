@@ -255,7 +255,7 @@ class Subject(Classifiable, Base):
         return res
 
 
-sbjts_splits_association_table = sa.Table(
+sbjts_splits_association = sa.Table(
     'sbjtsplits_association',
     Base.metadata,
     sa.Column('subject_id', sa.Integer, sa.ForeignKey(f'{TABLENAME_SUBJECTS}.id')),
@@ -269,13 +269,13 @@ class Split(Base):
     id = sa.Column(sa.Integer(), primary_key=True)
     dataset_id = sa.Column(sa.Integer(), sa.ForeignKey(f'{TABLENAME_DATASETS}.id'))
     name = sa.Column(sa.String())
-    sbjts = relationship(Subject, secondary=sbjts_splits_association_table)
+    sbjts = relationship(Subject, secondary=sbjts_splits_association)
 
     def __len__(self):
         return len(self.sbjts)
 
     def __getitem__(self, item):
-        raise NotImplementedError()
+        return self.sbjts[item]
 
 
 class Dataset(Base):
@@ -283,7 +283,7 @@ class Dataset(Base):
 
     id = sa.Column(sa.Integer, primary_key=True)
     splits = relationship(Split)
-    sbjts = relationship(Subject, lazy='dynamic')
+    sbjts = relationship(Subject)
     name = sa.Column(sa.String())
 
     @classmethod
@@ -322,7 +322,7 @@ class Dataset(Base):
 
 
 def reset_database():
-    sbjts_splits_association_table.drop(bind=engine)
+    sbjts_splits_association.drop(bind=engine)
     mappers = [
         SemSegClass,
         SemSegTpl,

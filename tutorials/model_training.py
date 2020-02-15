@@ -3,6 +3,7 @@ from typing import Tuple
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils import data
 
 import trainer.lib as lib
 import trainer.lib.demo_data as demo_data
@@ -48,6 +49,7 @@ def test():
 
 
 if __name__ == '__main__':
+    # lib.reset_database()
     sess = lib.Session()
     ds = sess.query(lib.Dataset).filter(lib.Dataset.name == 'mnist').first()
     if ds is None:
@@ -60,11 +62,11 @@ if __name__ == '__main__':
         f=preprocessor,
         mode=ml.ModelMode.Train
     )
-    test_set = ml.TorchDataset(
-        ds.get_split_by_name('test'),
-        f=preprocessor,
-        mode=ml.ModelMode.Eval
-    )
+    # test_set = ml.TorchDataset(
+    #     ds.get_split_by_name('test'),
+    #     f=preprocessor,
+    #     mode=ml.ModelMode.Eval
+    # )
 
     BATCH_SIZE = 8
     EPOCHS = 5
@@ -73,7 +75,7 @@ if __name__ == '__main__':
 
     net = MnistNetwork()
 
-    data_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, num_workers=1)
+    data_loader = data.DataLoader(train_set, batch_size=BATCH_SIZE, num_workers=2, pin_memory=True)
 
     train()
     # test()
