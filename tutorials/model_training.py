@@ -3,7 +3,6 @@ from typing import Tuple
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils import data
 
 import trainer.lib as lib
 import trainer.lib.demo_data as demo_data
@@ -57,14 +56,13 @@ if __name__ == '__main__':
         ds = demo_data.build_mnist(sd)
 
     class_name = 'digit'  # The structure that we now train for
-    train_set = ml.TorchDataset(
+    train_set = ml.InMemoryDataset(
         'mnist',
         'train',
         f=preprocessor,
-        mode=ml.ModelMode.Train,
-        in_memory=True
+        mode=ml.ModelMode.Train
     )
-    test_set = ml.TorchDataset(
+    test_set = ml.InMemoryDataset(
         'mnist',
         'test',
         f=preprocessor,
@@ -72,13 +70,13 @@ if __name__ == '__main__':
     )
 
     BATCH_SIZE = 32
-    EPOCHS = 5
+    EPOCHS = 2
 
     x = 0
 
     net = MnistNetwork()
 
-    data_loader = data.DataLoader(train_set, batch_size=BATCH_SIZE)
+    data_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE)
     # data_loader = torch.utils.data.DataLoader(
     #     datasets.MNIST('../data', train=True, download=True,
     #                    transform=transforms.Compose([

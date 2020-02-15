@@ -35,7 +35,7 @@ class ModelMode(Enum):
     Usage = 2
 
 
-class TorchDataset(data.Dataset):
+class InMemoryDataset(data.Dataset):
     """
     Wrapper around one dataset split to work with the torch.utils.data.Dataloader.
     This dataloader can be used to perform augmentations on multiple processes on the CPU and train on the GPU.
@@ -45,23 +45,21 @@ class TorchDataset(data.Dataset):
                  ds_name: str,
                  split_name: str,
                  f: Union[Callable[[lib.Subject, ModelMode], Tuple[np.ndarray, np.ndarray]], partial],
-                 mode: ModelMode = ModelMode.Train,
-                 in_memory=True):
+                 mode: ModelMode = ModelMode.Train):
         super().__init__()
         self.preprocessor = f
-        sess = lib.Session()
-        self.ds = sess.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
-        self.split = sess.query(lib.Split).options(
-            joinedload(lib.Split.sbjts).joinedload(lib.Subject.ims, innerjoin=True)
-        ).filter(self.ds.id == lib.Split.dataset_id and lib.Split.name == split_name).first()
+        session = lib.Session()
+
+        self.ds = session.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
+        self.split = session.query(lib.Split) \
+            .options(joinedload(lib.Split.sbjts).joinedload(lib.Subject.ims, innerjoin=True)) \
+            .filter(self.ds.id == lib.Split.dataset_id and lib.Split.name == split_name) \
+            .first()
+
         self.mode = mode
 
-    def get_torch_dataloader(self, batch_size=32, num_workers=1):
-        return data.DataLoader(
-            self,
-            batch_size=batch_size,
-            shuffle=True,
-            num_workers=num_workers)
+    def get_torch_dataloader(self, **kwargs):
+        return data.DataLoader(self, **kwargs)
 
     def __getitem__(self, item) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -71,6 +69,8 @@ class TorchDataset(data.Dataset):
         :return: Training example x, y
         """
         s = self.split.sbjts[item]
+        # if not self.in_memory:
+        #     self.session.add(s)
         x, y = self.preprocessor(s, self.mode)
 
         # Cannot transformed to cuda tensors at this point,
@@ -81,7 +81,7 @@ class TorchDataset(data.Dataset):
         return len(self.split.sbjts)
 
 
-def bench_mark_dataset(ds: TorchDataset, extractor: Callable):
+def bench_mark_dataset(ds: InMemoryDataset, extractor: Callable):
     res = []
     with tqdm(total=len(ds), maxinterval=len(ds) / 100) as pbar:
         for i in range(len(ds)):
