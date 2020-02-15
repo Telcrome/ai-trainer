@@ -61,6 +61,11 @@ class SourceData:
         self.arc_dataset: Union[None, lib.Dataset] = None
 
     def build_arc(self, sess):
+        ds = sess.query(lib.Dataset).filter(lib.Dataset.name == 'arc').first()
+        if ds is not None:
+            return ds
+
+        # Dataset does not exist yet, build it!
         if os.path.exists(self.arc_path):
             ss_tpl = lib.SemSegTpl.build_new(
                 'arc_colors',

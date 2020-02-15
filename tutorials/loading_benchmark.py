@@ -4,17 +4,18 @@ even on its (possibly) complex data structure!
 """
 
 from sqlalchemy.orm import joinedload, subqueryload
+from tqdm import tqdm
 
 import trainer.lib as lib
 import trainer.lib.demo_data as demo_data
+import trainer.ml as ml
+from trainer.ml.torch_utils import bench_mark_dataset
 
 
 def benchmark_mnist():
     ds = sess.query(lib.Dataset).filter(lib.Dataset.name == 'mnist').first()
     if ds is None:
         ds = sd.build_mnist(sd)
-
-    from trainer.ml.torch_utils import bench_mark_dataset
 
     split_old = sess.query(lib.Split).options(subqueryload(lib.Split.sbjts)).first()
     split = sess.query(lib.Split).options(
@@ -29,7 +30,15 @@ def benchmark_mnist():
 if __name__ == '__main__':
     # lib.reset_database()
     sess = lib.Session()
-    lib.reset_database()
     sd = demo_data.SourceData('D:\\')
 
     ds = sd.build_arc(sess)
+
+    split = ds.get_split_by_name('training')
+    aux = []
+    for s in tqdm(split):
+        aux.append(s.ims[0].get_ndarray())
+
+    aux = []
+    for s, gt in tqdm(ml.InMemoryDataset('arc', 'training', lambda x, y: (x, y), mode=ml.ModelMode.Train)):
+        aux.append(s.ims[0].get_ndarray())
