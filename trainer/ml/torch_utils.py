@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score
+from sqlalchemy.orm import joinedload
 from torch.optim import optimizer
 from torch.utils import data
 from tqdm import tqdm
@@ -41,18 +42,19 @@ class TorchDataset(data.Dataset):
     """
 
     def __init__(self,
-                 split: lib.Split,
+                 ds_name: str,
+                 split_name: str,
                  f: Union[Callable[[lib.Subject, ModelMode], Tuple[np.ndarray, np.ndarray]], partial],
                  mode: ModelMode = ModelMode.Train,
                  in_memory=True):
         super().__init__()
         self.preprocessor = f
-        self.split = split
+        sess = lib.Session()
+        self.ds = sess.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
+        self.split = sess.query(lib.Split).options(
+            joinedload(lib.Split.sbjts).joinedload(lib.Subject.ims, innerjoin=True)
+        ).filter(self.ds.id == lib.Split.dataset_id and lib.Split.name == split_name).first()
         self.mode = mode
-        self.session = None
-        self.subjects = None
-        if in_memory:
-            self.subjects = [s for s in self.split.sbjts]
 
     def get_torch_dataloader(self, batch_size=32, num_workers=1):
         return data.DataLoader(
@@ -68,12 +70,9 @@ class TorchDataset(data.Dataset):
         :param item: Name of a subject
         :return: Training example x, y
         """
-        # self.session = lib.Session() if self.session is None else self.session
-        # s = self.split.sbjts[item]
-        # self.session.add(s)
-        s = self.subjects[item]
+        s = self.split.sbjts[item]
         x, y = self.preprocessor(s, self.mode)
-        # self.session.remove(s)
+
         # Cannot transformed to cuda tensors at this point,
         # because they do not seem to work in shared memory. Return numpy arrays instead.
         return x, y

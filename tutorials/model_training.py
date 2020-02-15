@@ -52,30 +52,40 @@ if __name__ == '__main__':
     # lib.reset_database()
     sess = lib.Session()
     ds = sess.query(lib.Dataset).filter(lib.Dataset.name == 'mnist').first()
+    sd = demo_data.SourceData('D:\\')
     if ds is None:
-        sd = demo_data.SourceData('D:\\')
         ds = demo_data.build_mnist(sd)
 
     class_name = 'digit'  # The structure that we now train for
     train_set = ml.TorchDataset(
-        ds.get_split_by_name('train'),
+        'mnist',
+        'train',
         f=preprocessor,
-        mode=ml.ModelMode.Train
+        mode=ml.ModelMode.Train,
+        in_memory=True
     )
-    # test_set = ml.TorchDataset(
-    #     ds.get_split_by_name('test'),
-    #     f=preprocessor,
-    #     mode=ml.ModelMode.Eval
-    # )
+    test_set = ml.TorchDataset(
+        'mnist',
+        'test',
+        f=preprocessor,
+        mode=ml.ModelMode.Eval
+    )
 
-    BATCH_SIZE = 8
+    BATCH_SIZE = 32
     EPOCHS = 5
 
     x = 0
 
     net = MnistNetwork()
 
-    data_loader = data.DataLoader(train_set, batch_size=BATCH_SIZE, num_workers=2, pin_memory=True)
+    data_loader = data.DataLoader(train_set, batch_size=BATCH_SIZE)
+    # data_loader = torch.utils.data.DataLoader(
+    #     datasets.MNIST('../data', train=True, download=True,
+    #                    transform=transforms.Compose([
+    #                        transforms.ToTensor(),
+    #                        transforms.Normalize((0.1307,), (0.3081,))
+    #                    ])),
+    #     batch_size=BATCH_SIZE, shuffle=True)
 
     train()
-    # test()
+    test()
