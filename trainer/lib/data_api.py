@@ -207,14 +207,14 @@ class ImStack(Classifiable, NumpyBinary, Base):
             res.extra_info = extra_info
         return res
 
-    def add_ss_mask(self, gt_arr: np.ndarray, sem_seg_tpl: SemSegTpl, for_frame=0):
+    def add_ss_mask(self, gt_arr: np.ndarray, sem_seg_tpl: SemSegTpl, for_frame=0, ignore_shape_mismatch=False):
         if len(gt_arr.shape) == 2:
             # This is a single indicated structure without a last dimension, add it!
             gt_arr = np.reshape(gt_arr, (gt_arr.shape[0], gt_arr.shape[1], 1))
 
         assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentation mask'
         assert (len(gt_arr.shape) == 3), 'Wrong shape for a semantic segmentation mask'
-        assert (self.get_ndarray().shape[1:3] == gt_arr.shape[:2]), \
+        assert (ignore_shape_mismatch or self.get_ndarray().shape[1:3] == gt_arr.shape[:2]), \
             f'Shapes of seg mask {gt_arr.shape} and im stack {self.get_ndarray().shape} do not match'
         # noinspection PyTypeChecker
         tpl_classes_num = len(sem_seg_tpl.ss_classes)
@@ -223,6 +223,7 @@ class ImStack(Classifiable, NumpyBinary, Base):
         m.set_array(gt_arr)
         m.tpl = sem_seg_tpl
         m.for_frame = for_frame
+        self.semseg_masks.append(m)
         return m
 
     def __repr__(self):
