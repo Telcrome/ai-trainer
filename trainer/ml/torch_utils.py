@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Tuple, Union, Callable
+from typing import Tuple, Union, Callable, List
 
 import numpy as np
 import torch
@@ -44,7 +44,7 @@ class InMemoryDataset(data.Dataset):
     def __init__(self,
                  ds_name: str,
                  split_name: str,
-                 f: Union[Callable[[lib.Subject, ModelMode], Tuple[np.ndarray, np.ndarray]], partial],
+                 f: Union[Callable[[lib.Subject, ModelMode], List[Tuple[np.ndarray, np.ndarray]]], partial],
                  mode: ModelMode = ModelMode.Train):
         super().__init__()
         self.preprocessor = f
@@ -73,11 +73,11 @@ class InMemoryDataset(data.Dataset):
         s = self.split.sbjts[item]
         # if not self.in_memory:
         #     self.session.add(s)
-        x, y = self.preprocessor(s, self.mode)
+        t = self.preprocessor(s, self.mode)
 
         # Cannot transformed to cuda tensors at this point,
         # because they do not seem to work in shared memory. Return numpy arrays instead.
-        return x, y
+        return t
 
     def __len__(self):
         return len(self.split.sbjts)
@@ -153,13 +153,22 @@ class TrainerModel(ABC):
     def print_summary(self):
         print(f"Capacity of the network: {get_capacity(self.model)}")
 
-    def train_on_minibatch(self, training_example: Tuple[torch.Tensor, torch.Tensor]) -> float:
-        x, y = training_example
+    def init_hidden(self) -> torch.Tensor:
+        raise NotImplementedError()
 
+    def train_on_minibatch(self, training_examples: List[Tuple[torch.Tensor, torch.Tensor]]) -> float:
+        hidden_state = self.init_hidden().to(device)
+        # noinspection PyArgumentList
+        loss = torch.Tensor([0.]).to(device)
         self.optimizer.zero_grad()
-        y_ = self.model.forward(x)
+        for training_example in training_examples:
+            x, y = training_example
+            x, y = x.to(device), y.to(device)
 
-        loss = self.criterion(y_, y.long())
+            y_, hidden_state = self.model.forward(x, hidden_state)
+
+            l = self.criterion(y_, y)
+            loss += l
         loss.backward()
         self.optimizer.step()
 
@@ -175,10 +184,9 @@ class TrainerModel(ABC):
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
-                x, y = next(loader_iter)
-                x, y = x.to(device), y.to(device)
+                seq = next(loader_iter)
 
-                loss = self.train_on_minibatch((x, y))
+                loss = self.train_on_minibatch(seq)
 
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
