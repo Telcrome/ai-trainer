@@ -53,7 +53,7 @@ if __name__ == '__main__':
     ds = sess.query(lib.Dataset).filter(lib.Dataset.name == 'mnist').first()
     sd = demo_data.SourceData('D:\\')
     if ds is None:
-        ds = demo_data.build_mnist(sd)
+        ds = sd.build_mnist(sd)
 
     class_name = 'digit'  # The structure that we now train for
     train_set = ml.InMemoryDataset(
