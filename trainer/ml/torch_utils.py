@@ -1,10 +1,13 @@
 import os
+import random
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
 from typing import Tuple, Union, Callable, List
 
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score
@@ -108,7 +111,7 @@ class TrainerMetric(ABC):
             self.update(preds[batch_id], targets[batch_id])
 
     @abstractmethod
-    def update(self, prediction: np.ndarray, target: np.ndarray, plot=False):
+    def update(self, prediction: np.ndarray, target: np.ndarray):
         pass
 
     @abstractmethod
@@ -122,7 +125,7 @@ class AccuracyMetric(TrainerMetric):
         self.preds = []
         self.targets = []
 
-    def update(self, prediction: np.ndarray, target: np.ndarray, plot=False):
+    def update(self, prediction: np.ndarray, target: np.ndarray):
         if len(prediction.shape) != len(target.shape):
             # the prediction seems to be given in logits or class probabilities
             prediction = np.argmax(prediction, axis=1)
@@ -256,7 +259,13 @@ class TrainerModel(ABC):
 
                         y, y_ = y.numpy(), y_.cpu().numpy()
                         # ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
-                    evaluator.update(y_, y, plot=True)
+                    evaluator.update(y_, y)
+
+                    if random.randint(1, 20) > 19:
+                        fig, (ax1, ax2) = plt.subplots(1, 2)
+                        sns.heatmap(y_[0, 1], ax=ax1)
+                        sns.heatmap(y[0, 1], ax=ax2)
+                        ml.logger.visboard.add_figure(fig)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator.get_result():05f}")

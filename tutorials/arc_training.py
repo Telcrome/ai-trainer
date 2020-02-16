@@ -1,9 +1,7 @@
 import random
 from typing import List, Tuple
 
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -172,13 +170,8 @@ class ARCMetric(ml.TrainerMetric):
         self.correct = 0
         self.wrong = 0
 
-    def update(self, prediction: np.ndarray, target: np.ndarray, plot=False):
-        if plot:
-            fig, (ax1, ax2) = plt.subplots(1, 2)
-            sns.heatmap(prediction[0, 1], ax=ax1)
-            sns.heatmap(target[0, 1], ax=ax2)
-            ml.logger.visboard.add_figure(fig)
-            prediction = prediction >= 0.5
+    def update(self, prediction: np.ndarray, target: np.ndarray):
+        prediction = prediction >= 0.5
         for b_id in range(prediction.shape[0]):
             if np.array_equal(prediction[0, 1], target[0, 1].astype(np.bool)):
                 self.correct += 1
