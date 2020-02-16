@@ -16,6 +16,7 @@
       <w>cuda</w>
       <w>dataloader</w>
       <w>datasets</w>
+      <w>depthmap</w>
       <w>dicom</w>
       <w>dtype</w>
       <w>fgsm</w>
@@ -64,6 +65,7 @@
       <w>thresholding</w>
       <w>torchset</w>
       <w>tqdm</w>
+      <w>trgt</w>
       <w>visboard</w>
     </words>
   </dictionary>

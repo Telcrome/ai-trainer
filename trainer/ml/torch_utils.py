@@ -144,7 +144,7 @@ def init_weights(layer: nn.Module) -> None:
     elif isinstance(layer, nn.Conv2d):
         # Visualize a convolutional layer
         nn.init.xavier_uniform_(layer.weight)
-        nn.init.xavier_uniform_(layer.bias)
+        # nn.init.xavier_uniform_(layer.bias)
 
 
 def get_capacity(model: nn.Module) -> int:
@@ -196,7 +196,7 @@ class TrainerModel(ABC):
             inps, y = training_example
             inps, y = [inp.to(device) for inp in inps], y.to(device)
 
-            y_, hidden_state = self.model.forward(inps, hidden_states)
+            y_, hidden_states = self.model.forward(inps, hidden_states)
 
             seq_item_loss = self.criterion(y_, y)
             loss += seq_item_loss
@@ -246,13 +246,13 @@ class TrainerModel(ABC):
                 for i in range(steps):
                     ts = next(eval_iter)
 
-                    h = self.init_hidden()
+                    hs = self.init_hidden()
                     for t in ts:
                         x, y = t
-                        ml.logger.log(f'({x[0, 0]}, {x[0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
 
-                        x = x.to(device)
-                        y_, h = self.model.forward(x, h)
+                        ml.logger.log(f'({x[0][0, 0]}, {x[0][0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
+                        inps = [inp.to(device) for inp in x]
+                        y_, hs = self.model.forward(inps, hs)
 
                         y, y_ = y.numpy(), y_.cpu().numpy()
                         ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
