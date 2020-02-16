@@ -23,7 +23,8 @@ class OSizeNetwork(nn.Module):
         self.output_size_fc = nn.Linear(self.layer_dim, 10)
         self.reduction_layer = nn.Linear(10, 2)
 
-    def forward(self, x, hidden_state):
+    def forward(self, inps, hidden_states):
+        x, hidden_state = inps[0], hidden_states[0]
         # Computing the next hidden state
         hidden_state = self.rnn_cell(x, hidden_state)
 
@@ -51,24 +52,30 @@ class OSizeModel(ml.TrainerModel):
             weight_decay=0.2
         )
         crit = nn.MSELoss()
-        logger = ml.LogWriter()
         super().__init__(model_name=modelname,
                          model=model,
                          opti=opti,
-                         crit=crit,
-                         logwriter=logger)
+                         crit=crit)
 
-    def init_hidden(self):
-        return torch.zeros(BATCH_SIZE, self.model.hidden_dim)
+    def init_hidden(self) -> List[torch.Tensor]:
+        return [torch.zeros(BATCH_SIZE, self.model.hidden_dim).to(ml.torch_device)]
+
+    def handle_minibatch(self, seq: List[Tuple[List[torch.Tensor], torch.Tensor]], metric: ml.TrainerMetric = None):
+        attempts = 0
+        loss = self.train_on_minibatch(seq, evaluator=metric)
+        while loss > 1.0 and attempts < 50:
+            loss = self.train_on_minibatch(seq, evaluator=metric)
+            attempts += 1
+        return loss
 
 
-def encode_outputsize(im: lib.ImStack) -> Tuple[np.ndarray, np.ndarray]:
+def encode_outputsize(im: lib.ImStack) -> Tuple[List[np.ndarray], np.ndarray]:
     x_shape = im.get_ndarray().shape[1:3]
     y_shape = im.semseg_masks[0].get_ndarray().shape[:2]
 
     x = np.array([x_shape[0], x_shape[1]]).astype(np.float32)
     y = np.array([y_shape[0], y_shape[1]]).astype(np.float32)
-    return x, y
+    return [x], y
 
 
 def o_size_preprocessor(s: lib.Subject, mode: ml.ModelMode):

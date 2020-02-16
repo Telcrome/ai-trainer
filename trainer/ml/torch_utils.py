@@ -47,7 +47,7 @@ class InMemoryDataset(data.Dataset):
     def __init__(self,
                  ds_name: str,
                  split_name: str,
-                 f: Union[Callable[[lib.Subject, ModelMode], List[Tuple[np.ndarray, np.ndarray]]], partial],
+                 f: Union[Callable[[lib.Subject, ModelMode], List[Tuple[List[np.ndarray], np.ndarray]]], partial],
                  mode: ModelMode = ModelMode.Train):
         super().__init__()
         self.preprocessor = f
@@ -169,13 +169,11 @@ class TrainerModel(ABC):
                  model_name: str,
                  model: nn.Module,
                  opti: optimizer.Optimizer,
-                 logwriter: ml.LogWriter,
                  crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module]):
         super().__init__()
         self.model_name = model_name
         self.model, self.optimizer, self.criterion = model, opti, crit
         self.model = self.model.to(device)
-        self.logwriter = logwriter
         self.init_weights()
 
     def print_summary(self):
@@ -184,21 +182,21 @@ class TrainerModel(ABC):
     def init_weights(self):
         self.model.apply(init_weights)
 
-    def init_hidden(self) -> torch.Tensor:
+    def init_hidden(self) -> List[torch.Tensor]:
         raise NotImplementedError()
 
     def train_on_minibatch(self,
-                           training_examples: List[Tuple[torch.Tensor, torch.Tensor]],
+                           training_examples: List[Tuple[List[torch.Tensor], torch.Tensor]],
                            evaluator: TrainerMetric = None) -> float:
-        hidden_state = self.init_hidden().to(device)
+        hidden_states = self.init_hidden()
         # noinspection PyArgumentList
         loss = torch.Tensor([0.]).to(device)
         self.optimizer.zero_grad()
         for training_example in training_examples:
-            x, y = training_example
-            x, y = x.to(device), y.to(device)
+            inps, y = training_example
+            inps, y = [inp.to(device) for inp in inps], y.to(device)
 
-            y_, hidden_state = self.model.forward(x, hidden_state)
+            y_, hidden_state = self.model.forward(inps, hidden_states)
 
             seq_item_loss = self.criterion(y_, y)
             loss += seq_item_loss
@@ -210,35 +208,34 @@ class TrainerModel(ABC):
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
 
+    def handle_minibatch(self, seq: List[Tuple[List[torch.Tensor], torch.Tensor]], metric: TrainerMetric = None):
+        return self.train_on_minibatch(seq, evaluator=metric)
+
     def run_epoch(self, torch_loader: data.DataLoader, epoch: int, batch_size: int, steps=-1,
                   metric: TrainerMetric = None):
         self.model.train()
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
-        self.logwriter.log(
+        ml.logger.log(
             f'Starting epoch: {epoch} with {len(torch_loader) * batch_size} training examples and {steps} steps\n')
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
                 seq = next(loader_iter)
 
-                attempts = 0
-                loss = self.train_on_minibatch(seq, evaluator=metric)
-                while loss > 1.0 and attempts < 50:
-                    loss = self.train_on_minibatch(seq, evaluator=metric)
-                    attempts += 1
+                loss = self.handle_minibatch(seq, metric=metric)
 
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
                 epoch_loss = epoch_loss_sum / (i + 1)
-                self.logwriter.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
+                ml.logger.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
 
                 # Handle progress bar
                 pbar.update()
                 display_loss = epoch_loss_sum / (i + 1)
                 pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result()}')
-        self.logwriter.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
+        ml.logger.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
     def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric):
         self.model.eval()
@@ -249,21 +246,21 @@ class TrainerModel(ABC):
                 for i in range(steps):
                     ts = next(eval_iter)
 
-                    h = self.init_hidden().to(device)
+                    h = self.init_hidden()
                     for t in ts:
                         x, y = t
-                        self.logwriter.log(f'({x[0, 0]}, {x[0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
+                        ml.logger.log(f'({x[0, 0]}, {x[0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
 
                         x = x.to(device)
                         y_, h = self.model.forward(x, h)
 
                         y, y_ = y.numpy(), y_.cpu().numpy()
-                        self.logwriter.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
+                        ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
                     evaluator.update(y_, y)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator.get_result():05f}")
-                    self.logwriter.log('\n\n')
+                    ml.logger.log('\n\n')
 
     def save_to_disk(self, dir_path: str = '.'):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))

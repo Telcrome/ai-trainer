@@ -12,33 +12,41 @@ from trainer.lib import get_img_from_fig, create_identifier
 class LogWriter:
 
     def __init__(self, log_dir: str = './logs', id_hint='log'):
-        self.log_dir = log_dir
-        self.log_id = lib.create_identifier(hint=id_hint)
-        if not os.path.exists(self.log_dir):
-            os.mkdir(self.log_dir)
-        os.mkdir(self.get_run_path())
+        self.prepped = False
+        self.log_dir, self.log_id, self.logger, self.visboard = log_dir, lib.create_identifier(hint=id_hint), None, None
 
-        # Logging to file
-        self.logger = logging.getLogger('spam')
-        self.logger.setLevel(logging.DEBUG)
-        fh = logging.FileHandler(os.path.join(self.log_dir, 'logs.log'))
-        fh.setLevel(logging.DEBUG)
-        self.logger.addHandler(fh)
-        logging.info(self.log_id)
+    def prep(self):
+        if not self.prepped:
+            if not os.path.exists(self.log_dir):
+                os.mkdir(self.log_dir)
+            os.mkdir(self.get_run_path())
 
-        # Logging to Tensorboard
-        self.visboard = VisBoard(run_name=self.log_id, dir_name=os.path.join(self.log_dir, 'tb'))
+            # Logging to file
+            self.logger = logging.getLogger('spam')
+            self.logger.setLevel(logging.DEBUG)
+            fh = logging.FileHandler(os.path.join(self.get_run_path(), 'logs.log'))
+            fh.setLevel(logging.DEBUG)
+            self.logger.addHandler(fh)
+            self.logger.propagate = False
+            logging.info(self.log_id)
+
+            # Logging to Tensorboard
+            self.visboard = VisBoard(run_name=self.log_id, dir_name=os.path.join(self.log_dir, 'tb'))
+        self.prepped = True
 
     def log(self, c: str):
+        self.prep()
         self.logger.info(c)
 
     def get_run_path(self) -> str:
         return os.path.join(self.log_dir, self.log_id)
 
     def add_scalar(self, tag: str, val: float, step: int):
+        self.prep()
         self.visboard.writer.add_scalar(tag, val, step)
 
     def save_tensor(self, arr: torch.Tensor, name="tensor"):
+        self.prep()
         tensor_dir = os.path.join(self.get_run_path(), name)
         if not os.path.exists(tensor_dir):
             os.mkdir(tensor_dir)
@@ -79,3 +87,6 @@ class VisBoard:
     def visualize_subject(self, s: lib.Subject):
         fig, ax = plt.subplots()
         raise NotImplementedError()
+
+
+logger = LogWriter()
