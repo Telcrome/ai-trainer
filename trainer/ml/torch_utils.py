@@ -240,7 +240,7 @@ class TrainerModel(ABC):
                 pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result()}')
         ml.logger.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
-    def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric):
+    def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric, epoch=-1):
         self.model.eval()
         steps = len(eval_loader)
         eval_iter = iter(eval_loader)
@@ -261,15 +261,16 @@ class TrainerModel(ABC):
                         # ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
                     evaluator.update(y_, y)
 
-                    if random.randint(1, 20) > 19:
+                    if random.random() > 0.98:
                         fig, (ax1, ax2) = plt.subplots(1, 2)
+                        if epoch >= 0:
+                            fig.suptitle(f'Epoch {epoch}')
                         sns.heatmap(y_[0, 1], ax=ax1)
                         sns.heatmap(y[0, 1], ax=ax2)
                         ml.logger.visboard.add_figure(fig)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator.get_result():05f}")
-                    ml.logger.log('\n\n')
 
     def save_to_disk(self, dir_path: str = '.'):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))
