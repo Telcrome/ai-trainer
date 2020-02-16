@@ -11,10 +11,6 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 
-class SeqLoss(nn.Module):
-    pass
-
-
 class OSizeNetwork(nn.Module):
     def __init__(self):
         super(OSizeNetwork, self).__init__()
@@ -27,12 +23,12 @@ class OSizeNetwork(nn.Module):
         input_combined = torch.cat((x, hidden_state), dim=1)
 
         # Computing the next hidden state
-        hidden = F.relu(self.i2h(input_combined))
+        hidden_state = F.relu(self.i2h(input_combined))
 
         # Computing the output
         output = F.relu(self.input_fc(input_combined))
         output = F.relu(self.output_size_fc(output))
-        return output, hidden
+        return output, hidden_state
 
 
 class OSizeModel(ml.TrainerModel):
@@ -80,19 +76,50 @@ def o_size_preprocessor(s: lib.Subject, mode: ml.ModelMode):
     return res
 
 
+class ARCMetric(ml.TrainerMetric):
+
+    def __init__(self):
+        self.correct = 0
+        self.wrong = 0
+
+    def update(self, prediction: np.ndarray, target: np.ndarray):
+        prediction = np.round(prediction)
+        for b_id in range(prediction.shape[0]):
+            if prediction[b_id, 0] == target[b_id, 0] and prediction[b_id, 1] == target[b_id, 1]:
+                self.correct += 1
+            else:
+                self.wrong += 1
+
+    def get_result(self):
+        return self.correct / (self.correct + self.wrong)
+
+
 if __name__ == '__main__':
     # lib.reset_database()
     # sd = demo_data.SourceData('D:\\')
     # sd.build_arc(lib.Session())
 
-    BATCH_SIZE = 4
-    EPOCHS = 5
+    BATCH_SIZE = 1
+    EPOCHS = 4
 
     output_size_train = ml.InMemoryDataset('arc', 'training', o_size_preprocessor, mode=ml.ModelMode.Train)
+    output_size_test = ml.InMemoryDataset('arc', 'test', o_size_preprocessor, mode=ml.ModelMode.Eval)
 
     train_loader = output_size_train.get_torch_dataloader(batch_size=BATCH_SIZE)
+    test_loader = output_size_train.get_torch_dataloader(batch_size=BATCH_SIZE)
 
     net = OSizeModel()
 
     for epoch in range(EPOCHS):
         net.run_epoch(train_loader, epoch=epoch, batch_size=BATCH_SIZE)
+
+        # Testing the performance
+        metric = ARCMetric()
+        net.evaluate(test_loader, metric)
+        print(f'Test Output size accuracy: {metric.get_result()}')
+        # device = ml.torch_device
+        # with torch.no_grad():
+        #     x = torch.Tensor([[3, 5]]).to(device)
+        #     h = torch.zeros((1, 100)).to(device)
+        #     y, h = net.model(x, h)
+        # print(y)

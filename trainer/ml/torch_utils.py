@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
@@ -167,8 +168,8 @@ class TrainerModel(ABC):
 
             y_, hidden_state = self.model.forward(x, hidden_state)
 
-            l = self.criterion(y_, y)
-            loss += l
+            seq_item_loss = self.criterion(y_, y)
+            loss += seq_item_loss
         loss.backward()
         self.optimizer.step()
 
@@ -199,23 +200,39 @@ class TrainerModel(ABC):
                 pbar.set_description(f'Loss: {display_loss:05f}')
         print(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
-    def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric, batch_size=1, num_workers=2):
+    def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric):
         self.model.eval()
         steps = len(eval_loader)
         eval_iter = iter(eval_loader)
         with torch.no_grad():  # Testing does not require gradients
             with tqdm(total=steps, maxinterval=steps / 100) as pbar:
                 for i in range(steps):
-                    x, y = next(eval_iter)
-                    x = x.to(device)
-                    y_ = self.model.forward(x).cpu()
+                    ts = next(eval_iter)
 
-                    y, y_ = y.numpy(), y_.numpy()
+                    h = self.init_hidden().to(device)
+                    for t in ts:
+                        x, y = t
+                        x = x.to(device)
+                        y_, h = self.model.forward(x, h)
 
-                    evaluator.update(y_, y)
+                        y, y_ = y.numpy(), y_.cpu().numpy()
+
+                        evaluator.update(y_, y)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator}")
+
+    def save_to_disk(self, dir_path: str = '.'):
+        torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))
+
+    def load_from_disk(self, dir_path: str = '.') -> bool:
+        p = os.path.join(dir_path, f'{self.model_name}.pt')
+        if os.path.exists(p):
+            self.model.load_state_dict(torch.load(p))
+            return True
+        else:
+            print(f"{self.model} not yet on disk, train first.")
+            return False
 
 
 def get_capacity(model: nn.Module) -> int:
