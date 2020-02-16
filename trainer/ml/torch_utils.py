@@ -17,6 +17,8 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 # If GPU is available, use GPU
+
+
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
 IDENTIFIER = lib.create_identifier()
 
@@ -134,6 +136,30 @@ class AccuracyMetric(TrainerMetric):
         return accuracy_score(self.targets, self.preds)
 
 
+def init_weights(layer: nn.Module) -> None:
+    if isinstance(layer, nn.Linear):
+        # Visualize a fully connected layer
+        nn.init.xavier_uniform_(layer.weight)
+        # nn.init.xavier_uniform(layer.bias)
+    elif isinstance(layer, nn.Conv2d):
+        # Visualize a convolutional layer
+        nn.init.xavier_uniform_(layer.weight)
+        nn.init.xavier_uniform_(layer.bias)
+
+
+def get_capacity(model: nn.Module) -> int:
+    """
+    Computes the number of parameters of a network.
+    """
+    import inspect
+
+    # Instantiate, because model.parameters does not work on the class definition
+    if inspect.isclass(model):
+        model = model()
+
+    return sum([p.numel() for p in model.parameters()])
+
+
 class TrainerModel(ABC):
     """
     TrainerModel is the user of a torch nn.Module model and implements common training and evaluation methods.
@@ -143,21 +169,27 @@ class TrainerModel(ABC):
                  model_name: str,
                  model: nn.Module,
                  opti: optimizer.Optimizer,
-                 visboard: ml.VisBoard,
+                 logwriter: ml.LogWriter,
                  crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module]):
         super().__init__()
         self.model_name = model_name
         self.model, self.optimizer, self.criterion = model, opti, crit
         self.model = self.model.to(device)
-        self.visboard = visboard
+        self.logwriter = logwriter
+        self.init_weights()
 
     def print_summary(self):
         print(f"Capacity of the network: {get_capacity(self.model)}")
 
+    def init_weights(self):
+        self.model.apply(init_weights)
+
     def init_hidden(self) -> torch.Tensor:
         raise NotImplementedError()
 
-    def train_on_minibatch(self, training_examples: List[Tuple[torch.Tensor, torch.Tensor]]) -> float:
+    def train_on_minibatch(self,
+                           training_examples: List[Tuple[torch.Tensor, torch.Tensor]],
+                           evaluator: TrainerMetric = None) -> float:
         hidden_state = self.init_hidden().to(device)
         # noinspection PyArgumentList
         loss = torch.Tensor([0.]).to(device)
@@ -172,33 +204,41 @@ class TrainerModel(ABC):
             loss += seq_item_loss
         loss.backward()
         self.optimizer.step()
+        # noinspection PyUnboundLocalVariable
+        evaluator.update(y_.detach().cpu().numpy(), y.detach().cpu().numpy())
 
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
 
-    def run_epoch(self, torch_loader: data.DataLoader, epoch: int, batch_size: int, steps=-1):
+    def run_epoch(self, torch_loader: data.DataLoader, epoch: int, batch_size: int, steps=-1,
+                  metric: TrainerMetric = None):
         self.model.train()
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
-        print(f'Starting epoch: {epoch} with {len(torch_loader) * batch_size} training examples and {steps} steps\n')
+        self.logwriter.log(
+            f'Starting epoch: {epoch} with {len(torch_loader) * batch_size} training examples and {steps} steps\n')
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
                 seq = next(loader_iter)
 
-                loss = self.train_on_minibatch(seq)
+                attempts = 0
+                loss = self.train_on_minibatch(seq, evaluator=metric)
+                while loss > 1.0 and attempts < 50:
+                    loss = self.train_on_minibatch(seq, evaluator=metric)
+                    attempts += 1
 
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
                 epoch_loss = epoch_loss_sum / (i + 1)
-                self.visboard.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
+                self.logwriter.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
 
                 # Handle progress bar
                 pbar.update()
                 display_loss = epoch_loss_sum / (i + 1)
-                pbar.set_description(f'Loss: {display_loss:05f}')
-        print(f"\nEpoch result: {epoch_loss_sum / steps}\n")
+                pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result()}')
+        self.logwriter.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
     def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric):
         self.model.eval()
@@ -212,15 +252,18 @@ class TrainerModel(ABC):
                     h = self.init_hidden().to(device)
                     for t in ts:
                         x, y = t
+                        self.logwriter.log(f'({x[0, 0]}, {x[0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
+
                         x = x.to(device)
                         y_, h = self.model.forward(x, h)
 
                         y, y_ = y.numpy(), y_.cpu().numpy()
-
-                        evaluator.update(y_, y)
+                        self.logwriter.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
+                    evaluator.update(y_, y)
 
                     pbar.update()
-                    pbar.set_description(f"{evaluator}")
+                    pbar.set_description(f"{evaluator.get_result():05f}")
+                    self.logwriter.log('\n\n')
 
     def save_to_disk(self, dir_path: str = '.'):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))
@@ -233,16 +276,3 @@ class TrainerModel(ABC):
         else:
             print(f"{self.model} not yet on disk, train first.")
             return False
-
-
-def get_capacity(model: nn.Module) -> int:
-    """
-    Computes the number of parameters of a network.
-    """
-    import inspect
-
-    # Instantiate, because model.parameters does not work on the class definition
-    if inspect.isclass(model):
-        model = model()
-
-    return sum([p.numel() for p in model.parameters()])

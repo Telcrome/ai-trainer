@@ -29,6 +29,7 @@
       <w>kaggle</w>
       <w>logdir</w>
       <w>logits</w>
+      <w>logwriter</w>
       <w>matplot</w>
       <w>matplotlib</w>
       <w>minibatch</w>

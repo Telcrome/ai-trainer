@@ -1,3 +1,4 @@
+import logging
 import os
 
 import matplotlib.pyplot as plt
@@ -17,8 +18,25 @@ class LogWriter:
             os.mkdir(self.log_dir)
         os.mkdir(self.get_run_path())
 
+        # Logging to file
+        self.logger = logging.getLogger('spam')
+        self.logger.setLevel(logging.DEBUG)
+        fh = logging.FileHandler(os.path.join(self.log_dir, 'logs.log'))
+        fh.setLevel(logging.DEBUG)
+        self.logger.addHandler(fh)
+        logging.info(self.log_id)
+
+        # Logging to Tensorboard
+        self.visboard = VisBoard(run_name=self.log_id, dir_name=os.path.join(self.log_dir, 'tb'))
+
+    def log(self, c: str):
+        self.logger.info(c)
+
     def get_run_path(self) -> str:
         return os.path.join(self.log_dir, self.log_id)
+
+    def add_scalar(self, tag: str, val: float, step: int):
+        self.visboard.writer.add_scalar(tag, val, step)
 
     def save_tensor(self, arr: torch.Tensor, name="tensor"):
         tensor_dir = os.path.join(self.get_run_path(), name)
@@ -45,9 +63,6 @@ class VisBoard:
         if not self.run_name:
             self.run_name = create_identifier()
         self.writer = SummaryWriter(f'{self.dir_name}/{self.run_name}')
-
-    def add_scalar(self, tag: str, val: float, step: int):
-        self.writer.add_scalar(tag, val, step)
 
     def add_figure(self, fig: plt.Figure, group_name: str = "Default", close_figure: bool = True) -> None:
         """
