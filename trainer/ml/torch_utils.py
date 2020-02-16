@@ -108,7 +108,7 @@ class TrainerMetric(ABC):
             self.update(preds[batch_id], targets[batch_id])
 
     @abstractmethod
-    def update(self, prediction: np.ndarray, target: np.ndarray):
+    def update(self, prediction: np.ndarray, target: np.ndarray, plot=False):
         pass
 
     @abstractmethod
@@ -122,7 +122,7 @@ class AccuracyMetric(TrainerMetric):
         self.preds = []
         self.targets = []
 
-    def update(self, prediction: np.ndarray, target: np.ndarray):
+    def update(self, prediction: np.ndarray, target: np.ndarray, plot=False):
         if len(prediction.shape) != len(target.shape):
             # the prediction seems to be given in logits or class probabilities
             prediction = np.argmax(prediction, axis=1)
@@ -250,13 +250,13 @@ class TrainerModel(ABC):
                     for t in ts:
                         x, y = t
 
-                        ml.logger.log(f'({x[0][0, 0]}, {x[0][0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
+                        # ml.logger.log(f'({x[0][0, 0]}, {x[0][0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
                         inps = [inp.to(device) for inp in x]
                         y_, hs = self.model.forward(inps, hs)
 
                         y, y_ = y.numpy(), y_.cpu().numpy()
-                        ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
-                    evaluator.update(y_, y)
+                        # ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
+                    evaluator.update(y_, y, plot=True)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator.get_result():05f}")

@@ -1,7 +1,9 @@
 import random
 from typing import List, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -39,12 +41,12 @@ class EncodingToNumber(nn.Module):
 class OSizeNetwork(nn.Module):
     def __init__(self):
         super(OSizeNetwork, self).__init__()
-        self.hidden_depth = 30
+        self.hidden_depth = 20
         self.layer_dim = 100
         # self.i2h = nn.Linear(2 + self.hidden_dim, self.hidden_dim)
-        self.encoding_layer = NumberToEncoding()
+        # self.encoding_layer = NumberToEncoding()
         # self.decoding_layer = EncodingToNumber(5)
-        self.decoding_layer = nn.LogSoftmax(dim=1)
+        self.decoding_layer = nn.Softmax(dim=1)
 
         # self.rnn_cell = nn.GRUCell(2, self.hidden_dim)
         self.rnn_cell = ml.ConvGRUCell(
@@ -55,26 +57,20 @@ class OSizeNetwork(nn.Module):
             bias=True,
             dtype=torch.FloatTensor
         )
+        self.conv_last = nn.Conv2d(
+            in_channels=self.hidden_depth,
+            out_channels=2,
+            kernel_size=1
+        )
 
     def forward(self, inps: List, hidden_states: List):
-        gridsize, hidden_state = inps[0], hidden_states[0]
-
-        x = self.encoding_layer(gridsize)
+        inp, hidden_state = inps[0], hidden_states[0]
 
         # Computing the next hidden state
-        hidden_state = self.rnn_cell(x, hidden_state)
+        hidden_state = self.rnn_cell(inp, hidden_state)
 
-        # input_combined = torch.cat((x, hidden_state), dim=1)
-        input_combined = hidden_state
-        # Computing the output
-        output = torch.relu(self.input_fc(input_combined))
-        output = torch.relu(self.hidden_fc(output))
-        output = torch.relu(self.output_size_fc(output))
-
-        # output = torch.cat([torch.mul(output, m) for m in [1., 2., 3., 4., 5.]], dim=1)
-
-        output = torch.relu(self.reduction_layer(output))
-        # output = self.decoding_layer(output)
+        output = torch.relu(self.conv_last(hidden_state))
+        output = self.decoding_layer(output)
         return output, [hidden_state]
 
 
@@ -87,15 +83,17 @@ class OSizeModel(ml.TrainerModel):
             model.parameters(),
             lr=5e-3
         )
-        crit = nn.MSELoss()
+        crit = ml.FocalLoss(logits=False)
         super().__init__(model_name=modelname,
                          model=model,
                          opti=opti,
                          crit=crit)
 
     def init_hidden(self) -> List[torch.Tensor]:
-        first = [torch.zeros(BATCH_SIZE, self.model.hidden_dim).to(ml.torch_device)]
-        return first
+        # first = [torch.zeros(BATCH_SIZE, self.model.hidden_depth).to(ml.torch_device)]
+        res = self.model.rnn_cell.init_hidden(1).to(ml.torch_device)
+        # res = res.unsqueeze(0)
+        return [res]
 
     def handle_minibatch(self, seq: List[Tuple[List[torch.Tensor], torch.Tensor]], metric: ml.TrainerMetric = None):
         attempts = 0
@@ -140,21 +138,21 @@ def o_size_preprocessor(s: lib.Subject, mode: ml.ModelMode):
 
 def encode_depthmap(im: lib.ImStack, n_classes=11, max_grid=30) -> Tuple[List[np.ndarray], np.ndarray]:
     x, y = im.get_ndarray()[0, :, :, 0], im.semseg_masks[0].get_ndarray()[:, :, 0]
-    inp = np.zeros((max_grid, max_grid, n_classes), dtype=np.float32)
-    trgt = np.zeros((max_grid, max_grid, 2), dtype=np.float32)
+    inp = np.zeros((n_classes, max_grid, max_grid), dtype=np.float32)
+    trgt = np.zeros((2, max_grid, max_grid), dtype=np.float32)
 
     foreground_x, foreground_y = np.ones_like(x, dtype=np.float32), np.ones_like(y, dtype=np.float32)
 
-    inp[foreground_x.shape[0]:, :, 0] = 1.
-    inp[:, foreground_x.shape[1]:, 0] = 1.
+    inp[0, foreground_x.shape[0]:, :] = 1.
+    inp[0, :, foreground_x.shape[1]:] = 1.
     for w in range(x.shape[0]):
         for h in range(x.shape[1]):
             c = x[w, h] + 1
-            inp[w, h, c] = 1.
+            inp[c, w, h] = 1.
 
-    trgt[foreground_y.shape[0]:, :, 0] = 1.
-    trgt[:, foreground_y.shape[1]:, 0] = 1.
-    trgt[:foreground_y.shape[0], :foreground_y.shape[1], 1] = 1.
+    trgt[0, foreground_y.shape[0]:, :] = 1.
+    trgt[0, :, foreground_y.shape[1]:] = 1.
+    trgt[1, :foreground_y.shape[0], :foreground_y.shape[1]] = 1.
 
     return [inp], trgt
 
@@ -174,10 +172,15 @@ class ARCMetric(ml.TrainerMetric):
         self.correct = 0
         self.wrong = 0
 
-    def update(self, prediction: np.ndarray, target: np.ndarray):
-        prediction = np.round(prediction)
+    def update(self, prediction: np.ndarray, target: np.ndarray, plot=False):
+        if plot:
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            sns.heatmap(prediction[0, 1], ax=ax1)
+            sns.heatmap(target[0, 1], ax=ax2)
+            ml.logger.visboard.add_figure(fig)
+            prediction = prediction >= 0.5
         for b_id in range(prediction.shape[0]):
-            if prediction[b_id, 0] == target[b_id, 0] and prediction[b_id, 1] == target[b_id, 1]:
+            if np.array_equal(prediction[0, 1], target[0, 1].astype(np.bool)):
                 self.correct += 1
             else:
                 self.wrong += 1
