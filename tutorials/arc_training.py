@@ -10,40 +10,10 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 
-class NumberToEncoding(nn.Module):
-    def __init__(self):
-        super(NumberToEncoding, self).__init__()
-        self.n = 3
-
-    def forward(self, numbers):
-        # assert (len(numbers.size()) == 2)
-        # ml.logger.log(str(numbers))
-        return numbers
-
-
-class EncodingToNumber(nn.Module):
-    def __init__(self, n: int):
-        super(EncodingToNumber, self).__init__()
-        self.n = n
-        # noinspection PyArgumentList
-        self.bin_decoder = torch.Tensor([x ** 2 for x in range(1, n + 1)]).to(ml.torch_device)
-
-    def forward(self, encoding):
-        encoding = encoding[0]  # Assuming batch size 1!
-        # encoding = encoding.round()
-        cuts = [encoding[number_i * self.n: (number_i + 1) * self.n] for number_i in range(2)]
-        dots = [torch.dot(t, self.bin_decoder) for t in cuts]
-        return torch.stack(dots).unsqueeze(0)
-
-
 class OSizeNetwork(nn.Module):
     def __init__(self):
         super(OSizeNetwork, self).__init__()
-        self.hidden_depth = 20
-        self.layer_dim = 100
-        # self.i2h = nn.Linear(2 + self.hidden_dim, self.hidden_dim)
-        # self.encoding_layer = NumberToEncoding()
-        # self.decoding_layer = EncodingToNumber(5)
+        self.hidden_depth = 25
         self.decoding_layer = nn.Softmax(dim=1)
 
         # self.rnn_cell = nn.GRUCell(2, self.hidden_dim)
@@ -55,6 +25,16 @@ class OSizeNetwork(nn.Module):
             bias=True,
             dtype=torch.FloatTensor
         )
+
+        self.rnn_cell2 = ml.ConvGRUCell(
+            input_size=(30, 30),
+            input_dim=self.hidden_depth,
+            hidden_dim=self.hidden_depth,
+            kernel_size=(3, 3),
+            bias=True,
+            dtype=torch.FloatTensor
+        )
+
         self.conv_last = nn.Conv2d(
             in_channels=self.hidden_depth,
             out_channels=2,
@@ -62,14 +42,15 @@ class OSizeNetwork(nn.Module):
         )
 
     def forward(self, inps: List, hidden_states: List):
-        inp, hidden_state = inps[0], hidden_states[0]
+        inp = inps[0]
 
         # Computing the next hidden state
-        hidden_state = self.rnn_cell(inp, hidden_state)
+        h1 = self.rnn_cell(inp, hidden_states[0])
+        h2 = self.rnn_cell2(h1, hidden_states[1])
 
-        output = torch.relu(self.conv_last(hidden_state))
+        output = torch.relu(self.conv_last(h2))
         output = self.decoding_layer(output)
-        return output, [hidden_state]
+        return output, [h1, h2]
 
 
 class OSizeModel(ml.TrainerModel):
@@ -88,10 +69,10 @@ class OSizeModel(ml.TrainerModel):
                          crit=crit)
 
     def init_hidden(self) -> List[torch.Tensor]:
-        # first = [torch.zeros(BATCH_SIZE, self.model.hidden_depth).to(ml.torch_device)]
-        res = self.model.rnn_cell.init_hidden(1).to(ml.torch_device)
-        # res = res.unsqueeze(0)
-        return [res]
+        return [
+            self.model.rnn_cell.init_hidden(1).to(ml.torch_device),
+            self.model.rnn_cell.init_hidden(1).to(ml.torch_device),
+        ]
 
     def handle_minibatch(self, seq: List[Tuple[List[torch.Tensor], torch.Tensor]], metric: ml.TrainerMetric = None):
         attempts = 0
