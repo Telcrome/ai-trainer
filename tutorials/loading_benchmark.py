@@ -1,5 +1,5 @@
 """
-This tutorial aims at demonstrating the impressive loading speed that trainer allows,
+This tutorial aims at demonstrating the impressive loading speed that allowed by trainer,
 even on its (possibly) complex data structure!
 """
 

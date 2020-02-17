@@ -237,7 +237,7 @@ class TrainerModel(ABC):
                 # Handle progress bar
                 pbar.update()
                 display_loss = epoch_loss_sum / (i + 1)
-                pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result()}')
+                pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
         ml.logger.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
     def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric, epoch=-1):
