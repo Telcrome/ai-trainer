@@ -1,16 +1,12 @@
 """
 Defines an encoder, a decoder head for semantic segmentation and a classification head.
 """
-from typing import Tuple
 
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-import trainer.lib as lib
 import trainer.ml as ml
-from trainer.ml import ModelMode
 
 
 class SmallClassNet(nn.Module):
@@ -32,13 +28,13 @@ class SmallClassNet(nn.Module):
         return F.log_softmax(x, dim=-1)
 
 
-class MultiNetwork(ml.TrainerModel):
+class MultiNetwork(ml.ModelTrainer):
 
     def __init__(self):
         model = SmallClassNet()
         opti = optim.Adam(model.parameters(), lr=5e-3)
         crit = nn.CrossEntropyLoss()
-        super().__init__(model_name='multi_model',
+        super().__init__(exp_name='multi_model',
                          model=model,
                          opti=opti,
                          crit=crit)

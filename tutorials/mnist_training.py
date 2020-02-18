@@ -10,13 +10,13 @@ import trainer.ml as ml
 from trainer.ml.multi_network import SmallClassNet
 
 
-class MnistNetwork(ml.TrainerModel):
+class MnistNetwork(ml.ModelTrainer):
     def __init__(self):
         model = SmallClassNet()
         opti = optim.Adam(model.parameters(), lr=5e-3)
         crit = nn.CrossEntropyLoss()
         visboard = ml.VisBoard(run_name=lib.create_identifier('MnistNetwork'))
-        super().__init__(model_name='multi_model',
+        super().__init__(exp_name='multi_model',
                          model=model,
                          opti=opti,
                          crit=crit,

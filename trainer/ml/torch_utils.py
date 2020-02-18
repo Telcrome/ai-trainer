@@ -5,9 +5,7 @@ from enum import Enum
 from functools import partial
 from typing import Tuple, Union, Callable, List
 
-import matplotlib.pyplot as plt
 import numpy as np
-import seaborn as sns
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score
@@ -158,26 +156,28 @@ def get_capacity(model: nn.Module) -> int:
 
     # Instantiate, because model.parameters does not work on the class definition
     if inspect.isclass(model):
-        model = model()
+        raise Exception("The model is not initialized")
 
     return sum([p.numel() for p in model.parameters()])
 
 
-class TrainerModel(ABC):
+class ModelTrainer:
     """
     TrainerModel is the user of a torch nn.Module model and implements common training and evaluation methods.
     """
 
     def __init__(self,
-                 model_name: str,
+                 exp_name: str,
                  model: nn.Module,
                  opti: optimizer.Optimizer,
-                 crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module]):
-        super().__init__()
-        self.model_name = model_name
+                 crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module],
+                 weights_initializer=init_weights,
+                 hidden_initializer: Callable[[nn.Module], torch.Tensor] = None):
+        self.model_name = exp_name
         self.model, self.optimizer, self.criterion = model, opti, crit
         self.model = self.model.to(device)
-        self.init_weights()
+        self.weights_initializer = weights_initializer
+        self.hidden_initializer = hidden_initializer
 
     def print_summary(self):
         print(f"Capacity of the network: {get_capacity(self.model)}")
@@ -185,13 +185,10 @@ class TrainerModel(ABC):
     def init_weights(self):
         self.model.apply(init_weights)
 
-    def init_hidden(self) -> List[torch.Tensor]:
-        raise NotImplementedError()
-
     def train_on_minibatch(self,
                            training_examples: List[Tuple[List[torch.Tensor], torch.Tensor]],
                            evaluator: TrainerMetric = None) -> float:
-        hidden_states = self.init_hidden()
+        hidden_states = self.hidden_initializer(self.model)
         # noinspection PyArgumentList
         loss = torch.Tensor([0.]).to(device)
         self.optimizer.zero_grad()
@@ -211,9 +208,6 @@ class TrainerModel(ABC):
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
 
-    def handle_minibatch(self, seq: List[Tuple[List[torch.Tensor], torch.Tensor]], metric: TrainerMetric = None):
-        return self.train_on_minibatch(seq, evaluator=metric)
-
     def run_epoch(self, torch_loader: data.DataLoader, epoch: int, batch_size: int, steps=-1,
                   metric: TrainerMetric = None):
         self.model.train()
@@ -227,7 +221,7 @@ class TrainerModel(ABC):
             for i in range(steps):
                 seq = next(loader_iter)
 
-                loss = self.handle_minibatch(seq, metric=metric)
+                loss = self.train_on_minibatch(seq, evaluator=metric)
 
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
@@ -240,7 +234,12 @@ class TrainerModel(ABC):
                 pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
         ml.logger.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
 
-    def evaluate(self, eval_loader: data.DataLoader, evaluator: TrainerMetric, epoch=-1):
+    def evaluate(self,
+                 eval_loader: data.DataLoader,
+                 evaluator: TrainerMetric,
+                 epoch=-1,
+                 vis_prob=0.02,
+                 visu: Callable[[int, List[Tuple[np.ndarray, np.ndarray]]], None] = None):
         self.model.eval()
         steps = len(eval_loader)
         eval_iter = iter(eval_loader)
@@ -249,7 +248,10 @@ class TrainerModel(ABC):
                 for i in range(steps):
                     ts = next(eval_iter)
 
-                    hs = self.init_hidden()
+                    if visu is not None:
+                        vis_ls = []
+
+                    hs = self.hidden_initializer(self.model)
                     for t in ts:
                         x, y = t
 
@@ -258,16 +260,13 @@ class TrainerModel(ABC):
                         y_, hs = self.model.forward(inps, hs)
 
                         y, y_ = y.numpy(), y_.cpu().numpy()
-                        # ml.logger.log(f'Prediction: {({y_[0, 0]}, {y_[0, 1]})}')
+
+                        if visu is not None:
+                            vis_ls.append(([a.cpu().numpy() for a in x], y, y_))
                     evaluator.update(y_, y)
 
-                    if random.random() > 0.98:
-                        fig, (ax1, ax2) = plt.subplots(1, 2)
-                        if epoch >= 0:
-                            fig.suptitle(f'Epoch {epoch}')
-                        sns.heatmap(y_[0, 1], ax=ax1)
-                        sns.heatmap(y[0, 1], ax=ax2)
-                        ml.logger.visboard.add_figure(fig)
+                    if visu is not None and random.random() > (1 - vis_prob):
+                        visu(epoch, vis_ls)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator.get_result():05f}")

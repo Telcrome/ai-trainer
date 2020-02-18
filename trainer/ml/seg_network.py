@@ -48,10 +48,10 @@ class SegCrit(nn.Module):
         return bce * self.loss_weights[0] + dice * self.loss_weights[1]
 
 
-class SegNetwork(ml.TrainerModel):
+class SegNetwork(ml.ModelTrainer):
 
     def __init__(self,
-                 model_name: str,
+                 exp_name: str,
                  in_channels: int,
                  n_classes: int,
                  ds: lib.Dataset,
@@ -61,7 +61,7 @@ class SegNetwork(ml.TrainerModel):
         model = smp.PAN(in_channels=in_channels, classes=n_classes)
         opti = optim.Adam(model.parameters(), lr=5e-3)
         crit = SegCrit(1., 2., (0.5, 0.5))
-        super().__init__(model_name, model, opti, crit, ds, vis_board=vis_board)
+        super().__init__(exp_name, model, opti, crit, ds, vis_board=vis_board)
         self.in_channels, self.n_classes = in_channels, n_classes
 
     def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
