@@ -13,5 +13,5 @@ try:  # The following modules depend on torch, for CI systems without torch a tr
     from trainer.ml.torch_utils import ModelMode, TrainerModel, InMemoryDataset, device as torch_device, \
         TrainerMetric, AccuracyMetric
     from trainer.ml.seg_network import SegNetwork, SegCrit
-except ImportError:
-    print("Please install all requirements")
+except ImportError as e:
+    print(f"Please install all requirements: {e}")
