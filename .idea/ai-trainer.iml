@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$/..">
       <excludeFolder url="file://$MODULE_DIR$/../envs" />
     </content>
+    <content url="file://$MODULE_DIR$/../../arc-challenge" />
     <orderEntry type="jdk" jdkName="Python 3.7 (.)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
@@ -20,7 +21,7 @@
     <option name="TEMPLATE_CONFIGURATION" value="Jinja2" />
     <option name="TEMPLATE_FOLDERS">
       <list>
-        <option value="$MODULE_DIR$/trainer/server/templates" />
+        <option value="$MODULE_DIR$/../trainer/server/templates" />
       </list>
     </option>
   </component>

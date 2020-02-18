@@ -172,7 +172,7 @@ class ModelTrainer:
                  opti: optimizer.Optimizer,
                  crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module],
                  weights_initializer=init_weights,
-                 hidden_initializer: Callable[[nn.Module], torch.Tensor] = None):
+                 hidden_initializer: Callable[[nn.Module], List[torch.Tensor]] = None):
         self.model_name = exp_name
         self.model, self.optimizer, self.criterion = model, opti, crit
         self.model = self.model.to(device)
@@ -239,7 +239,7 @@ class ModelTrainer:
                  evaluator: TrainerMetric,
                  epoch=-1,
                  vis_prob=0.02,
-                 visu: Callable[[int, List[Tuple[np.ndarray, np.ndarray]]], None] = None):
+                 visu: Callable[[int, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None):
         self.model.eval()
         steps = len(eval_loader)
         eval_iter = iter(eval_loader)
