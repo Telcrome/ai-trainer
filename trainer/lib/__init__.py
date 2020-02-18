@@ -1,4 +1,4 @@
-from trainer.lib.data_api import Session, NumpyBinary, ClassType, Classifiable, MaskType, SemSegClass, SemSegTpl, \
+from trainer.lib.data_model import Session, NumpyBinary, ClassType, Classifiable, MaskType, SemSegClass, SemSegTpl, \
     SemSegMask, ImStack, Subject, Split, Dataset, reset_database, sbjts_splits_association
 # from trainer.lib.import_utils import add_imagestack, add_image_folder, import_dicom
 from trainer.lib.misc import get_img_from_fig, create_identifier, standalone_foldergrab, make_converter_dict_for_enum, \
