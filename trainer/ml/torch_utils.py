@@ -207,7 +207,7 @@ class ModelTrainer:
                                y.detach().cpu().numpy(),
                                y_.detach().cpu().numpy()))
 
-            seq_item_loss = self.criterion(y_, y) * (seq_i * 0.1 + 1.)
+            seq_item_loss = self.criterion(y_, y)
             loss += seq_item_loss
         loss.backward()
         self.optimizer.step()
