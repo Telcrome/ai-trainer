@@ -18,6 +18,16 @@ def distance_transformed(mask: np.ndarray) -> np.ndarray:
     return dist_trans(np.invert(mask).astype(np.float32))
 
 
+def one_hot_to_cont(x: np.ndarray) -> np.ndarray:
+    """
+    Convert a one hot encoded image into the same image with integer representations.
+
+    :param x: np.ndarray with (C, W, H)
+    :return: np.ndarray with (W, H)
+    """
+    return np.argmax(x, axis=len(x.shape) - 3)
+
+
 def normalize_im(im: np.ndarray, norm_type=ImageNormalizations.UnitRange) -> np.ndarray:
     """
     Currently just normalizes an image with pixel intensities in range [0, 255] to [-1, 1]

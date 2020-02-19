@@ -34,9 +34,9 @@ class ModelMode(Enum):
     - Eval does not require augmentation and is used for evaluation
     - Usage does not require ground truths
     """
-    Train = 0
-    Eval = 1
-    Usage = 2
+    Train = "Train"
+    Eval = "Eval"
+    Usage = "Usage"
 
 
 class InMemoryDataset(data.Dataset):
@@ -185,30 +185,46 @@ class ModelTrainer:
     def init_weights(self):
         self.model.apply(init_weights)
 
-    def train_on_minibatch(self,
-                           training_examples: List[Tuple[List[torch.Tensor], torch.Tensor]],
-                           evaluator: TrainerMetric = None) -> float:
+    def train_minibatch(self,
+                        training_examples: List[Tuple[List[torch.Tensor], torch.Tensor]],
+                        visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None,
+                        evaluator: TrainerMetric = None,
+                        epoch=-1) -> float:
         hidden_states = self.hidden_initializer(self.model)
         # noinspection PyArgumentList
         loss = torch.Tensor([0.]).to(device)
         self.optimizer.zero_grad()
-        for training_example in training_examples:
+
+        vis_ls = []
+
+        for seq_i, training_example in enumerate(training_examples):
             inps, y = training_example
             inps, y = [inp.to(device) for inp in inps], y.to(device)
 
             y_, hidden_states = self.model.forward(inps, hidden_states)
+            if visu is not None:
+                vis_ls.append(([a.detach().cpu().numpy() for a in inps],
+                               y.detach().cpu().numpy(),
+                               y_.detach().cpu().numpy()))
 
-            seq_item_loss = self.criterion(y_, y)
+            seq_item_loss = self.criterion(y_, y) * (seq_i * 0.1 + 1.)
             loss += seq_item_loss
         loss.backward()
         self.optimizer.step()
         # noinspection PyUnboundLocalVariable
         evaluator.update(y_.detach().cpu().numpy(), y.detach().cpu().numpy())
 
+        if visu is not None and random.random() > 0.99:
+            visu(epoch, ModelMode.Train, vis_ls)
+
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
 
-    def run_epoch(self, torch_loader: data.DataLoader, epoch: int, batch_size: int, steps=-1,
+    def run_epoch(self, torch_loader: data.DataLoader,
+                  epoch: int,
+                  batch_size: int,
+                  steps=-1,
+                  visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None,
                   metric: TrainerMetric = None):
         self.model.train()
         epoch_loss_sum = 0.
@@ -221,7 +237,7 @@ class ModelTrainer:
             for i in range(steps):
                 seq = next(loader_iter)
 
-                loss = self.train_on_minibatch(seq, evaluator=metric)
+                loss = self.train_minibatch(seq, evaluator=metric, epoch=epoch, visu=visu)
 
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
@@ -239,7 +255,7 @@ class ModelTrainer:
                  evaluator: TrainerMetric,
                  epoch=-1,
                  vis_prob=0.02,
-                 visu: Callable[[int, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None):
+                 visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None):
         self.model.eval()
         steps = len(eval_loader)
         eval_iter = iter(eval_loader)
@@ -266,7 +282,7 @@ class ModelTrainer:
                     evaluator.update(y_, y)
 
                     if visu is not None and random.random() > (1 - vis_prob):
-                        visu(epoch, vis_ls)
+                        visu(epoch, ModelMode.Eval, vis_ls)
 
                     pbar.update()
                     pbar.set_description(f"{evaluator.get_result():05f}")
