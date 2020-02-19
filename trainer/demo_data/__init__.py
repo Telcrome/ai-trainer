@@ -6,6 +6,6 @@ Uses synthetic data that uses tasks solvable by a human to enable simple demonst
 To fill your database with one of the datasets, just execute corresponding file.
 The relevant code is always at the bottom in the __main__ statement.
 """
-from trainer.demo_data.arc import ArcDataset
 from trainer.demo_data.main import get_test_logits, build_test_subject, DemoDataset
+from trainer.demo_data.arc import ArcDataset
 from trainer.demo_data.mnist import MnistDataset
