@@ -49,7 +49,8 @@ class InMemoryDataset(data.Dataset):
                  ds_name: str,
                  split_name: str,
                  f: Union[Callable[[lib.Subject, ModelMode], List[Tuple[List[np.ndarray], np.ndarray]]], partial],
-                 mode: ModelMode = ModelMode.Train):
+                 mode: ModelMode = ModelMode.Train,
+                 subject_filter: Union[Callable[[lib.Subject], bool], None] = None):
         super().__init__()
         self.preprocessor = f
         session = lib.Session()
@@ -63,6 +64,11 @@ class InMemoryDataset(data.Dataset):
             .first()
 
         self.mode = mode
+        self.subject_filter = subject_filter
+        self.subjects = self.split.sbjts
+
+        if self.subject_filter is not None:
+            self.subjects = list(filter(self.subject_filter, self.subjects))
 
     def get_torch_dataloader(self, **kwargs):
         return data.DataLoader(self, **kwargs)
@@ -74,9 +80,8 @@ class InMemoryDataset(data.Dataset):
         :param item: Name of a subject
         :return: Training example x, y
         """
-        s = self.split.sbjts[item]
-        # if not self.in_memory:
-        #     self.session.add(s)
+        s = self.subjects[item]
+
         t = self.preprocessor(s, self.mode)
 
         # Cannot transformed to cuda tensors at this point,
@@ -84,7 +89,7 @@ class InMemoryDataset(data.Dataset):
         return t
 
     def __len__(self):
-        return len(self.split.sbjts)
+        return len(self.subjects)
 
 
 def bench_mark_dataset(ds: InMemoryDataset, extractor: Callable):
@@ -172,12 +177,15 @@ class ModelTrainer:
                  opti: optimizer.Optimizer,
                  crit: Union[Callable[[torch.Tensor, torch.Tensor], torch.Tensor], nn.Module],
                  weights_initializer=init_weights,
-                 hidden_initializer: Callable[[nn.Module], List[torch.Tensor]] = None):
+                 train_batch_callback: Callable[[], None] = None):
         self.model_name = exp_name
         self.model, self.optimizer, self.criterion = model, opti, crit
         self.model = self.model.to(device)
         self.weights_initializer = weights_initializer
-        self.hidden_initializer = hidden_initializer
+        if train_batch_callback is not None:
+            self.train_batch_callback = train_batch_callback
+        else:
+            self.train_batch_callback = lambda: True
 
     def print_summary(self):
         print(f"Capacity of the network: {get_capacity(self.model)}")
@@ -187,10 +195,11 @@ class ModelTrainer:
 
     def train_minibatch(self,
                         training_examples: List[Tuple[List[torch.Tensor], torch.Tensor]],
+                        mode: ModelMode,
                         visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None,
                         evaluator: TrainerMetric = None,
                         epoch=-1) -> float:
-        hidden_states = self.hidden_initializer(self.model)
+        self.train_batch_callback()
         # noinspection PyArgumentList
         loss = torch.Tensor([0.]).to(device)
         self.optimizer.zero_grad()
@@ -201,7 +210,7 @@ class ModelTrainer:
             inps, y = training_example
             inps, y = [inp.to(device) for inp in inps], y.to(device)
 
-            y_, hidden_states = self.model.forward(inps, hidden_states)
+            y_ = self.model.forward(inps)
             if visu is not None:
                 vis_ls.append(([a.detach().cpu().numpy() for a in inps],
                                y.detach().cpu().numpy(),
@@ -209,13 +218,15 @@ class ModelTrainer:
 
             seq_item_loss = self.criterion(y_, y)
             loss += seq_item_loss
-        loss.backward()
-        self.optimizer.step()
+
+        if mode == ModelMode.Train:
+            loss.backward()
+            self.optimizer.step()
         # noinspection PyUnboundLocalVariable
         evaluator.update(y_.detach().cpu().numpy(), y.detach().cpu().numpy())
 
         if visu is not None and random.random() > 0.99:
-            visu(epoch, ModelMode.Train, vis_ls)
+            visu(epoch, mode, vis_ls)
 
         batch_loss = loss.item()  # Loss, in the end, should be a single number
         return batch_loss
@@ -223,69 +234,37 @@ class ModelTrainer:
     def run_epoch(self, torch_loader: data.DataLoader,
                   epoch: int,
                   batch_size: int,
+                  mode: ModelMode,
                   steps=-1,
                   visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None,
                   metric: TrainerMetric = None):
-        self.model.train()
+        if mode == ModelMode.Train:
+            self.model.train()
+        else:
+            self.model.eval()
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
-        ml.logger.log(
-            f'Starting epoch: {epoch} with {len(torch_loader) * batch_size} training examples and {steps} steps\n')
+        ml.logger.log(f'Starting epoch: {epoch} with N={len(torch_loader) * batch_size} and {steps} steps\n')
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
                 seq = next(loader_iter)
 
-                loss = self.train_minibatch(seq, evaluator=metric, epoch=epoch, visu=visu)
+                torch_env = torch.no_grad if mode == ModelMode.Eval else torch.enable_grad
+                with torch_env():
+                    loss = self.train_minibatch(seq, mode=mode, evaluator=metric, epoch=epoch, visu=visu)
 
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
                 epoch_loss = epoch_loss_sum / (i + 1)
-                ml.logger.add_scalar(f'loss/train epoch {epoch + 1}', epoch_loss, i)
+                ml.logger.add_scalar(f'{mode.value}: loss/train epoch {epoch + 1}', epoch_loss, i)
 
                 # Handle progress bar
                 pbar.update()
                 display_loss = epoch_loss_sum / (i + 1)
-                pbar.set_description(f'Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
-        ml.logger.log(f"\nEpoch result: {epoch_loss_sum / steps}\n")
-
-    def evaluate(self,
-                 eval_loader: data.DataLoader,
-                 evaluator: TrainerMetric,
-                 epoch=-1,
-                 vis_prob=0.02,
-                 visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None):
-        self.model.eval()
-        steps = len(eval_loader)
-        eval_iter = iter(eval_loader)
-        with torch.no_grad():  # Testing does not require gradients
-            with tqdm(total=steps, maxinterval=steps / 100) as pbar:
-                for i in range(steps):
-                    ts = next(eval_iter)
-
-                    if visu is not None:
-                        vis_ls = []
-
-                    hs = self.hidden_initializer(self.model)
-                    for t in ts:
-                        x, y = t
-
-                        # ml.logger.log(f'({x[0][0, 0]}, {x[0][0, 1]}) -> ({y[0, 0]}, {y[0, 1]})')
-                        inps = [inp.to(device) for inp in x]
-                        y_, hs = self.model.forward(inps, hs)
-
-                        y, y_ = y.numpy(), y_.cpu().numpy()
-
-                        if visu is not None:
-                            vis_ls.append(([a.cpu().numpy() for a in x], y, y_))
-                    evaluator.update(y_, y)
-
-                    if visu is not None and random.random() > (1 - vis_prob):
-                        visu(epoch, ModelMode.Eval, vis_ls)
-
-                    pbar.update()
-                    pbar.set_description(f"{evaluator.get_result():05f}")
+                pbar.set_description(f'Mode: {mode.value}, Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
+        ml.logger.log(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
 
     def save_to_disk(self, dir_path: str = '.'):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))

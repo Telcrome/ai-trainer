@@ -1,3 +1,4 @@
+from functools import reduce
 import json
 import os
 from typing import List
@@ -47,19 +48,27 @@ class ArcDataset(dd.DemoDataset):
                     # If the solution is given, add:
                     if 'output' in maze:
                         output_json = maze['output']
+                        gt_arr = array_from_json(output_json, depth=10).astype(np.bool)
                         im_stack.add_ss_mask(
-                            array_from_json(output_json, depth=10).astype(np.bool),
+                            gt_arr,
                             sem_seg_tpl=ss_tpl,
                             ignore_shape_mismatch=True)
 
+                        # Add metadata
+                        im_stack.extra_info['sizeeq'] = (input_im.shape == gt_arr.shape)
+
                     s.ims.append(im_stack)
+            s.extra_info['all_have_target'] = reduce(lambda x, y: x and y,
+                                                     ['sizeeq' in im.extra_info for im in s.ims])
+            if s.extra_info['all_have_target']:
+                s.extra_info['sizeeq'] = reduce(lambda x, y: x and y,
+                                                [im.extra_info['sizeeq'] for im in s.ims])
             d.get_split_by_name(split_name).sbjts.append(s)
 
     def build_dataset(self, sess=None) -> lib.Dataset:
         d, sess = super().build_dataset(sess)
 
         # Dataset does not exist yet, build it!
-
         ss_tpl = lib.SemSegTpl.build_new(
             'arc_colors',
             {

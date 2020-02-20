@@ -203,8 +203,10 @@ class ImStack(Classifiable, NumpyBinary, Base):
 
         assert (src_im.dtype == np.uint8 and len(src_im.shape) == 4)
         res.set_array(src_im)
-        if extra_info:
+        if extra_info is not None:
             res.extra_info = extra_info
+        else:
+            res.extra_info = {}
         return res
 
     def add_ss_mask(self, gt_arr: np.ndarray, sem_seg_tpl: SemSegTpl, for_frame=0, ignore_shape_mismatch=False):
@@ -246,13 +248,18 @@ class Subject(Classifiable, Base):
 
     id = sa.Column(sa.Integer(), primary_key=True)
     dataset_id = sa.Column(sa.Integer(), sa.ForeignKey(f'{TABLENAME_DATASETS}.id'))
+    extra_info = sa.Column(pg.JSONB())
     name = sa.Column(sa.String())
     ims = relationship(ImStack)
 
     @classmethod
-    def build_new(cls, name: str):
+    def build_new(cls, name: str, extra_info: Dict = None):
         res = cls()
         res.name = name
+        if extra_info is not None:
+            res.extra_info = extra_info
+        else:
+            res.extra_info = {}
         return res
 
 
@@ -320,6 +327,9 @@ class Dataset(Base):
     def __len__(self):
         # noinspection PyTypeChecker
         return len(self.sbjts)
+
+    def __repr__(self):
+        return f"{self.name} with {len(self)} subjects"
 
 
 def reset_database():
