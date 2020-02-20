@@ -3,9 +3,11 @@ import random
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Tuple, Union, Callable, List
+from typing import Tuple, Union, Callable, List, Iterator
 
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score
@@ -72,6 +74,9 @@ class InMemoryDataset(data.Dataset):
 
     def get_torch_dataloader(self, **kwargs):
         return data.DataLoader(self, **kwargs)
+
+    def get_random_batch(self):
+        return self.__getitem__(random.randint(0, self.__len__() - 1))
 
     def __getitem__(self, item) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -166,6 +171,40 @@ def get_capacity(model: nn.Module) -> int:
     return sum([p.numel() for p in model.parameters()])
 
 
+def plot_grad_flow(named_parameters: Iterator[Tuple[str, torch.nn.Parameter]]) -> plt.Figure:
+    """
+    Plots the gradients flowing through different layers in the net during training.
+    Can be used for checking for possible gradient vanishing / exploding problems.
+
+    Usage: Plug this function in Trainer class after loss.backwards() as
+    "plot_grad_flow(self.model.named_parameters())" to visualize the gradient flow
+    """
+    ave_grads = []
+    max_grads = []
+    layers = []
+    for n, p in named_parameters:
+        if p.requires_grad and ("bias" not in n):
+            layers.append(n.replace('.weight', ''))
+            ave_grads.append(p.grad.abs().mean())
+            max_grads.append(p.grad.abs().max())
+    fig, ax = plt.subplots()
+    ax.bar(np.arange(len(max_grads)), max_grads, alpha=0.1, lw=1, color="c")
+    ax.bar(np.arange(len(max_grads)), ave_grads, alpha=0.1, lw=1, color="b")
+    ax.hlines(0, 0, len(ave_grads) + 1, lw=2, color="k")
+    ax.set_xticks(range(0, len(ave_grads), 1))
+    ax.set_xticklabels(layers, rotation=45)
+    ax.set_xlim(left=0, right=len(ave_grads))
+    ax.set_ylim(bottom=-0.001, top=0.02)  # zoom in on the lower gradient regions
+    ax.set_xlabel("Layers")
+    ax.set_ylabel("average gradient")
+    ax.set_title("Gradient flow")
+    ax.grid(True)
+    ax.legend([Line2D([0], [0], color="c", lw=4),
+               Line2D([0], [0], color="b", lw=4),
+               Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
+    return fig
+
+
 class ModelTrainer:
     """
     TrainerModel is the user of a torch nn.Module model and implements common training and evaluation methods.
@@ -189,6 +228,7 @@ class ModelTrainer:
 
     def print_summary(self):
         print(f"Capacity of the network: {get_capacity(self.model)}")
+        # ml.logger.add_model(self.model, input_batch[0].unsqueeze(0).to(ml.torch_device))
 
     def init_weights(self):
         self.model.apply(init_weights)
@@ -227,8 +267,10 @@ class ModelTrainer:
 
         if visu is not None and random.random() > 0.99:
             visu(epoch, mode, vis_ls)
+            ml.logger.visboard.add_figure(plot_grad_flow(self.model.named_parameters()), group_name='gradient_analysis')
 
         batch_loss = loss.item()  # Loss, in the end, should be a single number
+
         return batch_loss
 
     def run_epoch(self, torch_loader: data.DataLoader,
