@@ -3,6 +3,7 @@ import os
 
 import matplotlib.pyplot as plt
 import torch
+import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 import trainer.lib as lib
@@ -51,6 +52,11 @@ class LogWriter:
         if not os.path.exists(tensor_dir):
             os.mkdir(tensor_dir)
         torch.save(arr, os.path.join(tensor_dir, f'{len(os.listdir(tensor_dir))}.pt'))
+
+    def add_model(self, model: nn.Module, input_batch: torch.Tensor):
+        self.prep()
+        self.visboard.writer.add_graph(model, input_batch)
+        # TODO: Write down some textual representation
 
 
 class VisBoard:
