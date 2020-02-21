@@ -59,10 +59,11 @@ class InMemoryDataset(data.Dataset):
 
         self.ds = session.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
         self.split = session.query(lib.Split) \
+            .filter(self.ds.id == lib.Split.dataset_id) \
+            .filter(lib.Split.name == split_name) \
             .options(joinedload(lib.Split.sbjts)
                      .joinedload(lib.Subject.ims, innerjoin=True)
                      .joinedload(lib.ImStack.semseg_masks, innerjoin=True)) \
-            .filter(self.ds.id == lib.Split.dataset_id and lib.Split.name == split_name) \
             .first()
 
         self.mode = mode
@@ -291,7 +292,11 @@ class ModelTrainer:
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
-                seq = next(loader_iter)
+                try:
+                    seq = next(loader_iter)
+                except StopIteration:
+                    loader_iter = iter(torch_loader)
+                    seq = next(loader_iter)
 
                 torch_env = torch.no_grad if mode == ModelMode.Eval else torch.enable_grad
                 with torch_env():
@@ -305,7 +310,8 @@ class ModelTrainer:
                 # Handle progress bar
                 pbar.update()
                 display_loss = epoch_loss_sum / (i + 1)
-                pbar.set_description(f'Mode: {mode.value}, Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
+                orientation_str = f"Epoch: {epoch}, Mode: {mode.value}"
+                pbar.set_description(f'{orientation_str}, Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
         ml.logger.log(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
 
     def save_to_disk(self, dir_path: str = '.'):

@@ -18,6 +18,7 @@
       <w>datasets</w>
       <w>depthmap</w>
       <w>dicom</w>
+      <w>downsample</w>
       <w>dtype</w>
       <w>fgsm</w>
       <w>foldergrab</w>
@@ -46,7 +47,9 @@
       <w>preds</w>
       <w>preprocessing</w>
       <w>pretrain</w>
+      <w>prog</w>
       <w>pyplot</w>
+      <w>relu</w>
       <w>sbjt</w>
       <w>sbjts</w>
       <w>sbjtsplits</w>
