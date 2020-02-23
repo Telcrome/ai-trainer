@@ -3,7 +3,7 @@ import random
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Tuple, Union, Callable, List, Iterator
+from typing import Tuple, Union, Callable, List, Iterator, Any
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,7 +50,8 @@ class InMemoryDataset(data.Dataset):
     def __init__(self,
                  ds_name: str,
                  split_name: str,
-                 f: Union[Callable[[lib.Subject, ModelMode], List[Tuple[List[np.ndarray], np.ndarray]]], partial],
+                 # List[Tuple[List[np.ndarray], np.ndarray]]], partial],
+                 f: Union[Callable[[lib.Subject, ModelMode], Any], partial],
                  mode: ModelMode = ModelMode.Train,
                  subject_filter: Union[Callable[[lib.Subject], bool], None] = None):
         super().__init__()
