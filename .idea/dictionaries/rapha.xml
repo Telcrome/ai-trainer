@@ -44,6 +44,7 @@
       <w>optim</w>
       <w>outputsize</w>
       <w>pbar</w>
+      <w>postgre</w>
       <w>preds</w>
       <w>preprocessing</w>
       <w>pretrain</w>
@@ -61,6 +62,7 @@
       <w>semsegtpl</w>
       <w>skdata</w>
       <w>statedict</w>
+      <w>subgrids</w>
       <w>tablename</w>
       <w>tensorboard</w>
       <w>testcode</w>
