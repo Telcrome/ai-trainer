@@ -81,7 +81,7 @@ def add_imagestack(s: lib.Subject, file_path: str, binary_id='') -> None:
         raise Exception('This file type is not understood')
 
 
-def add_image_folder(split: lib.Split, folder_path: str, progress=True) -> None:
+def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib.Session()) -> None:
     """
     Iterates through a folder and adds its contents to a dataset.
 
@@ -104,7 +104,7 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True) -> None:
             sg.OneLineProgressMeter(
                 title=f'Adding Image Folder',
                 key='key',
-                current_value=i,
+                current_value=i+1,
                 max_value=len(top_level_files),
                 grab_anywhere=True,
             )
@@ -118,20 +118,21 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True) -> None:
                 from trainer.lib import slugify
                 p_id = meta['PatientID']
                 p_id_clean = slugify(p_id)
-                s_existing = lib.Session().query(lib.Subject).filter(lib.Subject.name == p_id_clean).first()
+                s_existing = sess.query(lib.Subject).filter(lib.Subject.name == p_id_clean).first()
                 if s_existing is not None:
                     print("load patient")
                     s = s_existing
                 else:
                     print("Create new patient")
                     s = lib.Subject.build_new(p_id_clean)
-                s.ims.append(lib.ImStack.build_new(img_data))
+                im = lib.ImStack.build_new(img_data)
+                s.ims.append(im)
                 split.sbjts.append(s)
             else:  # Everything else is assumed to be a traditional image file
                 # Create the new subject
                 raise NotImplementedError()
 
-    lib.Session().commit()
+    # sess.commit()
 
 
 def append_subject(ds: lib.Dataset,

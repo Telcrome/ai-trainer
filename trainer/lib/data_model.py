@@ -67,9 +67,15 @@ class NumpyBinary:
     binary = sa.Column(sa.LargeBinary)
     shape = sa.Column(sa.String())
     dtype = sa.Column(sa.String())
+    # mem_usage = sa.Column(sa.Integer())
+    file_path = sa.Column(sa.String())
 
     def set_array(self, arr: np.ndarray) -> None:
-        self.binary = arr.tobytes()
+        if arr.size * 8 < 1024 * 1024 * 1024:
+            self.binary = arr.tobytes()
+        else:
+            # Array is too large to be stored using Postgresql bytea column
+            raise NotImplementedError()
         self.shape = str(arr.shape)[1:-1]
         self.dtype = str(arr.dtype)
 

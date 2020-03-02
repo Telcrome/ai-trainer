@@ -5,6 +5,7 @@
       <w>artefact</w>
       <w>astype</w>
       <w>autodoc</w>
+      <w>bytea</w>
       <w>childclass</w>
       <w>classdefinitions</w>
       <w>classvalues</w>
@@ -45,6 +46,7 @@
       <w>outputsize</w>
       <w>pbar</w>
       <w>postgre</w>
+      <w>postgresql</w>
       <w>preds</w>
       <w>preprocessing</w>
       <w>pretrain</w>
