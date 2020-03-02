@@ -32,6 +32,7 @@ Miscellaneous objects are general pickled objects.
 
 from __future__ import annotations  # Important for function annotations of symbols that are not loaded yet
 
+import os
 from ast import literal_eval as make_tuple
 from enum import Enum
 from typing import List, Dict
@@ -44,7 +45,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
 # engine = create_engine('sqlite:///:memory:', echo=True)
-con_string = 'postgresql+psycopg2://postgres:!supi1324!@127.0.0.1:5432/test4'
+
+DB_CON = os.getenv('DB_CON')
+con_string = f'postgresql+psycopg2://postgres:{DB_CON}'
 engine = create_engine(con_string)
 # engine = create_engine('sqlite:///./test.db')
 Session = sessionmaker(bind=engine)

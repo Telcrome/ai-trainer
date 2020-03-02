@@ -19,6 +19,12 @@ AI-Trainer helps with building a data generator and it relies on imgaug for it:
 conda install imgaug -c conda-forge
 ```
 
+For PostgreSQL connection trainer expects an environment variable "DB_CON" of the form:
+
+```shell script
+DB_PASS@127.0.0.1:5432/DB_NAME
+```
+
 # Getting started with training models
 
 Trainer currently supports annotating images and videos.
