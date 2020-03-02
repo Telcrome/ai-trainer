@@ -21,17 +21,18 @@ def trainer():
     pass
 
 
-@trainer.command(name='download')
-@click.option('--parent-path', '-p', default=os.getcwd, help='Directory that the dataset will appear in')
-@click.option('--name', '-n', help='If provided, the dataset will not be redownloaded everytime')
-@click.option('--url', '-u', help='Needs to point to a zip file')
-def dataset_download(parent_path, name, url):
-    from trainer.lib import download_and_extract
-    local_path = download_and_extract(online_url=url,
-                                      parent_dir=parent_path,
-                                      dir_name=name)
-    output = f'The directory is saved to {local_path}'
-    click.echo(output)
+@trainer.command(name='list-subjects')
+def trainer_list_subjects():
+    res = lib.Session().query(lib.Subject)  # @.filter(lib.Dataset.name == dataset_name)
+    for s in res:
+        print(s)
+
+
+@trainer.command(name='list-datasets')
+def trainer_list_subjects():
+    res = lib.Session().query(lib.Dataset)  # @.filter(lib.Dataset.name == dataset_name)
+    for d in res:
+        print(d)
 
 
 @trainer.command(name='init')
@@ -55,64 +56,25 @@ def dataset_init(parent_path, name):
 @trainer.group()
 def ds():
     """"
-    Command line tools concerned with one dataset that is currently on pwd
+    Command line tools concerned with one dataset
     """
     pass
 
 
 @ds.command(name="annotate")
-@click.option('--dataset-path', '-p', default=os.getcwd, help='Path to a dataset')
+@click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
 @click.option('--subject-name', '-s', default='', help='If provided, opens the given subject from the dataset')
-def dataset_annotate(dataset_path: str, subject_name: str):
+def dataset_annotate(dataset_name: str, subject_name: str):
     """
     Start annotating subjects in the dataset.
     """
+    d: lib.Dataset = lib.Session().query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
+    if d is None:
+        print('There is no such dataset')
     if not subject_name:
         # Subject name needs to be picked
-        d = lib.Dataset.from_disk(dataset_path)
-        subject_name = d.get_subject_name_list()[0]  # Just pick the first subject
-    run_window(AnnotationGui, os.path.join(dataset_path, subject_name), dataset_path)
-
-
-@ds.command(name="server")
-@click.option('--dataset-path', '-p', default=os.getcwd, help='Path to a dataset')
-def dataset_serve(dataset_path: str):
-    print(dataset_path)
-    from trainer.server import app
-    app.run()
-
-
-@ds.command(name="train")
-@click.option('--dataset-path', '-p', default=os.getcwd, help='The path to the directory where the dataset lives')
-def dataset_train(dataset_path: str):
-    """
-    Trains the models that can be trained from this dataset.
-
-    While True:
-        1. Analyses the current subjects for predictable content (structures, classes...)
-        2. Determines which models can be trained for helping the annotation process
-        3. Cycles over the different models:
-            3.1 -> trains them for one epoch
-            3.2 -> saves the weights and metadata into the dataset.
-    """
-    if not lib.dir_is_valid_entity(dataset_path):
-        raise Exception("The given directory is not a valid Dataset")
-    raise NotImplementedError()
-    # d = ml.Dataset.from_disk(dataset_path)
-    #
-    # seg_structs = d.compute_segmentation_structures()
-    #
-    # for str_name in seg_structs:
-    #     click.echo(f"\n{str_name}: {len(seg_structs[str_name])}")
-    #     from trainer.ml.predictor import compile_and_train
-    #     compile_and_train(d, str_name)
-
-
-@ds.command(name='visualize')
-@click.option('--dataset-path', '-p', default=os.getcwd)
-@click.option('--subject-name', '-s', default='')
-def dataset_visualize(dataset_path: str, subject_name: str):
-    raise NotImplementedError()
+        subject_name = d.sbjts[0]  # Just pick the first subject
+    run_window(AnnotationGui, subject_name, dataset_name)
 
 
 @ds.command(name='add-image-folder')

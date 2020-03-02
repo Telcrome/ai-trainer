@@ -5,6 +5,7 @@ from typing import Tuple
 import numpy as np
 import skimage
 import sqlalchemy as sa
+from sqlalchemy.orm.session import Session
 
 import trainer.lib as lib
 
@@ -45,13 +46,13 @@ class DemoDataset(ABC):
         self.kaggle_storage = os.path.join(self.data_path, 'kaggle_datasets')
 
     @abstractmethod
-    def build_dataset(self, sess=None) -> Tuple[lib.Dataset, sa.orm.session.Session]:
+    def build_dataset(self, sess: Session = lib.Session()) -> lib.Dataset:
         """
-
+        Builds a new dataset if it does not yet exists in the database.
         """
         if sess is None:
             sess = lib.Session()
         d = sess.query(lib.Dataset).filter(lib.Dataset.name == self.ds_name).first()
         if d is None:
             d = lib.Dataset.build_new(self.ds_name)
-        return d, sess
+        return d

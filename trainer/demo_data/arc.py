@@ -65,8 +65,8 @@ class ArcDataset(dd.DemoDataset):
                                                 [im.extra_info['sizeeq'] for im in s.ims])
             d.get_split_by_name(split_name).sbjts.append(s)
 
-    def build_dataset(self, sess=None) -> lib.Dataset:
-        d, sess = super().build_dataset(sess)
+    def build_dataset(self, sess=lib.Session()) -> lib.Dataset:
+        d = super().build_dataset(sess=sess)
 
         # Dataset does not exist yet, build it!
         ss_tpl = lib.SemSegTpl.build_new(

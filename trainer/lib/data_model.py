@@ -49,14 +49,11 @@ from sqlalchemy.orm import sessionmaker, relationship
 DB_CON = os.getenv('DB_CON')
 con_string = f'postgresql+psycopg2://postgres:{DB_CON}'
 engine = create_engine(con_string)
-# engine = create_engine('sqlite:///./test.db')
 Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
 
-TABLENAME_CLASSVALUES = 'classvalues'
 TABLENAME_CLASSDEFINITIONS = 'classdefinitions'
-TABLENAME_CLASSIFICATIONS = 'classifications'
 TABLENAME_SEMSEGCLASS = 'semsegtclasses'
 TABLENAME_SEMSEGTPL = 'semsegtpls'
 TABLENAME_SEM_SEG = 'semsegmasks'
@@ -89,8 +86,31 @@ class ClassType(Enum):
     Ordinal = 'ordinal'
 
 
+class ClassDefinition(Base):
+    __tablename__ = TABLENAME_CLASSDEFINITIONS
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String())
+    cls_type = sa.Column(sa.Enum(ClassType))
+    values: sa.Column(pg.JSONB())
+
+    @classmethod
+    def build_new(cls, name: str, cls_type: ClassType, values: List[str]):
+        res = cls()
+        res.name = name
+        res.cls_type = cls_type
+        res.values = values
+        return res
+
+    def __repr__(self):
+        return f"Class definition of {self.name} with type: {self.cls_type}\nValues: {self.values}"
+
+
 class Classifiable:
     classes = sa.Column(pg.JSONB())
+
+    # definition_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_CLASSDEFINITIONS}.id'))
+    # definition = relationship(ClassDefinition)
 
     def set_class(self, class_name: str, class_val: str):
         if self.classes:
@@ -106,7 +126,7 @@ class Classifiable:
 
     @classmethod
     def query_all_with_class(cls, session: sa.orm.session.Session, class_name: str):
-        return session.query(cls).filter(cls.classes.has_key(class_name))
+        return session.query(cls).filter(class_name in cls.classes)
 
 
 class MaskType(Enum):
@@ -241,19 +261,16 @@ class Subject(Classifiable, Base):
     For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
     text (symptom description, history) and structured data (date of birth, nationality...).
 
-    Wherever possible the data is saved in json format, but for example for imaging only the metadata is saved
-    as json, the actual image file can be found in the binaries-list.
+    The extra_info attribute can be used freely for a json dict.
 
     In future releases a complete changelog will be saved in a format suitable for process mining.
-    Currently one subject can only live in one dataset, as a result a subject cannot be shared among datasets.
     """
     __tablename__ = TABLENAME_SUBJECTS
 
     id = sa.Column(sa.Integer(), primary_key=True)
-    dataset_id = sa.Column(sa.Integer(), sa.ForeignKey(f'{TABLENAME_DATASETS}.id'))
     extra_info = sa.Column(pg.JSONB())
     name = sa.Column(sa.String())
-    ims = relationship(ImStack)
+    ims: List[ImStack] = relationship(ImStack)
 
     @classmethod
     def build_new(cls, name: str, extra_info: Dict = None):
@@ -264,6 +281,9 @@ class Subject(Classifiable, Base):
         else:
             res.extra_info = {}
         return res
+
+    def __repr__(self):
+        return f'Subject {self.name}\nExtra Info: {self.extra_info}\nImStacks: {self.ims}'
 
 
 sbjts_splits_association = sa.Table(
@@ -280,7 +300,7 @@ class Split(Base):
     id = sa.Column(sa.Integer(), primary_key=True)
     dataset_id = sa.Column(sa.Integer(), sa.ForeignKey(f'{TABLENAME_DATASETS}.id'))
     name = sa.Column(sa.String())
-    sbjts = relationship(Subject, secondary=sbjts_splits_association)
+    sbjts: List[Subject] = relationship(Subject, secondary=sbjts_splits_association)
 
     def __len__(self):
         return len(self.sbjts)
@@ -288,13 +308,18 @@ class Split(Base):
     def __getitem__(self, item):
         return self.sbjts[item]
 
+    def __repr__(self):
+        return f'Split {self.name} with {len(self.sbjts)} subjects'
+
 
 class Dataset(Base):
+    """
+    A dataset is a collection of splits.
+    """
     __tablename__ = TABLENAME_DATASETS
 
     id = sa.Column(sa.Integer, primary_key=True)
-    splits = relationship(Split)
-    sbjts = relationship(Subject)
+    splits: List[Split] = relationship(Split)
     name = sa.Column(sa.String())
 
     @classmethod
@@ -307,11 +332,9 @@ class Dataset(Base):
         split = Split()
         split.name = split_name
         split.sbjts = []
-        # noinspection PyUnresolvedReferences
         self.splits.append(split)
 
     def get_split_by_name(self, split_name: str):
-        # noinspection PyTypeChecker
         for split in self.splits:
             if split.name == split_name:
                 return split
@@ -319,7 +342,6 @@ class Dataset(Base):
 
     def get_summary(self) -> str:
         split_summary = ""
-        # noinspection PyTypeChecker
         for split in self.splits:
             split_summary += f'{split}\n'
         return split_summary
@@ -328,16 +350,17 @@ class Dataset(Base):
         raise NotImplementedError()
 
     def __len__(self):
-        # noinspection PyTypeChecker
-        return len(self.sbjts)
+        # TODO: Handle the case of the same subject being in different splits
+        return sum([len(split.sbjts) for split in self.splits])
 
     def __repr__(self):
-        return f"{self.name} with {len(self)} subjects"
+        return f"{self.name} with {len(self)} subjects\nSplits: {self.splits}"
 
 
 def reset_database():
     sbjts_splits_association.drop(bind=engine)
     mappers = [
+        ClassDefinition,
         SemSegClass,
         SemSegTpl,
         SemSegMask,
