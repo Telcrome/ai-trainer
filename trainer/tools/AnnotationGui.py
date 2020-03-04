@@ -196,28 +196,6 @@ class AnnotationGui(TWindow):
         next_split = lib.pick_from_list(self.d.splits)
         next_subject = lib.pick_from_list(next_split.sbjts)
         self.set_current_subject(next_subject)
-        # tool_width = 20
-        # tools = [
-        #     [sg.Button(button_text="Annotate subject", key='open_subject', size=(tool_width, 1))]
-        # ]
-        # main_layout = [
-        #     [sg.Text(text="Pick subject for annotation", size=(50, 1), key='lbl')],
-        #     [sg.Listbox(key='ls_s',
-        #                 values=[s.name for s in self.d.splits[0]],
-        #                 size=(60, 20)),
-        #      sg.Column(tools)]
-        # ]
-
-        # window = sg.Window("Pick your next subject", layout=main_layout)
-        #
-        # event, values = window.read()
-        # window.close()
-        #
-        # if event == "open_subject" and values['ls_s']:
-        #     next_subject_name = values['ls_s'][0]
-        #     self.set_current_subject(
-        #         lib.Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
-        #     print(f"Selecting next subject: {next_subject_name}")
 
     def save_all(self):
         print(f"Starting Save")

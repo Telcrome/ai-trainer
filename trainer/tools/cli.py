@@ -92,15 +92,15 @@ def dataset_train(dataset_name: str):
     # d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
 
     BATCH_SIZE = 2
-    EPOCHS = 1000
+    EPOCHS = 5
 
-    train_set = ml.InMemoryDataset(dataset_name, 'default', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Eval)
+    train_set = ml.InMemoryDataset(dataset_name, 'default', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Train)
 
     train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
     b = next(iter(train_loader))
     net_wrapper = ml.SegNetwork()
     net_wrapper.visualize_input_batch(b).show()
-    x, y = b
+    x, y = b[0]
     net = ml.ModelTrainer(
         lib.create_identifier('AnnoProposal'),
         net_wrapper.model,
@@ -108,9 +108,15 @@ def dataset_train(dataset_name: str):
         net_wrapper.crit
     )
     # net.load_from_disk(r'C:\Users\rapha\Desktop\epoch78.pt')
-    out = net.model([inp.to(ml.torch_device) for inp in x])
+    # out = net.model([inp.to(ml.torch_device) for inp in x])
+    # with torch.no_grad():
+    #     net_wrapper.visualize_input_batch((x, out.cpu())).show()
+    for epoch in range(EPOCHS):
+        net.run_epoch(train_loader, epoch=0, mode=ml.ModelMode.Train, batch_size=2, steps=100)
     with torch.no_grad():
+        out = net.model([inp.to(ml.torch_device) for inp in x])
         net_wrapper.visualize_input_batch((x, out.cpu())).show()
+
 
 @ds.command(name='add-image-folder')
 @click.option('--dataset-path', '-p', default=os.getcwd)

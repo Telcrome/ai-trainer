@@ -264,8 +264,9 @@ class ModelTrainer:
         if mode == ModelMode.Train:
             loss.backward()
             self.optimizer.step()
-        # noinspection PyUnboundLocalVariable
-        evaluator.update(y_.detach().cpu().numpy(), y.detach().cpu().numpy())
+        if evaluator is not None:
+            # noinspection PyUnboundLocalVariable
+            evaluator.update(y_.detach().cpu().numpy(), y.detach().cpu().numpy())
 
         if visu is not None and random.random() > 0.99:
             visu(epoch, mode, vis_ls)
@@ -312,7 +313,12 @@ class ModelTrainer:
                 pbar.update()
                 display_loss = epoch_loss_sum / (i + 1)
                 orientation_str = f"Epoch: {epoch}, Mode: {mode.value}"
-                pbar.set_description(f'{orientation_str}, Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
+                if metric is not None:
+                    pbar.set_description(
+                        f'{orientation_str}, Loss: {display_loss:05f}, Metric: {metric.get_result():05f}')
+                else:
+                    pbar.set_description(
+                        f'{orientation_str}, Loss: {display_loss:05f}')
         ml.logger.log(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
 
     def save_to_disk(self, dir_path: str = '.'):

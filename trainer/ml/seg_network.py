@@ -69,8 +69,8 @@ class SegNetwork:
         self.opti = optim.Adam(self.model.parameters(), lr=5e-3)
         self.crit = SegCrit(1., 2., (0.5, 0.5))
 
-    def visualize_input_batch(self, te: Tuple[List[np.ndarray], np.ndarray]) -> plt.Figure:
-        x, y = te
+    def visualize_input_batch(self, te: List[Tuple[List[np.ndarray], np.ndarray]]) -> plt.Figure:
+        x, y = te[0]
         x = x[0]
         fig, (ax1, ax2) = plt.subplots(1, 2)
         im_2d = x[0, 0, :, :]
@@ -96,7 +96,7 @@ class SegNetwork:
 
     @staticmethod
     def preprocess_segmap(s: lib.Subject,
-                          mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[List[np.ndarray], np.ndarray]:
+                          mode: ml.ModelMode = ml.ModelMode.Train) -> List[Tuple[List[np.ndarray], np.ndarray]]:
         imstack_with_masks = list(filter(lambda istck: len(istck.semseg_masks) > 0, s.ims))
         imstack: lib.ImStack = random.choice(imstack_with_masks)
 
@@ -143,8 +143,8 @@ class SegNetwork:
             gt_stacked = np.zeros((2, 384, 384), dtype=np.float32)
             gt_stacked[0, :, :] = cv2.resize(gt[:, :, 0], (384, 384))
             gt_stacked[1, :, :] = cv2.resize(gt[:, :, 1], (384, 384))
-            return [im], gt_stacked
-        return [im], np.empty(0)
+            return [([im], gt_stacked)]
+        return [([im], np.empty(0))]
 
 
 def double_conv(in_channels, out_channels):
