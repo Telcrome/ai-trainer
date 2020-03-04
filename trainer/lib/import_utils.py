@@ -129,6 +129,7 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
                 im = lib.ImStack.build_new(img_data)
                 s.ims.append(im)
                 split.sbjts.append(s)
+                sess.add(s)
             else:  # Everything else is assumed to be a traditional image file
                 # Create the new subject
                 raise NotImplementedError()

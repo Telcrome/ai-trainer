@@ -73,8 +73,10 @@ def dataset_annotate(dataset_name: str, subject_name: str):
         print('There is no such dataset')
     if not subject_name:
         # Subject name needs to be picked
-        subject_name = d.splits[0].sbjts[0]  # Just pick the first subject
-    run_window(AnnotationGui, subject_name, dataset_name)
+        s = d.splits[0].sbjts[0]  # Just pick the first subject
+    else:
+        raise NotImplementedError()
+    run_window(AnnotationGui, d, s)
 
 
 @ds.command(name='add-image-folder')

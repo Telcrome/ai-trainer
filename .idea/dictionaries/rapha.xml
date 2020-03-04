@@ -65,7 +65,9 @@
       <w>segmap</w>
       <w>segmentations</w>
       <w>segs</w>
+      <w>segsegclass</w>
       <w>semseg</w>
+      <w>semsegclass</w>
       <w>semsegmasks</w>
       <w>semsegtpl</w>
       <w>skdata</w>
@@ -80,6 +82,7 @@
       <w>thresholding</w>
       <w>tmost</w>
       <w>torchset</w>
+      <w>tpls</w>
       <w>tqdm</w>
       <w>trgt</w>
       <w>visboard</w>

@@ -10,7 +10,7 @@ Everything else required should be stored in the subject.
 import os
 import random
 import sys
-from typing import Tuple, List, Callable
+from typing import Tuple, List, Callable, Union
 
 import PySimpleGUI as sg
 import cv2
@@ -64,14 +64,18 @@ class AnnotationGui(TWindow):
     Opens a tools window that can be used to fill one subject with values.
     """
 
-    def __init__(self, te_path: str, d_path: str = ""):
-        if d_path:
-            self.d = lib.Dataset.from_disk(d_path)
-        self.current_subject: lib.Subject = None
-        self.seg_structs: List = None
+    def __init__(self, d: lib.Dataset, initial_subject: lib.Subject, sess=lib.Session()):
+        self.session = sess
+        self.d = d
+        self.current_subject: lib.Subject = initial_subject
+        self.seg_structs: List[lib.SemSegTpl] = sess.query(lib.SemSegTpl).all()
+        self.class_defs: List[lib.ClassDefinition] = sess.query(lib.ClassDefinition).all()
         self.frame_number, self.brush, self._struct_index = 0, Brushes.Standard, -1
         self.img_data, self.mask_data, self.mask_name, self._made_changes = None, None, '', False
-        self._selected_source_binary, self._selected_gt_binary, self._struct_name = None, None, None
+        self._selected_source_binary: Union[lib.ImStack, None] = None
+        self._selected_gt_binary: Union[lib.SemSegMask, None] = None
+        self._selected_struct: lib.SemSegTpl = self.seg_structs[0]
+        self._selected_semseg_cls: lib.SemSegClass = self._selected_struct.ss_classes[0]
 
         self.seg_tool = SegToolController(self.selection_event_handler)
 
@@ -148,7 +152,7 @@ class AnnotationGui(TWindow):
 
         # Class selector
         self.class_selector = TClassSelector()
-        self.class_selector.configure_selection(self.d)
+        self.class_selector.configure_selection(self.class_defs)
         self.content_grid.add_tool(self.class_selector)
 
         # Source binary selector
@@ -163,7 +167,10 @@ class AnnotationGui(TWindow):
         self.lst_gt_binaries.currentItemChanged.connect(self.lst_gt_binaries_changed)
         self.content_grid.add_tool(self.lst_gt_binaries)
 
-        self.set_current_subject(lib.Subject.from_disk(te_path))
+        self.set_current_subject(initial_subject)
+
+        for s in self.seg_structs:
+            self.lst_gt_binaries.addItem(f'{s.name}')
 
         self.console.push_to_ipython({'gui': self, 'dataset': self.d})
 
@@ -202,7 +209,7 @@ class AnnotationGui(TWindow):
         main_layout = [
             [sg.Text(text="Pick subject for annotation", size=(50, 1), key='lbl')],
             [sg.Listbox(key='ls_s',
-                        values=[te_name for te_name in self.d.get_subject_name_list()],
+                        values=[s.name for s in self.d.splits[0]],
                         size=(60, 20)),
              sg.Column(tools)]
         ]
@@ -291,42 +298,45 @@ class AnnotationGui(TWindow):
 
         # Load the list of source binaries into GUI
         self.lst_source_binaries.clear()
-        self.lst_gt_binaries.clear()
-        src_names = self.current_subject._get_binary_list_filtered(lambda x: x['binary_type'] == 'image_stack')
-        if src_names:
-            for b in src_names:
-                self.lst_source_binaries.addItem(str(b))
-            self.select_source_binary(src_names[0])
-
+        for im in s.ims:
+            self.lst_source_binaries.addItem(im.__repr__())
+        self.select_source_binary(s.ims[0])
+        # self.lst_gt_binaries.clear()
+        # src_names = self.current_subject._get_binary_list_filtered(lambda x: x['binary_type'] == 'image_stack')
+        # if src_names:
+        #     for b in src_names:
+        #         self.lst_source_binaries.addItem(str(b))
+        #     self.select_source_binary(src_names[0])
+        #
         self.update()
         self.console.push_to_ipython({"current_subject": s})
 
-    def select_source_binary(self, name: str, auto_save=True):
-        if auto_save and self.mask_data is not None and self._made_changes:
-            self.save_to_disk()
-        self.mask_data, self.mask_name, self.frame_number = None, name, 0
+    def select_source_binary(self, im: lib.ImStack):
+        # if auto_save and self.mask_data is not None and self._made_changes:
+        #     self.save_to_disk()
+        # self.mask_data, self.mask_name, self.frame_number = None, name, 0
 
-        self.img_data, self._selected_source_binary = self.current_subject._get_binary(name), name
-        self.seg_tool.set_img_stack(self.img_data)
+        self._selected_source_binary, self._selected_gt_binary = im, None
+        self.seg_tool.set_img_stack(self._selected_source_binary)
+
         # Load the possible structures into lst_gt
         self.lst_gt_binaries.clear()
-        meta = self.current_subject._get_binary_model(name)
-        self.seg_structs = list(meta["meta_data"]["structures"].keys())
-        for s in self.seg_structs:
-            self.lst_gt_binaries.addItem(f'{s}: {meta["meta_data"]["structures"][s]}')
+        # meta = self.current_subject._get_binary_model(name)
+        # self.seg_structs = list(meta["meta_data"]["structures"].keys())
 
-        # Preselect a mask if there is only one structure anyway
-        if self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, name, self.frame_number)):
-            self.select_gt_binary(self.seg_structs[0], for_name=name)
-        else:
-            self._selected_gt_binary, self.mask_data = None, None
+        # TODO Preselect a mask if there is only one structure anyway
+        self.select_gt_binary()
+        # if self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, name, self.frame_number)):
+        #     self.select_gt_binary(self.seg_structs[0], for_name=name)
+        # else:
+        #     self._selected_gt_binary, self.mask_data = None, None
 
         # Inform the class selector about the new selected binary
-        self.class_selector.set_binary_name(name)
+        self.class_selector.set_img_stack(self._selected_source_binary)
 
         self.update()
 
-    def select_gt_binary(self, structure_name, for_name: str, frame_number=0, auto_create=False, auto_save=True):
+    def select_gt_binary(self, auto_create=False):
         """
         For every source binary the subject knows which structures can exist by template.
         This function looks for the ground truth and if there is none creates a new fitting one.
@@ -339,37 +349,39 @@ class AnnotationGui(TWindow):
         """
 
         # See if this structure already is described in one of the masks of this frame number
-        gt_names = self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, for_name, frame_number))
+        # gt_names = self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, for_name, frame_number))
 
         # Currently assume that only one masks exists for every frame, which describes all structs
-        assert len(gt_names) <= 1
+        # assert len(gt_names) <= 1
 
-        def load_mask(gt_name: str) -> Tuple[str, str, int, np.ndarray]:
-            """
-            Loads the right mask out of the subject.
-            :param gt_name: The name of the ground truth binary that contains masks of all structures.
-            :return:
-            """
-            gt = self.current_subject._get_binary_model(gt_name)
-            gt_arr = self.current_subject._get_binary(gt_name)
-            i = gt['meta_data']['structures'].index(structure_name)
-            return gt_name, structure_name, i, gt_arr
+        # def load_mask(gt_name: str) -> Tuple[str, str, int, np.ndarray]:
+        #     """
+        #     Loads the right mask out of the subject.
+        #     :param gt_name: The name of the ground truth binary that contains masks of all structures.
+        #     :return:
+        #     """
+        #     gt = self.current_subject._get_binary_model(gt_name)
+        #     gt_arr = self.current_subject._get_binary(gt_name)
+        #     i = gt['meta_data']['structures'].index(structure_name)
+        #     return gt_name, structure_name, i, gt_arr
+        masks = self._selected_source_binary.semseg_masks
+        if masks:
+            self._selected_gt_binary = masks[0]
+        # if gt_names:
+        #     self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(gt_names[0])
+        # elif auto_create:
+        #     # Create a new ground truth for this frame
+        #     src_b = self.current_subject._get_binary(for_name)
+        #     new_gt_name = self.current_subject.add_new_gt_by_arr(
+        #         np.zeros((src_b.shape[1], src_b.shape[2], len(self.seg_structs)), dtype=np.bool),
+        #         structure_names=self.seg_structs,
+        #         mask_of=for_name,
+        #         frame_number=self.frame_number)
+        #     self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(new_gt_name)
+        # else:
+        #     self._selected_gt_binary, self.mask_data = None, None
 
-        if gt_names:
-            self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(gt_names[0])
-        elif auto_create:
-            # Create a new ground truth for this frame
-            src_b = self.current_subject._get_binary(for_name)
-            new_gt_name = self.current_subject.add_new_gt_by_arr(
-                np.zeros((src_b.shape[1], src_b.shape[2], len(self.seg_structs)), dtype=np.bool),
-                structure_names=self.seg_structs,
-                mask_of=for_name,
-                frame_number=self.frame_number)
-            self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(new_gt_name)
-        else:
-            self._selected_gt_binary, self.mask_data = None, None
-
-        self.update()
+            self.update()
         self._made_changes = False
 
     def update_log(self):
@@ -398,17 +410,15 @@ class AnnotationGui(TWindow):
         for p in ps:
             self.add_point(p, add=add)
 
-        self.seg_tool.set_mask(self.mask_data, self.current_subject._get_binary_model(self._selected_source_binary))
-        self.seg_tool.display_mask(self._struct_name)
+        self.seg_tool.set_mask(self._selected_gt_binary)
+        self.seg_tool.display_mask(self._selected_struct)
         self._made_changes = True
 
     def change_frame(self, frame_number: int):
-        if self.img_data.shape[0] - 1 >= frame_number >= 0:
+        if self._selected_source_binary.get_ndarray().shape[0] - 1 >= frame_number >= 0:
             self.frame_number = frame_number
 
-            self.select_gt_binary(self._struct_name,
-                                  for_name=self._selected_source_binary,
-                                  frame_number=frame_number)
+            self.select_gt_binary()
 
             self.update()
         else:
@@ -440,10 +450,9 @@ class AnnotationGui(TWindow):
 
     def update(self):
         self.seg_tool.display_img_stack(frame_number=self.frame_number)
-        self.seg_tool.set_mask(self.mask_data,
-                               self.current_subject._get_binary_model(self._selected_source_binary))
-        self.seg_tool.display_mask(self._struct_name)
-        self.frame_controller.set_frame_number(self.frame_number, self.img_data.shape[0])
+        self.seg_tool.set_mask(self._selected_gt_binary)
+        self.seg_tool.display_mask(self._selected_semseg_cls)
+        self.frame_controller.set_frame_number(self.frame_number, self._selected_source_binary.get_ndarray().shape[0])
 
     def find_annotations(self):
         struct_name = self.seg_structs[self._struct_index]

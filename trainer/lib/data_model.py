@@ -36,7 +36,7 @@ from functools import reduce
 import os
 from ast import literal_eval as make_tuple
 from enum import Enum
-from typing import List, Dict
+from typing import List, Dict, Union
 import random
 
 import numpy as np
@@ -73,6 +73,10 @@ class NumpyBinary:
     file_path = sa.Column(sa.String())
     stored_in_db = sa.Column(sa.Boolean())
 
+    @sa.orm.reconstructor
+    def init_on_load(self):
+        self.tmp_arr: Union[np.ndarray, None] = None
+
     @staticmethod
     def get_bin_disk_folder() -> str:
         p = os.getenv('BinStorage')
@@ -93,6 +97,7 @@ class NumpyBinary:
         return self.file_path
 
     def set_array(self, arr: np.ndarray) -> None:
+        self.tmp_arr = arr
         self.shape = str(arr.shape)[1:-1]
         self.dtype = str(arr.dtype)
         if arr.size * 8 < 1024 * 1024 * 1024:
@@ -104,10 +109,12 @@ class NumpyBinary:
             self.stored_in_db = False
 
     def get_ndarray(self) -> np.ndarray:
-        if self.stored_in_db:
-            return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
-        else:
-            return np.load(self.file_path)
+        if self.tmp_arr is None:
+            if self.stored_in_db:
+                self.tmp_arr = np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
+            else:
+                self.tmp_arr = np.load(self.file_path)
+        return self.tmp_arr
 
     def __repr__(self):
         return f"Numpy Binary with shape ({self.shape}) and type {self.dtype}>"
@@ -125,7 +132,7 @@ class ClassDefinition(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String())
     cls_type = sa.Column(sa.Enum(ClassType))
-    values: sa.Column(pg.JSONB())
+    values = sa.Column(pg.JSONB())
 
     @classmethod
     def build_new(cls, name: str, cls_type: ClassType, values: List[str]):
@@ -154,8 +161,12 @@ class Classifiable:
     def remove_class(self, class_name: str):
         self.classes.pop(class_name)
 
-    def get_class(self, class_name: str):
-        return self.classes[class_name]
+    def get_class(self, class_name: str):  # -> Union[Dict, None]:
+        if self.classes and class_name in self.classes:
+            res = self.classes[class_name]
+            return res
+        else:
+            return None
 
     @classmethod
     def query_all_with_class(cls, session: sa.orm.session.Session, class_name: str):
@@ -190,6 +201,9 @@ class SemSegClass(Base):
         res.name = name
         res.ss_type = ss_type
         return res
+
+    def __repr__(self):
+        return f'SemSegClass {self.name} of type {self.ss_type}'
 
 
 class SemSegTpl(Base):
