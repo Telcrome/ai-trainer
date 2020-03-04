@@ -5,6 +5,8 @@
       <w>artefact</w>
       <w>astype</w>
       <w>autodoc</w>
+      <w>binstorage</w>
+      <w>bmost</w>
       <w>bytea</w>
       <w>childclass</w>
       <w>classdefinitions</w>
@@ -31,6 +33,7 @@
       <w>inps</w>
       <w>jsonclass</w>
       <w>kaggle</w>
+      <w>lmost</w>
       <w>logdir</w>
       <w>logits</w>
       <w>logwriter</w>
@@ -51,8 +54,11 @@
       <w>preprocessing</w>
       <w>pretrain</w>
       <w>prog</w>
+      <w>progs</w>
+      <w>progtree</w>
       <w>pyplot</w>
       <w>relu</w>
+      <w>rmost</w>
       <w>sbjt</w>
       <w>sbjts</w>
       <w>sbjtsplits</w>
@@ -64,6 +70,7 @@
       <w>semsegtpl</w>
       <w>skdata</w>
       <w>statedict</w>
+      <w>subgrid</w>
       <w>subgrids</w>
       <w>tablename</w>
       <w>tensorboard</w>
@@ -71,6 +78,7 @@
       <w>testoutput</w>
       <w>testset</w>
       <w>thresholding</w>
+      <w>tmost</w>
       <w>torchset</w>
       <w>tqdm</w>
       <w>trgt</w>

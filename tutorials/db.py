@@ -31,6 +31,6 @@ if __name__ == '__main__':
     d = lib.Dataset.build_new('US_BONE')
     d.add_split('default')
     lib.add_image_folder(d.splits[0], folder_path=f_path, sess=session)
-
     session.add(d)
+
     session.commit()

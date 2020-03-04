@@ -39,6 +39,15 @@ def create_identifier(hint: str = '') -> str:
     return f"{dt_string}_{hint}" if hint else dt_string
 
 
+def delete_dir(dir_path: str, blocking=True):
+    if os.path.exists(dir_path):
+        import shutil
+        shutil.rmtree(dir_path, ignore_errors=True)
+        if blocking:
+            while os.path.exists(dir_path):
+                pass
+
+
 def standalone_foldergrab(
         folder_not_file: bool = False,
         optional_inputs: List[Tuple[str, str]] = None,

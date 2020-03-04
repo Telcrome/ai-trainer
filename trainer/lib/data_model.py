@@ -32,10 +32,12 @@ Miscellaneous objects are general pickled objects.
 
 from __future__ import annotations  # Important for function annotations of symbols that are not loaded yet
 
+from functools import reduce
 import os
 from ast import literal_eval as make_tuple
 from enum import Enum
 from typing import List, Dict
+import random
 
 import numpy as np
 import sqlalchemy as sa
@@ -69,18 +71,43 @@ class NumpyBinary:
     dtype = sa.Column(sa.String())
     # mem_usage = sa.Column(sa.Integer())
     file_path = sa.Column(sa.String())
+    stored_in_db = sa.Column(sa.Boolean())
+
+    @staticmethod
+    def get_bin_disk_folder() -> str:
+        p = os.getenv('BinStorage')
+        if not p:
+            raise Exception("Please set the path where I may store binaries which are too big for the db")
+        if not os.path.exists(p):
+            os.mkdir(p)
+        return p
+
+    def get_bin_disk_path(self):
+        if not self.file_path:
+            existing = os.listdir(NumpyBinary.get_bin_disk_folder())
+            shape_str = reduce(lambda x, y: f'{x}_{y}', make_tuple(f'({self.shape})'))
+            proposal: str = f'NPY_{self.dtype}_{shape_str}'
+            while f'{proposal}.npy' in existing:
+                proposal += f'_{random.randint(0, 50000):05d}'
+            self.file_path = os.path.join(NumpyBinary.get_bin_disk_folder(), f'{proposal}.npy')
+        return self.file_path
 
     def set_array(self, arr: np.ndarray) -> None:
-        if arr.size * 8 < 1024 * 1024 * 1024:
-            self.binary = arr.tobytes()
-        else:
-            # Array is too large to be stored using Postgresql bytea column
-            raise NotImplementedError()
         self.shape = str(arr.shape)[1:-1]
         self.dtype = str(arr.dtype)
+        if arr.size * 8 < 1024 * 1024 * 1024:
+            self.binary = arr.tobytes()
+            self.stored_in_db = True
+        else:
+            # Array is too large to be stored using Postgresql bytea column
+            np.save(self.get_bin_disk_path(), arr)
+            self.stored_in_db = False
 
     def get_ndarray(self) -> np.ndarray:
-        return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
+        if self.stored_in_db:
+            return np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
+        else:
+            return np.load(self.file_path)
 
     def __repr__(self):
         return f"Numpy Binary with shape ({self.shape}) and type {self.dtype}>"
@@ -364,6 +391,10 @@ class Dataset(Base):
 
 
 def reset_database():
+    # Reset storage on disk
+    from trainer.lib.misc import delete_dir
+    delete_dir(NumpyBinary.get_bin_disk_folder())
+
     sbjts_splits_association.drop(bind=engine)
     mappers = [
         ClassDefinition,

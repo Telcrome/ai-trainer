@@ -97,6 +97,7 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
     :param folder_path: Top level folder path
     :param split: The dataset split this data is appended to.
     :param progress: If true, displays a progress bar
+    :param sess: database session, defaults to a new session
     """
     top_level_files = os.listdir(folder_path)
     for i, file_name in enumerate(top_level_files):
@@ -131,8 +132,6 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
             else:  # Everything else is assumed to be a traditional image file
                 # Create the new subject
                 raise NotImplementedError()
-
-    # sess.commit()
 
 
 def append_subject(ds: lib.Dataset,
