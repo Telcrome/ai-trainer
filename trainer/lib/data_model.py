@@ -118,7 +118,8 @@ class NumpyBinary:
     def get_ndarray(self) -> np.ndarray:
         if self.tmp_arr is None:
             if self.stored_in_db:
-                self.tmp_arr = np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})')).copy()
+                self.tmp_arr = np.frombuffer(self.binary, dtype=self.dtype).reshape(
+                    make_tuple(f'({self.shape})')).copy()
             else:
                 self.tmp_arr = np.load(self.file_path)
         return self.tmp_arr
@@ -244,6 +245,7 @@ class SemSegMask(Classifiable, NumpyBinary, Base):
 
     def __repr__(self):
         return f"Mask for frame {self.for_frame} for template {self.tpl.name}"
+
 
 class ImStack(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_IM_STACKS

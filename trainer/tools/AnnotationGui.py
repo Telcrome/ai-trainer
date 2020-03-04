@@ -53,7 +53,7 @@ class FrameController(QtWidgets.QWidget):
         self.frame_changer(v)
 
     def set_frame_number(self, i: int, n: int):
-        self._current_frame, self._frame_number = i, n
+        self._current_frame, self._frame_number = i, n - 1
         self._label.setText(f"{self._current_frame}/{self._frame_number}")
         self._slider.setValue(self._current_frame)
         self._slider.setMaximum(self._frame_number)
@@ -348,23 +348,6 @@ class AnnotationGui(TWindow):
 
         :param auto_create: Automatically write a new ground truth array on disk if there is none
         """
-
-        # See if this structure already is described in one of the masks of this frame number
-        # gt_names = self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, for_name, frame_number))
-
-        # Currently assume that only one masks exists for every frame, which describes all structs
-        # assert len(gt_names) <= 1
-
-        # def load_mask(gt_name: str) -> Tuple[str, str, int, np.ndarray]:
-        #     """
-        #     Loads the right mask out of the subject.
-        #     :param gt_name: The name of the ground truth binary that contains masks of all structures.
-        #     :return:
-        #     """
-        #     gt = self.current_subject._get_binary_model(gt_name)
-        #     gt_arr = self.current_subject._get_binary(gt_name)
-        #     i = gt['meta_data']['structures'].index(structure_name)
-        #     return gt_name, structure_name, i, gt_arr
         masks = self._selected_source_binary.semseg_masks
         masks = filter(lambda x: x.for_frame == self.frame_number, masks)
         masks = list(masks)
@@ -379,7 +362,6 @@ class AnnotationGui(TWindow):
                 new_gt = self._selected_source_binary.add_ss_mask(
                     gt_arr, self._selected_semsegtpl, for_frame=self.frame_number
                 )
-                # self.session.add(new_gt)
                 self._selected_gt_binary = new_gt
                 self.update_imstacks_list()
             else:
@@ -420,7 +402,7 @@ class AnnotationGui(TWindow):
 
             self.update_segtool()
         else:
-            msg = f"Cannot set frame {self.frame_number} on multi frame image with {self.img_data.shape[0]} frames"
+            msg = f"Cannot set frame {frame_number}"
             print(msg)
 
     def add_point(self, pos, add=True):
@@ -450,23 +432,11 @@ class AnnotationGui(TWindow):
         self.frame_controller.set_frame_number(self.frame_number, self._selected_source_binary.get_ndarray().shape[0])
 
     def find_annotations(self):
-        # struct_name = self.seg_structs[self._struct_index]
-        # annos, _ = self.current_subject.get_manual_struct_segmentations(struct_name)
         gts = filter(lambda x: x.tpl == self._selected_semsegtpl, self._selected_source_binary.semseg_masks)
         res = ''
         for gt in gts:
             res += f'{gt}\n'
         sg.Popup(res)
-        # if self._selected_source_binary in annos:
-        #     bs = annos[self._selected_source_binary]
-        #     res = f"{struct_name} is segmented in {len(bs)} frames:\n"
-        #     f_str = [f"{self.current_subject._get_binary_model(b_name)['meta_data']['frame_number']}\n" for b_name in
-        #              bs]
-        #     for f in f_str:
-        #         res += f
-        #     sg.Popup(res)
-        # else:
-        #     sg.Popup(f"No Annotations made for {struct_name}")
 
 
 if __name__ == '__main__':
