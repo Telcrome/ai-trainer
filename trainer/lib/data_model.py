@@ -73,8 +73,15 @@ class NumpyBinary:
     file_path = sa.Column(sa.String())
     stored_in_db = sa.Column(sa.Boolean())
 
+    def __init__(self):
+        self.tmp_arr: Union[np.ndarray, None] = None
+
     @sa.orm.reconstructor
     def init_on_load(self):
+        """
+        Does the job of the constructor in case of an object which is loaded from the database.
+        See https://docs.sqlalchemy.org/en/13/orm/constructors.html for details.
+        """
         self.tmp_arr: Union[np.ndarray, None] = None
 
     @staticmethod
@@ -111,7 +118,7 @@ class NumpyBinary:
     def get_ndarray(self) -> np.ndarray:
         if self.tmp_arr is None:
             if self.stored_in_db:
-                self.tmp_arr = np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})'))
+                self.tmp_arr = np.frombuffer(self.binary, dtype=self.dtype).reshape(make_tuple(f'({self.shape})')).copy()
             else:
                 self.tmp_arr = np.load(self.file_path)
         return self.tmp_arr
@@ -211,7 +218,7 @@ class SemSegTpl(Base):
 
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String())
-    ss_classes = relationship(SemSegClass)
+    ss_classes: List[SemSegClass] = relationship(SemSegClass)
 
     @classmethod
     def build_new(cls, tpl_name: str, seg_types: Dict[str, MaskType]):
@@ -235,6 +242,8 @@ class SemSegMask(Classifiable, NumpyBinary, Base):
     mtype = sa.Column(sa.Enum(MaskType))
     im_stack_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_IM_STACKS}.id'))
 
+    def __repr__(self):
+        return f"Mask for frame {self.for_frame} for template {self.tpl.name}"
 
 class ImStack(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_IM_STACKS

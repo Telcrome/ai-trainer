@@ -94,16 +94,16 @@ class TClassSelector(QtWidgets.QWidget):
             print(class_value)
             if class_value == '--Removed--':
                 print(class_value)
-                # if self.selection_level == ClassSelectionLevel.BinaryLevel:
-                #     self.subject.remove_class(class_name, for_binary=self.binary_name)
-                # elif self.selection_level == ClassSelectionLevel.SubjectLevel:
-                #     self.subject.remove_class(class_name)
+                if self.selection_level == ClassSelectionLevel.BinaryLevel:
+                    self.imstack.remove_class(class_name)
+                elif self.selection_level == ClassSelectionLevel.SubjectLevel:
+                    self.subject.remove_class(class_name)
             else:
                 print(f'{class_value} ELSE')
-                # if self.selection_level == ClassSelectionLevel.BinaryLevel:
-                #     self.subject.set_class(class_name, class_value, for_dataset=d, for_binary=self.binary_name)
-                # elif self.selection_level == ClassSelectionLevel.SubjectLevel:
-                #     self.subject.set_class(class_name, class_value, for_dataset=d)
+                if self.selection_level == ClassSelectionLevel.BinaryLevel:
+                    self.imstack.set_class(class_name, class_value)
+                elif self.selection_level == ClassSelectionLevel.SubjectLevel:
+                    self.subject.set_class(class_name, class_value)
 
         for cls_def in cls_tpls:
             # class_info = d.get_class(class_name)

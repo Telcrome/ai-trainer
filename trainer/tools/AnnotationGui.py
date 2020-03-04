@@ -70,12 +70,12 @@ class AnnotationGui(TWindow):
         self.current_subject: lib.Subject = initial_subject
         self.seg_structs: List[lib.SemSegTpl] = sess.query(lib.SemSegTpl).all()
         self.class_defs: List[lib.ClassDefinition] = sess.query(lib.ClassDefinition).all()
-        self.frame_number, self.brush, self._struct_index = 0, Brushes.Standard, -1
-        self.img_data, self.mask_data, self.mask_name, self._made_changes = None, None, '', False
+        self.frame_number, self.brush = 0, Brushes.Standard
+        self._made_changes = False
         self._selected_source_binary: Union[lib.ImStack, None] = None
         self._selected_gt_binary: Union[lib.SemSegMask, None] = None
-        self._selected_struct: lib.SemSegTpl = self.seg_structs[0]
-        self._selected_semseg_cls: lib.SemSegClass = self._selected_struct.ss_classes[0]
+        self._selected_semsegtpl: lib.SemSegTpl = self.seg_structs[0]
+        self._selected_semseg_cls: lib.SemSegClass = self._selected_semsegtpl.ss_classes[0]
 
         self.seg_tool = SegToolController(self.selection_event_handler)
 
@@ -132,10 +132,6 @@ class AnnotationGui(TWindow):
                                                  "Ctrl+Shift+I",
                                                  "Open the json file of the subject on disk",
                                                  lambda: self.inspect_on_disk(open_file=True)),
-                super().create_action_from_tuple("Update Log",
-                                                 "Ctrl+L",
-                                                 "Shows the actually loaded json content in the logging tool",
-                                                 self.update_log),
                 super().create_action_from_tuple("Find frames with annotation",
                                                  "Ctrl+F",
                                                  "Computes the frames with annotations",
@@ -156,21 +152,28 @@ class AnnotationGui(TWindow):
         self.content_grid.add_tool(self.class_selector)
 
         # Source binary selector
-        self.content_grid.add_tool(QtWidgets.QLabel("Source Binary Selection:"))
+        self.content_grid.add_tool(QtWidgets.QLabel("ImageStack Selection:"))
         self.lst_source_binaries = QtWidgets.QListWidget()
         self.lst_source_binaries.currentItemChanged.connect(self.lst_src_binaries_changed)
         self.content_grid.add_tool(self.lst_source_binaries)
 
-        # Mask Selector
-        self.content_grid.add_tool(QtWidgets.QLabel("Mask Selection:"))
-        self.lst_gt_binaries = QtWidgets.QListWidget()
-        self.lst_gt_binaries.currentItemChanged.connect(self.lst_gt_binaries_changed)
-        self.content_grid.add_tool(self.lst_gt_binaries)
+        # SemSegTpl Selector
+        self.content_grid.add_tool(QtWidgets.QLabel("SemSeg Template Selection:"))
+        self.lst_semsegtpls = QtWidgets.QListWidget()
+        self.lst_semsegtpls.currentItemChanged.connect(self.lst_semsegtpls_changed)
+        self.content_grid.add_tool(self.lst_semsegtpls)
+
+        # SemSegTpl Selector
+        self.content_grid.add_tool(QtWidgets.QLabel("SemSeg Class Selection:"))
+        self.lst_semsegclss = QtWidgets.QListWidget()
+        self.lst_semsegclss.currentItemChanged.connect(self.lst_semsegclss_changed)
+        self.content_grid.add_tool(self.lst_semsegclss)
 
         self.set_current_subject(initial_subject)
 
+        self.lst_semsegtpls.clear()
         for s in self.seg_structs:
-            self.lst_gt_binaries.addItem(f'{s.name}')
+            self.lst_semsegtpls.addItem(f'{s.name}')
 
         self.console.push_to_ipython({'gui': self, 'dataset': self.d})
 
@@ -190,7 +193,7 @@ class AnnotationGui(TWindow):
         # self.create_new_mask()
         #
         # self.mask_data[:, :, self._struct_index] = res > 0.3
-        # self.update()
+        # self.update_segtool()
 
     def select_next_subject(self):
         self.save_to_disk()
@@ -226,8 +229,8 @@ class AnnotationGui(TWindow):
             print(f"Selecting next subject: {next_subject_name}")
 
     def save_to_disk(self):
-        print(f"Saving to {self.current_subject._get_parent_directory()}")
-        self.current_subject.to_disk(self.current_subject._get_parent_directory())
+        print(f"Saving")
+        self.session.commit()
 
     def add_image_data_from_disk(self):
         layout = [[sg.Text(text="Select from Disk")],
@@ -279,37 +282,42 @@ class AnnotationGui(TWindow):
         if item is not None:
             src_item = item.text()
             print(f"Selected Source binary: {src_item}")
-            self.select_source_binary(src_item)
+            self.select_source_binary(self.current_subject.ims[self.lst_source_binaries.currentIndex().row()])
 
-    def lst_gt_binaries_changed(self, item, auto_save=True):
+    def lst_semsegtpls_changed(self, item):
         if item is not None:
-            print(f"Selected Ground Truth: {item.text()}")
-            self.select_gt_binary(self.seg_structs[self.lst_gt_binaries.currentIndex().row()],
-                                  for_name=self._selected_source_binary,
-                                  frame_number=self.frame_number)
+
+            self._selected_semsegtpl = self.seg_structs[self.lst_semsegtpls.currentIndex().row()]
+            self.lst_semsegclss.clear()
+            for semsegcls in self._selected_semsegtpl.ss_classes:
+                self.lst_semsegclss.addItem(f'{semsegcls.name}: {semsegcls.ss_type}')
+            print(f"Selected Semantic Segmentation Template: {self._selected_semsegtpl}")
+
+    def lst_semsegclss_changed(self, item):
+        if item is not None:
+            # print(f"Selected SemSeg Class: {item.text()}")
+            self._selected_semseg_cls = self._selected_semsegtpl.ss_classes[self.lst_semsegclss.currentIndex().row()]
+            print(f"Selected Semantic Segmentation Class: {self._selected_semseg_cls}")
+            self.select_gt_binary()
+            self.update_segtool()
 
     def set_current_subject(self, s: lib.Subject):
         self.current_subject = s
         self.frame_number = 0
-        self.mask_data = None
 
         # Handle GUI elements concerned with classes
         self.class_selector.set_subject(self.current_subject)
 
         # Load the list of source binaries into GUI
-        self.lst_source_binaries.clear()
-        for im in s.ims:
-            self.lst_source_binaries.addItem(im.__repr__())
+        self.update_imstacks_list()
         self.select_source_binary(s.ims[0])
-        # self.lst_gt_binaries.clear()
-        # src_names = self.current_subject._get_binary_list_filtered(lambda x: x['binary_type'] == 'image_stack')
-        # if src_names:
-        #     for b in src_names:
-        #         self.lst_source_binaries.addItem(str(b))
-        #     self.select_source_binary(src_names[0])
-        #
-        self.update()
+        self.update_segtool()
         self.console.push_to_ipython({"current_subject": s})
+
+    def update_imstacks_list(self):
+        self.lst_source_binaries.clear()
+        for im in self.current_subject.ims:
+            self.lst_source_binaries.addItem(f'({im.shape}) with {len(im.semseg_masks)} masks')
 
     def select_source_binary(self, im: lib.ImStack):
         # if auto_save and self.mask_data is not None and self._made_changes:
@@ -319,12 +327,9 @@ class AnnotationGui(TWindow):
         self._selected_source_binary, self._selected_gt_binary = im, None
         self.seg_tool.set_img_stack(self._selected_source_binary)
 
-        # Load the possible structures into lst_gt
-        self.lst_gt_binaries.clear()
         # meta = self.current_subject._get_binary_model(name)
         # self.seg_structs = list(meta["meta_data"]["structures"].keys())
 
-        # TODO Preselect a mask if there is only one structure anyway
         self.select_gt_binary()
         # if self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, name, self.frame_number)):
         #     self.select_gt_binary(self.seg_structs[0], for_name=name)
@@ -334,18 +339,14 @@ class AnnotationGui(TWindow):
         # Inform the class selector about the new selected binary
         self.class_selector.set_img_stack(self._selected_source_binary)
 
-        self.update()
+        self.update_segtool()
+        self.console.push_to_ipython({"im_bin": self._selected_source_binary})
 
     def select_gt_binary(self, auto_create=False):
         """
-        For every source binary the subject knows which structures can exist by template.
         This function looks for the ground truth and if there is none creates a new fitting one.
-        :param structure_name: The selected structure name
-        :param for_name: The source binary which the structure should correspond to
-        :param frame_number: The frame number which is selected for annotation
+
         :param auto_create: Automatically write a new ground truth array on disk if there is none
-        :param auto_save: Automatically save the previously selected gt and binary first
-        :return:
         """
 
         # See if this structure already is described in one of the masks of this frame number
@@ -365,29 +366,26 @@ class AnnotationGui(TWindow):
         #     i = gt['meta_data']['structures'].index(structure_name)
         #     return gt_name, structure_name, i, gt_arr
         masks = self._selected_source_binary.semseg_masks
-        if masks:
-            self._selected_gt_binary = masks[0]
-        # if gt_names:
-        #     self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(gt_names[0])
-        # elif auto_create:
-        #     # Create a new ground truth for this frame
-        #     src_b = self.current_subject._get_binary(for_name)
-        #     new_gt_name = self.current_subject.add_new_gt_by_arr(
-        #         np.zeros((src_b.shape[1], src_b.shape[2], len(self.seg_structs)), dtype=np.bool),
-        #         structure_names=self.seg_structs,
-        #         mask_of=for_name,
-        #         frame_number=self.frame_number)
-        #     self._selected_gt_binary, self._struct_name, self._struct_index, self.mask_data = load_mask(new_gt_name)
-        # else:
-        #     self._selected_gt_binary, self.mask_data = None, None
-
-            self.update()
-        self._made_changes = False
-
-    def update_log(self):
-        # self.content_grid.logging_widget.clear()
-        # self.content_grid.logging_widget.appendPlainText(f"{str(self.te)}")
-        sg.popup(str(self.current_subject))
+        masks = filter(lambda x: x.for_frame == self.frame_number, masks)
+        masks = list(masks)
+        if self._selected_semseg_cls is not None:
+            if masks:
+                assert len(masks) == 1
+                self._selected_gt_binary = masks[0]
+            elif auto_create:
+                src_b = self._selected_source_binary.get_ndarray()
+                gt_arr = np.zeros((src_b.shape[1], src_b.shape[2], len(self._selected_semsegtpl.ss_classes)),
+                                  dtype=np.bool)
+                new_gt = self._selected_source_binary.add_ss_mask(
+                    gt_arr, self._selected_semsegtpl, for_frame=self.frame_number
+                )
+                # self.session.add(new_gt)
+                self._selected_gt_binary = new_gt
+                self.update_imstacks_list()
+            else:
+                self._selected_gt_binary = None
+            self._made_changes = False
+            self.console.push_to_ipython({"gt_bin": self._selected_gt_binary})
 
     def delete_selected_binaries(self):
         ns = [i.text() for i in self.lst_source_binaries.selectedItems()]
@@ -400,18 +398,18 @@ class AnnotationGui(TWindow):
         self.current_subject.delete_gt(mask_of=self._selected_source_binary, frame_number=self.frame_number)
         self._selected_gt_binary, self.mask_data = None, None
 
-        self.update()
+        self.update_segtool()
         self._made_changes = False
 
     def selection_event_handler(self, ps: List[Tuple[int, int]], add=True):
-        if not self.mask_name:
-            sg.popup("Please set a mask name")
+        # if self._selected_gt_binary is None:
+        #     sg.popup("There is no mask to draw on")
 
         for p in ps:
             self.add_point(p, add=add)
 
         self.seg_tool.set_mask(self._selected_gt_binary)
-        self.seg_tool.display_mask(self._selected_struct)
+        self.seg_tool.display_mask(self._selected_semseg_cls)
         self._made_changes = True
 
     def change_frame(self, frame_number: int):
@@ -420,53 +418,55 @@ class AnnotationGui(TWindow):
 
             self.select_gt_binary()
 
-            self.update()
+            self.update_segtool()
         else:
             msg = f"Cannot set frame {self.frame_number} on multi frame image with {self.img_data.shape[0]} frames"
             print(msg)
 
-    def create_new_mask(self):
-        if self.mask_data is None:
-            self.select_gt_binary(
-                self.seg_structs[self.lst_gt_binaries.currentIndex().row()],
-                for_name=self._selected_source_binary,
-                frame_number=self.frame_number,
-                auto_create=True)
-
     def add_point(self, pos, add=True):
         # If the ground truth does not yet exist, create a new
-        self.create_new_mask()
+        if self._selected_gt_binary is None:
+            self.select_gt_binary(auto_create=True)
 
         if self.brush == Brushes.Standard:
             intensity = add * 255
-            tmp = cv2.circle(self.mask_data[:, :, self._struct_index].astype(np.uint8) * 255, pos,
+            struct_index = self._selected_gt_binary.tpl.ss_classes.index(self._selected_semseg_cls)
+            tmp = cv2.circle(self._selected_gt_binary.get_ndarray()[:, :, struct_index].astype(np.uint8) * 255,
+                             pos,
                              self.seg_tool.pen_size, intensity, -1)
-            self.mask_data[:, :, self._struct_index] = tmp.astype(np.bool)
+
+            self._selected_gt_binary.get_ndarray()[:, :, struct_index] = tmp.astype(np.bool)
+            self._selected_gt_binary.set_array(self._selected_gt_binary.get_ndarray())
         # elif self.m.brush == Brushes.AI_Merge:
         #     intensity = add * 255
         #     c = cv2.circle(np.zeros(self.m.foreground.shape, dtype=np.uint8), pos, self.m.brush_size, intensity, -1)
         #     tmp = (c & self.m.proposal) | self.m.foreground
         #     self.m.foreground = tmp.astype(np.bool)
 
-    def update(self):
+    def update_segtool(self):
         self.seg_tool.display_img_stack(frame_number=self.frame_number)
         self.seg_tool.set_mask(self._selected_gt_binary)
         self.seg_tool.display_mask(self._selected_semseg_cls)
         self.frame_controller.set_frame_number(self.frame_number, self._selected_source_binary.get_ndarray().shape[0])
 
     def find_annotations(self):
-        struct_name = self.seg_structs[self._struct_index]
-        annos, _ = self.current_subject.get_manual_struct_segmentations(struct_name)
-        if self._selected_source_binary in annos:
-            bs = annos[self._selected_source_binary]
-            res = f"{struct_name} is segmented in {len(bs)} frames:\n"
-            f_str = [f"{self.current_subject._get_binary_model(b_name)['meta_data']['frame_number']}\n" for b_name in
-                     bs]
-            for f in f_str:
-                res += f
-            sg.Popup(res)
-        else:
-            sg.Popup(f"No Annotations made for {struct_name}")
+        # struct_name = self.seg_structs[self._struct_index]
+        # annos, _ = self.current_subject.get_manual_struct_segmentations(struct_name)
+        gts = filter(lambda x: x.tpl == self._selected_semsegtpl, self._selected_source_binary.semseg_masks)
+        res = ''
+        for gt in gts:
+            res += f'{gt}\n'
+        sg.Popup(res)
+        # if self._selected_source_binary in annos:
+        #     bs = annos[self._selected_source_binary]
+        #     res = f"{struct_name} is segmented in {len(bs)} frames:\n"
+        #     f_str = [f"{self.current_subject._get_binary_model(b_name)['meta_data']['frame_number']}\n" for b_name in
+        #              bs]
+        #     for f in f_str:
+        #         res += f
+        #     sg.Popup(res)
+        # else:
+        #     sg.Popup(f"No Annotations made for {struct_name}")
 
 
 if __name__ == '__main__':

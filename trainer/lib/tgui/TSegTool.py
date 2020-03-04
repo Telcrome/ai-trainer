@@ -27,35 +27,6 @@ class Brushes(Enum):
     AI_Merge = 2
 
 
-def get_rgb_repr(image_data: np.ndarray,
-                 mask: np.ndarray = None,
-                 indicator_pos: Tuple[int, int] = None,
-                 brush_size=15,
-                 frame_number=0) -> np.ndarray:
-    if image_data.shape[3] == 1:
-        # Assumption: Grayscale
-        image_data = image_data[frame_number, :, :, 0]
-    else:
-        # Assumption: RGB
-        image_data = np.dot(image_data[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
-
-    # if indicator_pos is not None:
-    #     indicated = cv2.circle(np.copy(image_data), indicator_pos, brush_size, (255, 0, 0), 1)
-    # else:
-    #     indicated = image_data
-    blend_im = 0.8 * image_data.astype(np.uint8)
-    res = np.zeros((image_data.shape[0], image_data.shape[1], 3), dtype=np.uint8)
-    if mask is None:
-        res[:, :, 0] = blend_im
-        res[:, :, 1] = blend_im
-        res[:, :, 2] = blend_im
-    else:
-        res[:, :, 0] = blend_im + 0.2 * (mask.astype(np.uint8) * 255)
-        res[:, :, 1] = blend_im
-        res[:, :, 2] = blend_im
-    return res
-
-
 class IndicatorSceneItem(QtWidgets.QGraphicsEllipseItem):
     def __init__(self, parent=None, pos: Tuple[int, int] = None, size=15):
         QtWidgets.QGraphicsPixmapItem.__init__(self, parent)
@@ -249,17 +220,17 @@ class SegToolController:
     def display_mask(self, semsegclass: lib.SemSegClass):
         im_arr = self._img_stack.get_ndarray()
         res = np.zeros((im_arr.shape[1], im_arr.shape[2], 3), dtype=np.uint8)
-        # if self._mask is not None:
-        #     struct_index = list(self._mask_meta.keys()).index(structure_name)
-        #     struct_mask = self._mask[:, :, struct_index].astype(np.uint8)
-        #     res[:, :, 0] = struct_mask * 255
-        #     if self._mask_meta[structure_name] == lib.MaskType.Line.value:
-        #         res[:, :, 1] = skeletonize(struct_mask) * 255
-        #     elif self._mask_meta[structure_name] == lib.MaskType.Point.value:
-        #         raise NotImplementedError()
-        #     res[:, :, 2] = np.zeros((self._mask.shape[0], self._mask.shape[1]), dtype=np.uint8)
-        #     for i in range(len(self._mask_meta.keys())):
-        #         if i != struct_index:
-        #             res[:, :, 2] |= (self._mask[:, :, i].astype(np.uint8) * 255)
-            # res[:, :, 2] = self._mask[:, :, i].astype(np.uint8) * 255
+        if self._mask is not None:
+            struct_index = self._mask.tpl.ss_classes.index(semsegclass)
+            struct_mask = self._mask.get_ndarray()[:, :, struct_index].astype(np.uint8)
+            res[:, :, 0] = struct_mask * 255
+            if semsegclass.ss_type == lib.MaskType.Line:
+                res[:, :, 1] = skeletonize(struct_mask) * 255
+            elif semsegclass.ss_type == lib.MaskType.Point:
+                raise NotImplementedError()
+            res[:, :, 2] = np.zeros((self._mask.get_ndarray().shape[0], self._mask.get_ndarray().shape[1]), dtype=np.uint8)
+            for i in range(len(self._mask.tpl.ss_classes)):
+                if i != struct_index:
+                    res[:, :, 2] |= (self._mask.get_ndarray()[:, :, i].astype(np.uint8) * 255)
+                # res[:, :, 2] = self._mask.get_ndarray()[:, :, i].astype(np.uint8) * 255
         self._scene.mask_pixmap.setPixmap(arr_to_pixmap(res))

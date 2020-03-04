@@ -68,7 +68,8 @@ def dataset_annotate(dataset_name: str, subject_name: str):
     """
     Start annotating subjects in the dataset.
     """
-    d: lib.Dataset = lib.Session().query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
+    sess = lib.Session()
+    d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
     if d is None:
         print('There is no such dataset')
     if not subject_name:
@@ -76,7 +77,7 @@ def dataset_annotate(dataset_name: str, subject_name: str):
         s = d.splits[0].sbjts[0]  # Just pick the first subject
     else:
         raise NotImplementedError()
-    run_window(AnnotationGui, d, s)
+    run_window(AnnotationGui, d, s, sess)
 
 
 @ds.command(name='add-image-folder')

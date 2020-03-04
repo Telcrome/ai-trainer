@@ -30,6 +30,7 @@
       <w>imagestacks</w>
       <w>imgstack</w>
       <w>imstack</w>
+      <w>imstacks</w>
       <w>inps</w>
       <w>jsonclass</w>
       <w>kaggle</w>
@@ -66,10 +67,14 @@
       <w>segmentations</w>
       <w>segs</w>
       <w>segsegclass</w>
+      <w>segtool</w>
       <w>semseg</w>
       <w>semsegclass</w>
+      <w>semsegcls</w>
+      <w>semsegclss</w>
       <w>semsegmasks</w>
       <w>semsegtpl</w>
+      <w>semsegtpls</w>
       <w>skdata</w>
       <w>statedict</w>
       <w>subgrid</w>
