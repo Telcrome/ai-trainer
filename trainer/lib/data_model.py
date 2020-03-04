@@ -84,14 +84,14 @@ class NumpyBinary:
         """
         self.tmp_arr: Union[np.ndarray, None] = None
 
-    @staticmethod
-    def commit_handler(sess):
-        for obj in sess.dirty:
-            if isinstance(obj, NumpyBinary):
-                print("This is a numpy binary")
-                obj.set_array(obj.tmp_arr)
-            else:
-                print(obj)
+    # @staticmethod
+    # def commit_handler(sess):
+    #     for obj in sess.dirty:
+    #         if isinstance(obj, NumpyBinary):
+    #             print(f"Preparing {obj}")
+    #             obj.set_array(obj.tmp_arr)
+    #         else:
+    #             print(obj)
 
     @staticmethod
     def get_bin_disk_folder() -> str:
@@ -444,6 +444,6 @@ def reset_database():
     Base.metadata.create_all(engine)
 
 
-event.listen(Session, "before_commit", NumpyBinary.commit_handler)
+# event.listen(Session, "before_commit", NumpyBinary.commit_handler)
 
 Base.metadata.create_all(engine)

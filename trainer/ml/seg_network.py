@@ -1,5 +1,5 @@
 import random
-from typing import Tuple
+from typing import Tuple, List
 
 import cv2
 import imgaug.augmenters as iaa
@@ -48,24 +48,30 @@ class SegCrit(nn.Module):
         return bce * self.loss_weights[0] + dice * self.loss_weights[1]
 
 
-class SegNetwork(ml.ModelTrainer):
+class WrapperNet(nn.Module):
 
-    def __init__(self,
-                 exp_name: str,
-                 in_channels: int,
-                 n_classes: int,
-                 ds: lib.Dataset,
-                 batch_size=4,
-                 vis_board=None):
+    def __init__(self, wrapped_net: nn.Module):
+        super().__init__()
+        self.wrapped_net = wrapped_net
+
+    def forward(self, inps):
+        return self.wrapped_net(inps[0])
+
+
+class SegNetwork:
+
+    def __init__(self):
         # model = ResNetUNet(n_class=n_classes)
-        model = smp.PAN(in_channels=in_channels, classes=n_classes)
-        opti = optim.Adam(model.parameters(), lr=5e-3)
-        crit = SegCrit(1., 2., (0.5, 0.5))
-        super().__init__(exp_name, model, opti, crit, ds, vis_board=vis_board)
-        self.in_channels, self.n_classes = in_channels, n_classes
+        self.in_channels, self.n_classes = 3, 2
+        pan = smp.PAN(in_channels=self.in_channels, classes=self.n_classes)
+        pan.load_state_dict(torch.load(r'C:\Users\rapha\Desktop\epoch78.pt'))
+        self.model = WrapperNet(pan)
+        self.opti = optim.Adam(self.model.parameters(), lr=5e-3)
+        self.crit = SegCrit(1., 2., (0.5, 0.5))
 
-    def visualize_input_batch(self, te: Tuple[np.ndarray, np.ndarray]) -> plt.Figure:
+    def visualize_input_batch(self, te: Tuple[List[np.ndarray], np.ndarray]) -> plt.Figure:
         x, y = te
+        x = x[0]
         fig, (ax1, ax2) = plt.subplots(1, 2)
         im_2d = x[0, 0, :, :]
         gt_2d = y[0, 0, :, :]
@@ -89,20 +95,19 @@ class SegNetwork(ml.ModelTrainer):
         return figs
 
     @staticmethod
-    def preprocess_segmap(s: lib.Subject, mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[np.ndarray, np.ndarray]:
-        is_names = s.get_image_stack_keys()
-        is_name = random.choice(is_names)
-        available_structures = s.get_structure_list(image_stack_key=is_name)
-        # TODO: Doesnt make sense for multiple structures
-        selected_struct = random.choice(list(available_structures.keys()))
-        im = s._get_binary(is_name)
+    def preprocess_segmap(s: lib.Subject,
+                          mode: ml.ModelMode = ml.ModelMode.Train) -> Tuple[List[np.ndarray], np.ndarray]:
+        imstack_with_masks = list(filter(lambda istck: len(istck.semseg_masks) > 0, s.ims))
+        imstack: lib.ImStack = random.choice(imstack_with_masks)
+
         if not mode == ml.ModelMode.Usage:
-            possible_frames = s.get_masks_of(is_name, frame_numbers=True)
-            selected_frame = random.choice(possible_frames)
+            mask: lib.SemSegMask = random.choice(imstack.semseg_masks)
+            gt = mask.get_ndarray()
         else:
-            selected_frame = random.randint(0, im.shape[0])
-        im = cv2.cvtColor(im[selected_frame], cv2.COLOR_GRAY2RGB)
-        gt = ml.get_mask_for_frame(s, is_name, selected_struct, selected_frame)
+            raise NotImplementedError()
+            # mask = random.randint(0, imstack.get_ndarray().shape[0])
+        im = imstack.get_ndarray()[mask.for_frame]
+        # im = cv2.cvtColor(imstack.get_ndarray()[mask.for_frame], cv2.COLOR_GRAY2RGB)
 
         if mode == ml.ModelMode.Train:
             # Augmentation
@@ -133,13 +138,13 @@ class SegNetwork(ml.ModelTrainer):
 
         if not mode == ml.ModelMode.Usage:
             gt = gt.astype(np.float32)
-            gt = cv2.resize(gt, (384, 384))
-            # gt = np.expand_dims(gt, 0)
-            gt_stacked = np.zeros((2, gt.shape[0], gt.shape[1]), dtype=np.float32)
-            gt_stacked[0, :, :] = gt.astype(np.float32)
-            gt_stacked[1, :, :] = np.invert(gt.astype(np.bool)).astype(gt_stacked.dtype)
-            return im, gt_stacked
-        return im, np.empty(0)
+            # gt = cv2.resize(gt, (384, 384))
+            # # gt = np.expand_dims(gt, 0)
+            gt_stacked = np.zeros((2, 384, 384), dtype=np.float32)
+            gt_stacked[0, :, :] = cv2.resize(gt[:, :, 0], (384, 384))
+            gt_stacked[1, :, :] = cv2.resize(gt[:, :, 1], (384, 384))
+            return [im], gt_stacked
+        return [im], np.empty(0)
 
 
 def double_conv(in_channels, out_channels):

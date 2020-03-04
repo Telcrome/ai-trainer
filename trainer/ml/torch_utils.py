@@ -318,8 +318,8 @@ class ModelTrainer:
     def save_to_disk(self, dir_path: str = '.'):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))
 
-    def load_from_disk(self, dir_path: str = '.') -> bool:
-        p = os.path.join(dir_path, f'{self.model_name}.pt')
+    def load_from_disk(self, f_path: str) -> bool:
+        p = f_path
         if os.path.exists(p):
             self.model.load_state_dict(torch.load(p))
             return True

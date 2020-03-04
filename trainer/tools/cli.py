@@ -8,8 +8,10 @@ import os
 
 import click
 from tqdm import tqdm
+import torch
 
 import trainer.lib as lib
+import trainer.ml as ml
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
 
 
@@ -79,6 +81,36 @@ def dataset_annotate(dataset_name: str, subject_name: str):
         raise NotImplementedError()
     run_window(AnnotationGui, d, s, sess)
 
+
+@ds.command(name="train")
+@click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
+def dataset_train(dataset_name: str):
+    """
+    Start annotating subjects in the dataset.
+    """
+    # sess = lib.Session()
+    # d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
+
+    BATCH_SIZE = 2
+    EPOCHS = 1000
+
+    train_set = ml.InMemoryDataset(dataset_name, 'default', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Eval)
+
+    train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
+    b = next(iter(train_loader))
+    net_wrapper = ml.SegNetwork()
+    net_wrapper.visualize_input_batch(b).show()
+    x, y = b
+    net = ml.ModelTrainer(
+        lib.create_identifier('AnnoProposal'),
+        net_wrapper.model,
+        net_wrapper.opti,
+        net_wrapper.crit
+    )
+    # net.load_from_disk(r'C:\Users\rapha\Desktop\epoch78.pt')
+    out = net.model([inp.to(ml.torch_device) for inp in x])
+    with torch.no_grad():
+        net_wrapper.visualize_input_batch((x, out.cpu())).show()
 
 @ds.command(name='add-image-folder')
 @click.option('--dataset-path', '-p', default=os.getcwd)

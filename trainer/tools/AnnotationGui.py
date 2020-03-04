@@ -41,6 +41,7 @@ class FrameController(QtWidgets.QWidget):
 
         self._slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         self._slider.setMinimum(0)
+        # noinspection PyUnresolvedReferences
         self._slider.sliderReleased.connect(self.slider_changed)
 
         self._layout.addWidget(self._label)
@@ -71,7 +72,7 @@ class AnnotationGui(TWindow):
         self.seg_structs: List[lib.SemSegTpl] = sess.query(lib.SemSegTpl).all()
         self.class_defs: List[lib.ClassDefinition] = sess.query(lib.ClassDefinition).all()
         self.frame_number, self.brush = 0, Brushes.Standard
-        self._made_changes = False
+        # self._made_changes = False
         self._selected_source_binary: Union[lib.ImStack, None] = None
         self._selected_gt_binary: Union[lib.SemSegMask, None] = None
         self._selected_semsegtpl: lib.SemSegTpl = self.seg_structs[0]
@@ -124,14 +125,6 @@ class AnnotationGui(TWindow):
                                                  lambda: self.change_frame(self.frame_number - 1))
             ],
             "Debug": [
-                super().create_action_from_tuple("Inspect dir on Disk",
-                                                 "Ctrl+I",
-                                                 "Open the directory of the subject on disk",
-                                                 self.inspect_on_disk),
-                super().create_action_from_tuple("Inspect json on Disk",
-                                                 "Ctrl+Shift+I",
-                                                 "Open the json file of the subject on disk",
-                                                 lambda: self.inspect_on_disk(open_file=True)),
                 super().create_action_from_tuple("Find frames with annotation",
                                                  "Ctrl+F",
                                                  "Computes the frames with annotations",
@@ -232,52 +225,48 @@ class AnnotationGui(TWindow):
         print(f"Finished Save")
 
     def add_image_data_from_disk(self):
-        layout = [[sg.Text(text="Select from Disk")],
-                  [sg.Text(text="Name: "), sg.Input(key='binary_name')],
-                  [sg.Input(key='filepath'), sg.FileBrowse()],
-                  [sg.Checkbox(text="Reduce to recommended size", key="reduce_size", default=True)],
-                  [sg.Submit(), sg.Cancel()]]
-        p = sg.Window('Select folder', layout)
-        e, v = p.Read()
-        p.close()
-        if e == "Submit":
-            im = imageio.imread(v['filepath'])
-
-            # The annotator cannot deal with big images very well, so resize it if its too big
-            if v['reduce_size']:
-                dst_pixel = 600
-                src_pixel = im.shape[0]
-                if dst_pixel < src_pixel:  # Do not resize if the image is small anyways
-                    resize_factor = dst_pixel / src_pixel
-                    im = cv2.resize(im, None, fx=resize_factor, fy=resize_factor)
-
-            self.current_subject.add_source_image_by_arr(im, binary_name=v['binary_name'], structures={"gt": "blob"})
-            self.set_current_subject(self.current_subject)
+        sg.Popup("Not implemented for this version")
+        # layout = [[sg.Text(text="Select from Disk")],
+        #           [sg.Text(text="Name: "), sg.Input(key='binary_name')],
+        #           [sg.Input(key='filepath'), sg.FileBrowse()],
+        #           [sg.Checkbox(text="Reduce to recommended size", key="reduce_size", default=True)],
+        #           [sg.Submit(), sg.Cancel()]]
+        # p = sg.Window('Select folder', layout)
+        # e, v = p.Read()
+        # p.close()
+        # if e == "Submit":
+        #     im = imageio.imread(v['filepath'])
+        #
+        #     # The annotator cannot deal with big images very well, so resize it if its too big
+        #     if v['reduce_size']:
+        #         dst_pixel = 600
+        #         src_pixel = im.shape[0]
+        #         if dst_pixel < src_pixel:  # Do not resize if the image is small anyways
+        #             resize_factor = dst_pixel / src_pixel
+        #             im = cv2.resize(im, None, fx=resize_factor, fy=resize_factor)
+        #
+        #     self.current_subject.add_source_image_by_arr(im, binary_name=v['binary_name'], structures={"gt": "blob"})
+        #     self.set_current_subject(self.current_subject)
 
     def add_dicom_image_data(self):
-        dicom_path, ks = standalone_foldergrab(folder_not_file=False,
-                                               optional_inputs=[("Binary Name", "binary_name")],
-                                               optional_choices=[("Structure Template", "struct_tpl",
-                                                                  self.d.get_structure_template_names())],
-                                               title="Select DICOM file")
-        if dicom_path:
-            from trainer.lib.import_utils import append_dicom_to_subject
-            tpl_name = ks['struct_tpl']
-            if tpl_name in self.d.get_structure_template_names():
-                seg_structs = self.d.get_structure_template_by_name(tpl_name)
-                append_dicom_to_subject(self.current_subject.get_working_directory(), dicom_path,
-                                        seg_structs=seg_structs)
-                print(ks['binary_name'])
-                print(dicom_path)
-                self.set_current_subject(lib.Subject.from_disk(self.current_subject.get_working_directory()))
+        sg.Popup("Not implemented for this version")
+        # dicom_path, ks = standalone_foldergrab(folder_not_file=False,
+        #                                        optional_inputs=[("Binary Name", "binary_name")],
+        #                                        optional_choices=[("Structure Template", "struct_tpl",
+        #                                                           self.d.get_structure_template_names())],
+        #                                        title="Select DICOM file")
+        # if dicom_path:
+        #     from trainer.lib.import_utils import append_dicom_to_subject
+        #     tpl_name = ks['struct_tpl']
+        #     if tpl_name in self.d.get_structure_template_names():
+        #         seg_structs = self.d.get_structure_template_by_name(tpl_name)
+        #         append_dicom_to_subject(self.current_subject.get_working_directory(), dicom_path,
+        #                                 seg_structs=seg_structs)
+        #         print(ks['binary_name'])
+        #         print(dicom_path)
+        #         self.set_current_subject(lib.Subject.from_disk(self.current_subject.get_working_directory()))
 
-    def inspect_on_disk(self, open_file=False):
-        if open_file:
-            os.startfile(self.current_subject._get_json_path())
-        else:
-            os.startfile(self.current_subject.get_working_directory())
-
-    def lst_src_binaries_changed(self, item, auto_save=True):
+    def lst_src_binaries_changed(self, item):
         if item is not None:
             src_item = item.text()
             print(f"Selected Source binary: {src_item}")
@@ -365,22 +354,28 @@ class AnnotationGui(TWindow):
                 self.update_imstacks_list()
             else:
                 self._selected_gt_binary = None
-            self._made_changes = False
+            # self._made_changes = False
             self.console.push_to_ipython({"gt_bin": self._selected_gt_binary})
 
     def delete_selected_binaries(self):
-        ns = [i.text() for i in self.lst_source_binaries.selectedItems()]
-        for n in ns:
-            print(f"Deleting binary {n}")
-            self.current_subject._remove_binary(n)
-        self.set_current_subject(self.current_subject)
+        sg.Popup(f'Not implemented, {self._selected_source_binary}')
+        # ns = [i.text() for i in self.lst_source_binaries.selectedItems()]
+        # for n in ns:
+        #     print(f"Deleting binary {n}")
+        #     self.current_subject._remove_binary(n)
+        # self.set_current_subject(self.current_subject)
 
     def delete_selected_mask(self):
-        self.current_subject.delete_gt(mask_of=self._selected_source_binary, frame_number=self.frame_number)
-        self._selected_gt_binary, self.mask_data = None, None
+        if self._selected_gt_binary in self.session:
+            self.session.delete(self._selected_gt_binary)
+        if self._selected_gt_binary in self._selected_source_binary.semseg_masks:
+            self._selected_source_binary.semseg_masks.remove(self._selected_gt_binary)
+        self._selected_gt_binary = None
+        # TODO delete from ims
 
+        self.update_imstacks_list()
         self.update_segtool()
-        self._made_changes = False
+        # self._made_changes = False
 
     def selection_event_handler(self, ps: List[Tuple[int, int]], add=True):
         # if self._selected_gt_binary is None:
@@ -391,7 +386,7 @@ class AnnotationGui(TWindow):
 
         self.seg_tool.set_mask(self._selected_gt_binary)
         self.seg_tool.display_mask(self._selected_semseg_cls)
-        self._made_changes = True
+        # self._made_changes = True
 
     def change_frame(self, frame_number: int):
         if self._selected_source_binary.get_ndarray().shape[0] - 1 >= frame_number >= 0:
@@ -417,7 +412,7 @@ class AnnotationGui(TWindow):
                              self.seg_tool.pen_size, intensity, -1)
 
             self._selected_gt_binary.get_ndarray()[:, :, struct_index] = tmp.astype(np.bool)
-            # self._selected_gt_binary.set_array(self._selected_gt_binary.get_ndarray())
+            self._selected_gt_binary.set_array(self._selected_gt_binary.get_ndarray())
         # elif self.m.brush == Brushes.AI_Merge:
         #     intensity = add * 255
         #     c = cv2.circle(np.zeros(self.m.foreground.shape, dtype=np.uint8), pos, self.m.brush_size, intensity, -1)
