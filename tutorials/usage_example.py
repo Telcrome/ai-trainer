@@ -1,3 +1,7 @@
+import os
+import shutil
+
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -6,7 +10,7 @@ import trainer.lib as lib
 from trainer.ml.data_loading import get_subject_gen, get_img_mask_pair
 
 
-def visualize_one_train_pair(ds: ml.Dataset, image_stack_index=0, segmentation_name="femur", frame=0) -> plt.Figure:
+def visualize_one_train_pair(ds: ml.Dataset, image_stack_index=1, segmentation_name="femur", frame=0) -> plt.Figure:
     """
     For demonstration, just visualize some content of one subject
     """
@@ -40,6 +44,24 @@ if __name__ == '__main__':
     # If you want to export some information of the dataset
     # you can iterate through the subjects in deterministic order
     # as following:
+    export_dir = './export'
+    if os.path.exists(export_dir):
+        shutil.rmtree(export_dir)
+        while os.path.exists(export_dir):
+            pass
+    os.mkdir(export_dir)
     for s in ds:
         # All information about the subject is now capsuled in s
         print(s.name)
+        subject_folder = os.path.join(export_dir, s.name)
+        os.mkdir(subject_folder)
+        for im_name in s.get_image_stack_keys():
+            imstack_folder = os.path.join(subject_folder, im_name)
+            os.mkdir(imstack_folder)
+            imstack = s.get_binary(im_name)
+            np.save(os.path.join(imstack_folder, f'im.npy'), imstack)
+            for gt_name in s.get_masks_of(im_name):
+                gt = s.get_binary(gt_name)
+                gt_model = s.get_binary_model(gt_name)
+                f_number = str(gt_model['meta_data']['frame_number'])
+                np.save(os.path.join(imstack_folder, f'{f_number}.npy'), gt)
