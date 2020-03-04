@@ -87,7 +87,7 @@ class AnnotationGui(TWindow):
                 super().create_action_from_tuple("Save",
                                                  "Ctrl+S",
                                                  "Saves the currently opened subject on disk",
-                                                 self.save_to_disk),
+                                                 self.save_all),
                 super().create_action_from_tuple("Add Image Data from Disk",
                                                  "Ctrl+A",
                                                  "Allows to add standard image and video files",
@@ -196,41 +196,40 @@ class AnnotationGui(TWindow):
         # self.update_segtool()
 
     def select_next_subject(self):
-        self.save_to_disk()
-
-        next_subject_name = random.choice(self.d.get_subject_name_list())
-        self.set_current_subject(lib.Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
-        print("Selecting next subject")
+        sg.Popup("No heuristic for picking the next subject is implemented yet")
 
     def pick_next_subject(self):
-        self.save_to_disk()
+        self.save_all()
+        next_split = lib.pick_from_list(self.d.splits)
+        next_subject = lib.pick_from_list(next_split.sbjts)
+        self.set_current_subject(next_subject)
+        # tool_width = 20
+        # tools = [
+        #     [sg.Button(button_text="Annotate subject", key='open_subject', size=(tool_width, 1))]
+        # ]
+        # main_layout = [
+        #     [sg.Text(text="Pick subject for annotation", size=(50, 1), key='lbl')],
+        #     [sg.Listbox(key='ls_s',
+        #                 values=[s.name for s in self.d.splits[0]],
+        #                 size=(60, 20)),
+        #      sg.Column(tools)]
+        # ]
 
-        tool_width = 20
-        tools = [
-            [sg.Button(button_text="Annotate subject", key='open_subject', size=(tool_width, 1))]
-        ]
-        main_layout = [
-            [sg.Text(text="Pick subject for annotation", size=(50, 1), key='lbl')],
-            [sg.Listbox(key='ls_s',
-                        values=[s.name for s in self.d.splits[0]],
-                        size=(60, 20)),
-             sg.Column(tools)]
-        ]
+        # window = sg.Window("Pick your next subject", layout=main_layout)
+        #
+        # event, values = window.read()
+        # window.close()
+        #
+        # if event == "open_subject" and values['ls_s']:
+        #     next_subject_name = values['ls_s'][0]
+        #     self.set_current_subject(
+        #         lib.Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
+        #     print(f"Selecting next subject: {next_subject_name}")
 
-        window = sg.Window("Pick your next subject", layout=main_layout)
-
-        event, values = window.read()
-        window.close()
-
-        if event == "open_subject" and values['ls_s']:
-            next_subject_name = values['ls_s'][0]
-            self.set_current_subject(
-                lib.Subject.from_disk(os.path.join(self.d.get_working_directory(), next_subject_name)))
-            print(f"Selecting next subject: {next_subject_name}")
-
-    def save_to_disk(self):
-        print(f"Saving")
+    def save_all(self):
+        print(f"Starting Save")
         self.session.commit()
+        print(f"Finished Save")
 
     def add_image_data_from_disk(self):
         layout = [[sg.Text(text="Select from Disk")],
@@ -418,7 +417,7 @@ class AnnotationGui(TWindow):
                              self.seg_tool.pen_size, intensity, -1)
 
             self._selected_gt_binary.get_ndarray()[:, :, struct_index] = tmp.astype(np.bool)
-            self._selected_gt_binary.set_array(self._selected_gt_binary.get_ndarray())
+            # self._selected_gt_binary.set_array(self._selected_gt_binary.get_ndarray())
         # elif self.m.brush == Brushes.AI_Merge:
         #     intensity = add * 255
         #     c = cv2.circle(np.zeros(self.m.foreground.shape, dtype=np.uint8), pos, self.m.brush_size, intensity, -1)

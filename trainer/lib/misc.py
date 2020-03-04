@@ -6,7 +6,7 @@ import urllib
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Any, TypeVar
 
 import PySimpleGUI as sg
 import cv2
@@ -37,6 +37,22 @@ def create_identifier(hint: str = '') -> str:
     now = datetime.now()
     dt_string = now.strftime("%Y_%m_%d__%H_%M_%S")
     return f"{dt_string}_{hint}" if hint else dt_string
+
+
+T = TypeVar('T')
+
+
+def pick_from_list(ls: List[T], title='Title', rows=-1, columns=-1) -> T:
+    if rows == -1:
+        rows = len(ls) + 1
+    if columns == -1:
+        columns = max([len(str(x)) for x in ls])
+    layout = [[sg.Listbox(values=ls, size=(columns, rows))],
+              [sg.Submit()]]
+    window = sg.Window(title, layout)
+    event, values = window.read()
+    window.close()
+    return values[0][0]
 
 
 def delete_dir(dir_path: str, blocking=True):

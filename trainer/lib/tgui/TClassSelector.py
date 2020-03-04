@@ -130,7 +130,7 @@ class TClassSelector(QtWidgets.QWidget):
         # Update the label to give feedback to the user
         res = f'Selected subject:\n{self.subject.name}\n'
         if self.selection_level == ClassSelectionLevel.BinaryLevel or self.selection_level == ClassSelectionLevel.FrameLevel:
-            res += f'Selected binary:\n{self.binary_name}'
+            res += f'Selected image stack:\n{self.imstack}'
         if self.selection_level == ClassSelectionLevel.FrameLevel:
             res += f'Selected frame:\n{self.frame_number}'
         self.label.setText(res)

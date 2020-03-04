@@ -41,6 +41,7 @@ import random
 
 import numpy as np
 import sqlalchemy as sa
+from sqlalchemy import event
 import sqlalchemy.dialects.postgresql as pg
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -69,7 +70,6 @@ class NumpyBinary:
     binary = sa.Column(sa.LargeBinary)
     shape = sa.Column(sa.String())
     dtype = sa.Column(sa.String())
-    # mem_usage = sa.Column(sa.Integer())
     file_path = sa.Column(sa.String())
     stored_in_db = sa.Column(sa.Boolean())
 
@@ -83,6 +83,15 @@ class NumpyBinary:
         See https://docs.sqlalchemy.org/en/13/orm/constructors.html for details.
         """
         self.tmp_arr: Union[np.ndarray, None] = None
+
+    @staticmethod
+    def commit_handler(sess):
+        for obj in sess.dirty:
+            if isinstance(obj, NumpyBinary):
+                print("This is a numpy binary")
+                obj.set_array(obj.tmp_arr)
+            else:
+                print(obj)
 
     @staticmethod
     def get_bin_disk_folder() -> str:
@@ -341,7 +350,7 @@ class Subject(Classifiable, Base):
         return res
 
     def __repr__(self):
-        return f'Subject {self.name}\nExtra Info: {self.extra_info}\nImStacks: {self.ims}'
+        return f'Subject {self.name} with {len(self.ims)} image stacks'
 
 
 sbjts_splits_association = sa.Table(
@@ -434,5 +443,7 @@ def reset_database():
     Base.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])
     Base.metadata.create_all(engine)
 
+
+event.listen(Session, "before_commit", NumpyBinary.commit_handler)
 
 Base.metadata.create_all(engine)

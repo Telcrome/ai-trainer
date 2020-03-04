@@ -204,7 +204,7 @@ class SegToolController:
     def display_img_stack(self, frame_number: int) -> None:
         if self._img_stack.get_ndarray().shape[3] == 1:
             # Assumption: Grayscale
-            image_data = self._img_stack[frame_number, :, :, 0]
+            image_data = self._img_stack.get_ndarray()[frame_number, :, :, 0]
         else:
             # Assumption: RGB
             image_data = np.dot(self._img_stack.get_ndarray()[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
