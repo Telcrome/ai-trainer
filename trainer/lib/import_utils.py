@@ -105,7 +105,7 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
             sg.OneLineProgressMeter(
                 title=f'Adding Image Folder',
                 key='key',
-                current_value=i+1,
+                current_value=i + 1,
                 max_value=len(top_level_files),
                 grab_anywhere=True,
             )
@@ -133,6 +133,29 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
             else:  # Everything else is assumed to be a traditional image file
                 # Create the new subject
                 raise NotImplementedError()
+
+
+def import_subject(split: lib.Split, subject_path: str, semsegtpl: lib.SemSegTpl):
+    s_name = os.path.split(subject_path)[-1]
+    s = lib.Subject.build_new(s_name)
+    split.sbjts.append(s)
+    imstack_paths = [os.path.join(subject_path, p) for p in os.listdir(subject_path)]
+    for imstack_path in imstack_paths:
+        gts_paths = [(os.path.join(imstack_path, p), os.path.splitext(p)[0]) for p in os.listdir(imstack_path) if
+                     p != 'im.npy']
+        im_arr = np.load(os.path.join(imstack_path, 'im.npy'))
+        imstack = lib.ImStack.build_new(src_im=im_arr)
+        s.ims.append(imstack)
+        for gt_path, f_number in gts_paths:
+            gt_arr = np.load(gt_path)
+            imstack.add_ss_mask(gt_arr, semsegtpl, for_frame=f_number)
+
+
+def add_import_folder(split: lib.Split, folder_path: str, semsegtpl: lib.SemSegTpl):
+    subject_paths = [os.path.join(folder_path, fn) for fn in os.listdir(folder_path)]
+    for sp in subject_paths:
+        print(f'Importing {sp}')
+        import_subject(split, sp, semsegtpl)
 
 
 def append_subject(ds: lib.Dataset,
