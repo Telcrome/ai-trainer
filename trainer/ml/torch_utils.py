@@ -23,6 +23,7 @@ import trainer.ml as ml
 
 
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
+# device = torch.device('cpu')
 IDENTIFIER = lib.create_identifier()
 
 
@@ -252,13 +253,15 @@ class ModelTrainer:
             inps, y = training_example
             inps, y = [inp.to(device) for inp in inps], y.to(device)
 
-            y_ = self.model.forward(inps)
+            y_ = self.model(inps)
             if visu is not None:
                 vis_ls.append(([a.detach().cpu().numpy() for a in inps],
                                y.detach().cpu().numpy(),
                                y_.detach().cpu().numpy()))
 
             seq_item_loss = self.criterion(y_, y)
+            if seq_item_loss < 0:
+                print("Loss smaller 0 is not possible")
             loss += seq_item_loss
 
         if mode == ModelMode.Train:

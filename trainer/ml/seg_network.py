@@ -39,11 +39,11 @@ class SegCrit(nn.Module):
     def __init__(self, alpha, beta, loss_weights: Tuple):
         super().__init__()
         self.loss_weights = loss_weights
-        self.focal_loss = ml.FocalLoss(alpha=alpha, gamma=beta, logits=False)
+        self.focal_loss = ml.FocalLoss(alpha=alpha, gamma=beta, logits=True)
 
     def forward(self, logits, target):
+        bce = self.focal_loss(logits, target)
         outputs = torch.sigmoid(logits)
-        bce = self.focal_loss(outputs, target)
         dice = ml.dice_loss(outputs, target)
         return bce * self.loss_weights[0] + dice * self.loss_weights[1]
 
@@ -64,7 +64,7 @@ class SegNetwork:
         # model = ResNetUNet(n_class=n_classes)
         self.in_channels, self.n_classes = 3, 2
         pan = smp.PAN(in_channels=self.in_channels, classes=self.n_classes)
-        pan.load_state_dict(torch.load(r'C:\Users\rapha\Desktop\epoch78.pt'))
+        # pan.load_state_dict(torch.load(r'C:\Users\rapha\Desktop\epoch78.pt'))
         self.model = WrapperNet(pan)
         self.opti = optim.Adam(self.model.parameters(), lr=5e-3)
         self.crit = SegCrit(1., 2., (0.5, 0.5))
@@ -72,27 +72,12 @@ class SegNetwork:
     def visualize_input_batch(self, te: List[Tuple[List[np.ndarray], np.ndarray]]) -> plt.Figure:
         x, y = te[0]
         x = x[0]
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        im_2d = x[0, 0, :, :]
-        gt_2d = y[0, 0, :, :]
-        sns.heatmap(im_2d, ax=ax1)
-        sns.heatmap(gt_2d, ax=ax2)
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+        sns.heatmap(x[0, 0, :, :], ax=ax1)
+        sns.heatmap(x[0, 1, :, :], ax=ax2)
+        sns.heatmap(y[0, 0, :, :], ax=ax3)
+        sns.heatmap(y[0, 1, :, :], ax=ax4)
         return fig
-
-    def visualize_prediction(self, loader):
-        x, y = next(iter(loader))
-        x, y = x.to(ml.torch_device), y.to(ml.torch_device)
-        y_ = torch.sigmoid(self.model(x))
-        figs = []
-        for i in range(y_.shape[0]):
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-            sns.heatmap(x.cpu().numpy()[i, 0, :, :], ax=ax1)
-            if y.size(1) > 0:  # np.empty is returned as a type-consistent substitute for None
-                sns.heatmap(y.cpu().numpy()[i, 0, :, :], ax=ax2)
-            sns.heatmap(y_.cpu().numpy()[i, 0, :, :], ax=ax3)
-            sns.heatmap((y_.cpu().numpy()[i, 0, :, :] > 0.5).astype(np.int8), ax=ax4)
-            figs.append(fig)
-        return figs
 
     @staticmethod
     def preprocess_segmap(s: lib.Subject,
@@ -107,7 +92,7 @@ class SegNetwork:
             raise NotImplementedError()
             # mask = random.randint(0, imstack.get_ndarray().shape[0])
         im = imstack.get_ndarray()[mask.for_frame]
-        # im = cv2.cvtColor(imstack.get_ndarray()[mask.for_frame], cv2.COLOR_GRAY2RGB)
+        im = cv2.cvtColor(imstack.get_ndarray()[mask.for_frame], cv2.COLOR_GRAY2RGB)
 
         if mode == ml.ModelMode.Train:
             # Augmentation
@@ -137,12 +122,13 @@ class SegNetwork:
         im = np.rollaxis(ml.normalize_im(im), 2, 0)
 
         if not mode == ml.ModelMode.Usage:
+            gt_inv = np.invert(gt.astype(np.bool)).astype(np.float32)
             gt = gt.astype(np.float32)
             # gt = cv2.resize(gt, (384, 384))
             # # gt = np.expand_dims(gt, 0)
             gt_stacked = np.zeros((2, 384, 384), dtype=np.float32)
-            gt_stacked[0, :, :] = cv2.resize(gt[:, :, 0], (384, 384))
-            gt_stacked[1, :, :] = cv2.resize(gt[:, :, 1], (384, 384))
+            gt_stacked[0, :, :] = cv2.resize(gt, (384, 384))
+            gt_stacked[1, :, :] = cv2.resize(gt_inv, (384, 384))
             return [([im], gt_stacked)]
         return [([im], np.empty(0))]
 

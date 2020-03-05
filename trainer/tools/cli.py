@@ -92,15 +92,23 @@ def dataset_train(dataset_name: str):
     # d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
 
     BATCH_SIZE = 2
-    EPOCHS = 5
+    EPOCHS = 50
 
-    train_set = ml.InMemoryDataset(dataset_name, 'default', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Train)
+    train_set = ml.InMemoryDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Train)
+    eval_set = ml.InMemoryDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Eval)
 
     train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
-    b = next(iter(train_loader))
+    eval_loader = eval_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
+    # sess = lib.Session()
+    # split = sess.query(lib.Split).filter(lib.Split.name == 'imported')
+
+    # def loader():
+    #     for s in split.sbjts:
+    #         te = ml.SegNetwork.preprocess_segmap(s, ml.ModelMode.Train)
+    #         yield torch.Tensor(te[0]), torch.Tensor(te[1])
+
     net_wrapper = ml.SegNetwork()
-    net_wrapper.visualize_input_batch(b).show()
-    x, y = b[0]
+
     net = ml.ModelTrainer(
         lib.create_identifier('AnnoProposal'),
         net_wrapper.model,
@@ -112,10 +120,14 @@ def dataset_train(dataset_name: str):
     # with torch.no_grad():
     #     net_wrapper.visualize_input_batch((x, out.cpu())).show()
     for epoch in range(EPOCHS):
-        net.run_epoch(train_loader, epoch=0, mode=ml.ModelMode.Train, batch_size=2, steps=100)
-    with torch.no_grad():
-        out = net.model([inp.to(ml.torch_device) for inp in x])
-        net_wrapper.visualize_input_batch((x, out.cpu())).show()
+        with torch.no_grad():
+            b = next(iter(train_loader))
+            x, y = b[0]
+            net_wrapper.visualize_input_batch(b).show()
+            out = net.model([inp.to(ml.torch_device) for inp in x])
+            out = torch.sigmoid(out)
+            net_wrapper.visualize_input_batch([(x, out.cpu().numpy())]).show()
+        net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=BATCH_SIZE, steps=50)
 
 
 @ds.command(name='add-image-folder')
