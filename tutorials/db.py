@@ -27,10 +27,16 @@ if __name__ == '__main__':
     )
     session.add(cls_def)
 
-    f_path, _ = lib.standalone_foldergrab(folder_not_file=True, title='Select the parent folder')
     d = lib.Dataset.build_new('US_BONE')
-    d.add_split('default')
-    lib.add_image_folder(d.splits[0], folder_path=f_path, sess=session)
+
+    # d.add_split('default')
+    # f_path, _ = lib.standalone_foldergrab(folder_not_file=True, title='Select the parent folder')
+    # lib.add_image_folder(d.splits[0], folder_path=f_path, sess=session)
+
+    d.add_split('imported')
+    f_path, _ = lib.standalone_foldergrab(folder_not_file=True, title='Select the import folder')
+    lib.add_import_folder(d.get_split_by_name('imported'), folder_path=f_path, semsegtpl=ss_tpl)
+
     session.add(d)
 
     session.commit()
