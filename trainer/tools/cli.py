@@ -111,7 +111,7 @@ def dataset_export(dataset_name: str, split_name: str, weights_path: str):
     model.eval()
     model.load_state_dict(torch.load(weights_path))
     dataset = ml.SemSegDataset(dataset_name, split_name, mode=ml.ModelMode.Usage)
-    dataset.export_to_dir(os.getcwd(), model)
+    dataset.export_to_dir(os.path.join(os.getcwd(), lib.create_identifier('export')), model)
 
 
 @ds.command(name="train")

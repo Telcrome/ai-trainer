@@ -151,8 +151,16 @@ class SemSegDataset(data.Dataset):
                 frames_with_mask = {ssmask.for_frame: ssmask for ssmask in imstack.semseg_masks}
                 for frame_id in range(imstack.get_ndarray().shape[0]):
                     im_arr = imstack.get_ndarray()[frame_id]
-                    pred_arr = model(torch.from_numpy(im_arr).unsqueeze(0))
-                    true_arr = frames_with_mask[frame_id] if frame_id in frames_with_mask else None
+                    model_input_size = ml.normalize_im(cv2.resize(im_arr, (384, 384)))
+                    model_input = torch.from_numpy(np.rollaxis(model_input_size, 2, 0).astype(np.float32)).unsqueeze(0)
+                    pred_arr = torch.sigmoid(model(model_input)).detach().numpy()[0]
+                    for class_id in range(pred_arr.shape[0]):
+                        class_arr = pred_arr[class_id]
+                        cv2.imwrite(os.path.join(imstack_folder, f'{frame_id}class{class_id}.png'), class_arr * 255)
+                    true_arr = frames_with_mask[frame_id].get_ndarray() if frame_id in frames_with_mask else None
+                    # if true_arr is not None:
+                    #     for class_id in range(true_arr.shape[2]):
+                    #         cv2.imwrite(os.path.join(imstack_folder, f'{frame_id}gt{class_id}.png'), true_arr[:, :, class_id])
                     cv2.imwrite(os.path.join(imstack_folder, f'{frame_id}image.png'), im_arr)
 
     @staticmethod
