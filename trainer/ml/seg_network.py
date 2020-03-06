@@ -39,17 +39,6 @@ class SegNetwork:
         self.crit = SegCrit(1., 2., (0.5, 0.5))
 
     @staticmethod
-    def visualize_input_batch(te: Tuple[np.ndarray, np.ndarray]) -> None:
-        x, y = te
-        for batch_id in range(x.size()[0]):
-            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-            sns.heatmap(x[batch_id, 0, :, :], ax=ax1)
-            sns.heatmap(y[batch_id, 0, :, :], ax=ax2)
-            sns.heatmap(y[batch_id, 1, :, :], ax=ax3)
-            sns.heatmap(y[batch_id, 2, :, :], ax=ax4)
-            fig.show()
-
-    @staticmethod
     def preprocess_segmap(s: lib.Subject,
                           mode: ml.ModelMode = ml.ModelMode.Train) -> List[Tuple[List[np.ndarray], np.ndarray]]:
         imstack_with_masks = list(filter(lambda istck: len(istck.semseg_masks) > 0, s.ims))

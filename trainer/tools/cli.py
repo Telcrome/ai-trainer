@@ -6,6 +6,9 @@ This module contains the tooling for:
 
 import os
 
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 import click
 from tqdm import tqdm
 import segmentation_models_pytorch as smp
@@ -91,9 +94,30 @@ def dataset_annotate(dataset_name: str, subject_name: str):
     run_window(AnnotationGui, d, s, sess)
 
 
+@ds.command(name="export")
+@click.option('--dataset-name', '-n', prompt='Dataset Name', help='Name of the dataset')
+@click.option('--split-name', '-s', prompt='Split Name', help='Name of the dataset split')
+@click.option('--weights-path', '-w', help='Path to the weights of the network')
+def dataset_export(dataset_name: str, split_name: str, weights_path: str):
+    """
+    Export the dataset to disk.
+
+    :param dataset_name:
+    :param split_name:
+    :param weights_path:
+    :return:
+    """
+    model = smp.PAN(in_channels=3, classes=3)
+    model.eval()
+    model.load_state_dict(torch.load(weights_path))
+    dataset = ml.SemSegDataset(dataset_name, split_name, mode=ml.ModelMode.Usage)
+    dataset.export_to_dir(os.getcwd(), model)
+
+
 @ds.command(name="train")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
-def dataset_train(dataset_name: str):
+@click.option('--weights-path', '-w', help='Weights to start from', default='')
+def dataset_train(dataset_name: str, weights_path: str):
     """
     Start annotating subjects in the dataset.
     """
@@ -107,17 +131,19 @@ def dataset_train(dataset_name: str):
     # train_set.export_to_dir(r'C:\Users\rapha\Desktop\data\export_semseg')
     eval_set = ml.SemSegDataset(dataset_name, 'imported', mode=ml.ModelMode.Eval)
 
-    train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True, num_workers=2)
+    train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
     eval_loader = eval_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
-    # sess = lib.Session()
-    # split = sess.query(lib.Split).filter(lib.Split.name == 'imported')
 
-    # def loader():
-    #     for s in split.sbjts:
-    #         te = ml.SegNetwork.preprocess_segmap(s, ml.ModelMode.Train)
-    #         yield torch.Tensor(te[0]), torch.Tensor(te[1])
+    def vis(inps: np.ndarray, preds: np.ndarray, targets: np.ndarray) -> None:
+        for batch_id in range(inps.shape[0]):
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+            sns.heatmap(inps[batch_id, 0, :, :], ax=ax1)
+            sns.heatmap(targets[batch_id, :, :], ax=ax2)
+            # sns.heatmap(preds[batch_id, 0, :, :], ax=ax2)
+            sns.heatmap(preds[batch_id, 1, :, :], ax=ax3)
+            sns.heatmap(preds[batch_id, 2, :, :], ax=ax4)
+            fig.show()
 
-    # net_wrapper = ml.SegNetwork()
     model = smp.PAN(in_channels=3, classes=3)
     opti = optim.Adam(model.parameters(), lr=5e-3)
     crit = ml.SegCrit(1., 2., (1.0, 0.5))
@@ -128,6 +154,8 @@ def dataset_train(dataset_name: str):
         opti,
         crit
     )
+    if weights_path:
+        net.load_from_disk(weights_path)
 
     def vis_loader(loader):
         with torch.no_grad():
@@ -136,12 +164,12 @@ def dataset_train(dataset_name: str):
             # ml.SegNetwork.visualize_input_batch(b)
             out = model(x.to(ml.torch_device))
             out = torch.sigmoid(out)
-            ml.SegNetwork.visualize_input_batch((x, out.cpu().numpy()))
+            vis(x.numpy(), out.cpu().numpy(), y.numpy())
 
     for epoch in range(EPOCHS):
         vis_loader(train_loader)
         net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=BATCH_SIZE)
-        net.save_to_disk(r'C:\Users\rapha\sciebo\Students\Raphael Schaefer\200306_weights')
+        net.save_to_disk(r'C:\Users\rapha\sciebo\Students\Raphael Schaefer\200306_weights', hint=f'{epoch}')
         vis_loader(eval_loader)
 
 

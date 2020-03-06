@@ -6,6 +6,7 @@ from functools import partial
 from typing import Tuple, Union, Callable, List, Iterator, Any
 
 import numpy as np
+import cv2
 import imgaug.augmenters as iaa
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import matplotlib.pyplot as plt
@@ -138,11 +139,21 @@ class SemSegDataset(data.Dataset):
                     f_number = ssmask.for_frame
                     self.masks.append((imstack.get_ndarray()[f_number], ssmask.get_ndarray()))
 
-    def export_to_dir(self, dir_name):
-        lib.delete_dir(dir_name)
+    def export_to_dir(self, dir_name, model: nn.Module):
         os.mkdir(dir_name)
-        for im, gt in tqdm(self):
-            print(im, gt)
+        for sbjt in self.split.sbjts:
+            print(f'Exporting {sbjt.name} to {dir_name}')
+            sbjt_folder = os.path.join(dir_name, sbjt.name)
+            os.mkdir(sbjt_folder)
+            for i, imstack in enumerate(sbjt.ims):
+                imstack_folder = os.path.join(sbjt_folder, f'imstack{i}')
+                os.mkdir(imstack_folder)
+                frames_with_mask = {ssmask.for_frame: ssmask for ssmask in imstack.semseg_masks}
+                for frame_id in range(imstack.get_ndarray().shape[0]):
+                    im_arr = imstack.get_ndarray()[frame_id]
+                    pred_arr = model(torch.from_numpy(im_arr).unsqueeze(0))
+                    true_arr = frames_with_mask[frame_id] if frame_id in frames_with_mask else None
+                    cv2.imwrite(os.path.join(imstack_folder, f'{frame_id}image.png'), im_arr)
 
     @staticmethod
     def aug_preprocessor(t: Tuple[np.ndarray, np.ndarray]):
@@ -184,8 +195,15 @@ class SemSegDataset(data.Dataset):
         """
         x, y = self.masks[item]
 
+        if x.shape[2] == 1:
+            x = cv2.cvtColor(x, cv2.COLOR_GRAY2RGB)
+
+        x = cv2.resize(x, (384, 384))
+        y = cv2.resize(y.astype(np.uint8), (384, 384)).astype(np.bool)
+
         if self.preprocessor is not None:
             x, y = self.preprocessor((x, y))
+            y = y.astype(np.bool)  # Will later be used for indexing, therefore needs to be boolean
 
         x = np.rollaxis(ml.normalize_im(x), 2, 0)
         y = np.rollaxis(y, 2, 0)
@@ -431,8 +449,8 @@ class ModelTrainer:
                         f'{orientation_str}, Loss: {display_loss:05f}')
         ml.logger.log(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
 
-    def save_to_disk(self, dir_path: str = '.'):
-        torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}.pt'))
+    def save_to_disk(self, dir_path: str = '.', hint=''):
+        torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}{hint}.pt'))
 
     def load_from_disk(self, f_path: str) -> bool:
         p = f_path
