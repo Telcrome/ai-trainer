@@ -17,37 +17,6 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 
-class SegCrit(nn.Module):
-    """
-    Criterion which is optimized for semantic segmentation tasks.
-
-    Expects targets in the range between 0 and 1 and the logits of the predictions.
-
-    >>> import trainer.ml as ml
-    >>> import trainer.lib as lib
-    >>> import numpy as np
-    >>> import torch
-    >>> np.random.seed(0)
-    >>> alpha, beta, loss_weights = 1., 2., (0.5, 0.5)
-    >>> sc = ml.SegCrit(alpha, beta, loss_weights)
-    >>> preds, target = lib.get_test_logits(shape=(8, 1, 3, 3)), np.random.randint(size=(8, 1, 3, 3), low=0, high=2)
-    >>> preds, target = torch.from_numpy(preds.astype(np.float32)), torch.from_numpy(target.astype(np.float32))
-    >>> sc.forward(preds, target)
-    tensor(6.8156)
-    """
-
-    def __init__(self, alpha, beta, loss_weights: Tuple):
-        super().__init__()
-        self.loss_weights = loss_weights
-        self.focal_loss = ml.FocalLoss(alpha=alpha, gamma=beta, logits=True)
-
-    def forward(self, logits, target):
-        bce = self.focal_loss(logits, target)
-        outputs = torch.sigmoid(logits)
-        dice = ml.dice_loss(outputs, target)
-        return bce * self.loss_weights[0] + dice * self.loss_weights[1]
-
-
 class WrapperNet(nn.Module):
 
     def __init__(self, wrapped_net: nn.Module):
@@ -75,9 +44,9 @@ class SegNetwork:
         for batch_id in range(x.size()[0]):
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
             sns.heatmap(x[batch_id, 0, :, :], ax=ax1)
-            sns.heatmap(x[batch_id, 1, :, :], ax=ax2)
-            sns.heatmap(y[batch_id, 0, :, :], ax=ax3)
-            sns.heatmap(y[batch_id, 1, :, :], ax=ax4)
+            sns.heatmap(y[batch_id, 0, :, :], ax=ax2)
+            sns.heatmap(y[batch_id, 1, :, :], ax=ax3)
+            sns.heatmap(y[batch_id, 2, :, :], ax=ax4)
             fig.show()
 
     @staticmethod

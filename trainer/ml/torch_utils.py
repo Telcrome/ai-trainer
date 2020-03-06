@@ -111,11 +111,10 @@ class SemSegDataset(data.Dataset):
     def __init__(self,
                  ds_name: str,
                  split_name: str,
-                 channels_first=True,
                  mode: ModelMode = ModelMode.Train,
                  session=lib.Session()):
         super().__init__()
-        self.channels_first, self.session = channels_first, session
+        self.session = session
 
         self.ds = session.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
         self.split = session.query(lib.Split) \
@@ -151,18 +150,25 @@ class SemSegDataset(data.Dataset):
         """
         Uses the preprocessor that converts a subject to a training example.
 
-        :param item: Name of a subject
+        :param item: Index of a training example
         :return: Training example x, y
         """
         x, y = self.masks[item]
+        x = np.rollaxis(ml.normalize_im(x), 2, 0)
+        y = np.rollaxis(y, 2, 0)
+        gt = np.zeros((y.shape[1], y.shape[2]), dtype=np.int)
+        for c_id in range(y.shape[0]):
+            gt[y[c_id]] = c_id + 1
+        # y = np.argmax(y, axis=0)
 
-        if self.channels_first:
-            x = np.rollaxis(ml.normalize_im(x), 2, 0)
-            y = np.rollaxis(y, 2, 0)
+        # gt = np.zeros((y.shape[1], y.shape[2]))
+        # gt[y[0]] = 1
+        # gt[y[1]] = 2
 
         # Cannot transform to cuda tensors at this point,
         # because they do not seem to work in shared memory. Return numpy arrays instead.
-        return x.astype(np.float32), y.astype(np.float32)
+        # return torch.from_numpy(x), torch.from_numpy(gt).long()
+        return x.astype(np.float32), gt
 
     def __len__(self):
         return len(self.masks)

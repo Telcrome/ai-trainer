@@ -10,8 +10,14 @@ import click
 from tqdm import tqdm
 import segmentation_models_pytorch as smp
 import torch
+import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
+
+from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator
+from ignite.metrics import Accuracy, Loss, RunningAverage
+
+from ignite.contrib.handlers import ProgressBar
 
 import trainer.lib as lib
 import trainer.ml as ml
@@ -97,11 +103,9 @@ def dataset_train(dataset_name: str):
     BATCH_SIZE = 4
     EPOCHS = 50
 
-    train_set = ml.SemSegDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap,
-                                 mode=ml.ModelMode.Train)
+    train_set = ml.SemSegDataset(dataset_name, 'imported', mode=ml.ModelMode.Train)
     # train_set.export_to_dir(r'C:\Users\rapha\Desktop\data\export_semseg')
-    eval_set = ml.SemSegDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap,
-                                mode=ml.ModelMode.Eval)
+    eval_set = ml.SemSegDataset(dataset_name, 'imported', mode=ml.ModelMode.Eval)
 
     train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
     eval_loader = eval_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
@@ -114,15 +118,65 @@ def dataset_train(dataset_name: str):
     #         yield torch.Tensor(te[0]), torch.Tensor(te[1])
 
     # net_wrapper = ml.SegNetwork()
-    model = smp.PAN(in_channels=3, classes=2)
+    model = smp.PAN(in_channels=3, classes=3)
     opti = optim.Adam(model.parameters(), lr=5e-3)
-    crit = ml.SegCrit(1., 2., (0.5, 0.5))
+    crit = ml.SegCrit(1., 2., (1.0, 0.5))
+    # crit = nn.CrossEntropyLoss()
+
+    # trainer = create_supervised_trainer(model, opti, crit, device=ml.torch_device)
+    # evaluator = create_supervised_evaluator(
+    #     model, metrics={"nll": Loss(crit)}, device=ml.torch_device
+    # )
+    #
+    # RunningAverage(output_transform=lambda x: x).attach(trainer, "loss")
+    #
+    # # from ignite.contrib.metrics import GpuInfo
+    # #
+    # # GpuInfo().attach(trainer, name="gpu")
+    #
+    # pbar = ProgressBar(persist=True)
+    # pbar.attach(trainer, metric_names="all")
+    #
+    # @trainer.on(Events.EPOCH_COMPLETED)
+    # def log_training_results(engine):
+    #     with torch.no_grad():
+    #         b = next(iter(train_loader))
+    #         x, y = b
+    #         ml.SegNetwork.visualize_input_batch(b)
+    #         out = model(x.to(ml.torch_device))
+    #         out = torch.sigmoid(out)
+    #         ml.SegNetwork.visualize_input_batch((x, out.cpu().numpy()))
+    #
+    #     evaluator.run(train_loader)
+    #     metrics = evaluator.state.metrics
+    #     avg_nll = metrics["nll"]
+    #     pbar.log_message(
+    #         "Training Results - Epoch: {}  Avg loss: {:.2f}".format(
+    #             engine.state.epoch, avg_nll
+    #         )
+    #     )
+    #
+    # @trainer.on(Events.EPOCH_COMPLETED)
+    # def log_validation_results(engine):
+    #     evaluator.run(eval_loader)
+    #     metrics = evaluator.state.metrics
+    #     avg_nll = metrics["nll"]
+    #     pbar.log_message(
+    #         "Validation Results - Epoch: {} Avg loss: {:.2f}".format(
+    #             engine.state.epoch, avg_nll
+    #         )
+    #     )
+    #
+    #     pbar.n = pbar.last_print_n = 0
+    #
+    # trainer.run(train_loader, max_epochs=EPOCHS)
     net = ml.ModelTrainer(
-        lib.create_identifier('AnnoProposal'),
+        'name',
         model,
         opti,
         crit
     )
+
     # net.load_from_disk(r'C:\Users\rapha\Desktop\epoch78.pt')
     # out = net.model([inp.to(ml.torch_device) for inp in x])
     # with torch.no_grad():
@@ -131,8 +185,8 @@ def dataset_train(dataset_name: str):
         with torch.no_grad():
             b = next(iter(train_loader))
             x, y = b
-            ml.SegNetwork.visualize_input_batch(b)
-            out = net.model(x.to(ml.torch_device))
+            # ml.SegNetwork.visualize_input_batch(b)
+            out = model(x.to(ml.torch_device))
             out = torch.sigmoid(out)
             ml.SegNetwork.visualize_input_batch((x, out.cpu().numpy()))
         net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=BATCH_SIZE)
