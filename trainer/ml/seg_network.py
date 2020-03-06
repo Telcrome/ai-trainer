@@ -92,13 +92,13 @@ class SegNetwork:
         im = np.rollaxis(ml.normalize_im(im), 2, 0)
 
         if not mode == ml.ModelMode.Usage:
-            gt_inv = np.invert(gt[:, :, 0].astype(np.bool)).astype(np.float32)
-            gt = gt[:, :, 0].astype(np.float32)
+            gt_inv = np.invert(gt[:, :, 0].astype(np.bool) | gt[:, :, 1].astype(np.bool)).astype(np.float32)
+            # gt = gt[:, :, 0].astype(np.float32)
             # gt = cv2.resize(gt, (384, 384))
             # # gt = np.expand_dims(gt, 0)
-            gt_stacked = np.zeros((2, 384, 384), dtype=np.float32)
+            gt_stacked = np.zeros((3, 384, 384), dtype=np.int)
+            gt_stacked[0, :, :] = cv2.resize(gt_inv, (384, 384))
             gt_stacked[0, :, :] = cv2.resize(gt, (384, 384))
-            gt_stacked[1, :, :] = cv2.resize(gt_inv, (384, 384))
             return [([im], gt_stacked)]
         return [([im], np.empty(0))]
 

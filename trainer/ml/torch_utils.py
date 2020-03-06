@@ -6,6 +6,8 @@ from functools import partial
 from typing import Tuple, Union, Callable, List, Iterator, Any
 
 import numpy as np
+import imgaug.augmenters as iaa
+from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import torch
@@ -111,10 +113,12 @@ class SemSegDataset(data.Dataset):
     def __init__(self,
                  ds_name: str,
                  split_name: str,
+                 f: Union[Callable[[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]], partial] = None,
                  mode: ModelMode = ModelMode.Train,
                  session=lib.Session()):
         super().__init__()
         self.session = session
+        self.preprocessor = f
 
         self.ds = session.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
         self.split = session.query(lib.Split) \
@@ -140,6 +144,31 @@ class SemSegDataset(data.Dataset):
         for im, gt in tqdm(self):
             print(im, gt)
 
+    @staticmethod
+    def aug_preprocessor(t: Tuple[np.ndarray, np.ndarray]):
+        im, gt = t
+        seq = iaa.Sequential([
+            iaa.Dropout([0.01, 0.2]),  # drop 5% or 20% of all pixels
+            iaa.Crop(percent=(0, 0.1)),
+            iaa.Fliplr(0.5),
+            iaa.Sharpen((0.0, 1.0)),  # sharpen the image
+            # iaa.SaltAndPepper(0.1),
+            iaa.WithColorspace(
+                to_colorspace="HSV",
+                from_colorspace="RGB",
+                children=iaa.WithChannels(
+                    0,
+                    iaa.Add((0, 50))
+                )
+            ),
+            iaa.Sometimes(p=0.5, then_list=[iaa.Affine(rotate=(-10, 10))])
+            # iaa.ElasticTransformation(alpha=50, sigma=5)  # apply water effect (affects segmaps)
+        ], random_order=True)
+        segmap = SegmentationMapsOnImage(gt, shape=im.shape)
+        im, gt = seq(image=im, segmentation_maps=segmap)
+        gt = gt.arr
+        return im, gt
+
     def get_torch_dataloader(self, **kwargs):
         return data.DataLoader(self, **kwargs)
 
@@ -154,6 +183,10 @@ class SemSegDataset(data.Dataset):
         :return: Training example x, y
         """
         x, y = self.masks[item]
+
+        if self.preprocessor is not None:
+            x, y = self.preprocessor((x, y))
+
         x = np.rollaxis(ml.normalize_im(x), 2, 0)
         y = np.rollaxis(y, 2, 0)
         gt = np.zeros((y.shape[1], y.shape[2]), dtype=np.int)
