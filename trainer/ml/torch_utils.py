@@ -100,6 +100,74 @@ class InMemoryDataset(data.Dataset):
         return len(self.subjects)
 
 
+class SemSegDataset(data.Dataset):
+    """
+    Dataset Wrapper that simplifies the common case of performing single image semantic segmentation.
+    Given a split it looks for all masks and yields pairs (image: np.ndarray, mask: np.ndarray).
+
+    The dataset is loaded into memory, therefore your data has to be small enough.
+    """
+
+    def __init__(self,
+                 ds_name: str,
+                 split_name: str,
+                 channels_first=True,
+                 mode: ModelMode = ModelMode.Train,
+                 session=lib.Session()):
+        super().__init__()
+        self.channels_first, self.session = channels_first, session
+
+        self.ds = session.query(lib.Dataset).filter(lib.Dataset.name == ds_name).first()
+        self.split = session.query(lib.Split) \
+            .filter(self.ds.id == lib.Split.dataset_id) \
+            .filter(lib.Split.name == split_name) \
+            .options(joinedload(lib.Split.sbjts)
+                     .joinedload(lib.Subject.ims, innerjoin=True)
+                     .joinedload(lib.ImStack.semseg_masks, innerjoin=True)) \
+            .first()
+
+        self.mode = mode
+
+        self.masks: List[Tuple[np.ndarray, np.ndarray]] = []
+        for sbjt in self.split.sbjts:
+            for imstack in sbjt.ims:
+                for ssmask in imstack.semseg_masks:
+                    f_number = ssmask.for_frame
+                    self.masks.append((imstack.get_ndarray()[f_number], ssmask.get_ndarray()))
+
+    def export_to_dir(self, dir_name):
+        lib.delete_dir(dir_name)
+        os.mkdir(dir_name)
+        for im, gt in tqdm(self):
+            print(im, gt)
+
+    def get_torch_dataloader(self, **kwargs):
+        return data.DataLoader(self, **kwargs)
+
+    def get_random_batch(self):
+        return self.__getitem__(random.randint(0, self.__len__() - 1))
+
+    def __getitem__(self, item) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Uses the preprocessor that converts a subject to a training example.
+
+        :param item: Name of a subject
+        :return: Training example x, y
+        """
+        x, y = self.masks[item]
+
+        if self.channels_first:
+            x = np.rollaxis(ml.normalize_im(x), 2, 0)
+            y = np.rollaxis(y, 2, 0)
+
+        # Cannot transform to cuda tensors at this point,
+        # because they do not seem to work in shared memory. Return numpy arrays instead.
+        return x.astype(np.float32), y.astype(np.float32)
+
+    def __len__(self):
+        return len(self.masks)
+
+
 def bench_mark_dataset(ds: InMemoryDataset, extractor: Callable):
     res = []
     with tqdm(total=len(ds), maxinterval=len(ds) / 100) as pbar:
@@ -237,7 +305,7 @@ class ModelTrainer:
         self.model.apply(init_weights)
 
     def train_minibatch(self,
-                        training_examples: List[Tuple[List[torch.Tensor], torch.Tensor]],
+                        training_examples: Tuple[torch.Tensor, torch.Tensor],
                         mode: ModelMode,
                         visu: Callable[[int, ModelMode, List[Tuple[np.ndarray, np.ndarray, np.ndarray]]], None] = None,
                         evaluator: TrainerMetric = None,
@@ -249,20 +317,20 @@ class ModelTrainer:
 
         vis_ls = []
 
-        for seq_i, training_example in enumerate(training_examples):
-            inps, y = training_example
-            inps, y = [inp.to(device) for inp in inps], y.to(device)
+        # inps, y = training_example
+        # inps, y = [inp.to(device) for inp in inps], y.to(device)
+        x, y = training_examples[0].to(device), training_examples[1].to(device)
 
-            y_ = self.model(inps)
-            if visu is not None:
-                vis_ls.append(([a.detach().cpu().numpy() for a in inps],
-                               y.detach().cpu().numpy(),
-                               y_.detach().cpu().numpy()))
+        y_ = self.model(x)
+        # if visu is not None:
+        #     vis_ls.append(([a.detach().cpu().numpy() for a in inps],
+        #                    y.detach().cpu().numpy(),
+        #                    y_.detach().cpu().numpy()))
 
-            seq_item_loss = self.criterion(y_, y)
-            if seq_item_loss < 0:
-                print("Loss smaller 0 is not possible")
-            loss += seq_item_loss
+        seq_item_loss = self.criterion(y_, y)
+        if seq_item_loss < 0:
+            print("Loss smaller 0 is not possible")
+        loss += seq_item_loss
 
         if mode == ModelMode.Train:
             loss.backward()

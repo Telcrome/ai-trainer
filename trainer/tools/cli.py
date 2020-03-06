@@ -8,7 +8,10 @@ import os
 
 import click
 from tqdm import tqdm
+import segmentation_models_pytorch as smp
 import torch
+import torch.nn as nn
+import torch.optim as optim
 
 import trainer.lib as lib
 import trainer.ml as ml
@@ -91,11 +94,14 @@ def dataset_train(dataset_name: str):
     # sess = lib.Session()
     # d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
 
-    BATCH_SIZE = 2
+    BATCH_SIZE = 4
     EPOCHS = 50
 
-    train_set = ml.InMemoryDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Train)
-    eval_set = ml.InMemoryDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap, mode=ml.ModelMode.Eval)
+    train_set = ml.SemSegDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap,
+                                 mode=ml.ModelMode.Train)
+    # train_set.export_to_dir(r'C:\Users\rapha\Desktop\data\export_semseg')
+    eval_set = ml.SemSegDataset(dataset_name, 'imported', ml.SegNetwork.preprocess_segmap,
+                                mode=ml.ModelMode.Eval)
 
     train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
     eval_loader = eval_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
@@ -107,13 +113,15 @@ def dataset_train(dataset_name: str):
     #         te = ml.SegNetwork.preprocess_segmap(s, ml.ModelMode.Train)
     #         yield torch.Tensor(te[0]), torch.Tensor(te[1])
 
-    net_wrapper = ml.SegNetwork()
-
+    # net_wrapper = ml.SegNetwork()
+    model = smp.PAN(in_channels=3, classes=2)
+    opti = optim.Adam(model.parameters(), lr=5e-3)
+    crit = ml.SegCrit(1., 2., (0.5, 0.5))
     net = ml.ModelTrainer(
         lib.create_identifier('AnnoProposal'),
-        net_wrapper.model,
-        net_wrapper.opti,
-        net_wrapper.crit
+        model,
+        opti,
+        crit
     )
     # net.load_from_disk(r'C:\Users\rapha\Desktop\epoch78.pt')
     # out = net.model([inp.to(ml.torch_device) for inp in x])
@@ -122,12 +130,12 @@ def dataset_train(dataset_name: str):
     for epoch in range(EPOCHS):
         with torch.no_grad():
             b = next(iter(train_loader))
-            x, y = b[0]
-            net_wrapper.visualize_input_batch(b).show()
-            out = net.model([inp.to(ml.torch_device) for inp in x])
+            x, y = b
+            ml.SegNetwork.visualize_input_batch(b)
+            out = net.model(x.to(ml.torch_device))
             out = torch.sigmoid(out)
-            net_wrapper.visualize_input_batch([(x, out.cpu().numpy())]).show()
-        net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=BATCH_SIZE, steps=50)
+            ml.SegNetwork.visualize_input_batch((x, out.cpu().numpy()))
+        net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=BATCH_SIZE)
 
 
 @ds.command(name='add-image-folder')

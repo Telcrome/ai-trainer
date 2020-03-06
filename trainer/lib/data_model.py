@@ -263,7 +263,7 @@ class ImStack(Classifiable, NumpyBinary, Base):
     sbjt_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_SUBJECTS}.id'))
     extra_info = sa.Column(pg.JSONB())
 
-    semseg_masks: List = relationship("SemSegMask")
+    semseg_masks: List[SemSegMask] = relationship("SemSegMask")
 
     @classmethod
     def build_new(cls, src_im: np.ndarray, extra_info: Dict = None):

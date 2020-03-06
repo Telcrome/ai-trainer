@@ -11,7 +11,7 @@ try:  # The following modules depend on torch, for CI systems without torch a tr
     from trainer.ml.losses import dice_loss, FocalLoss
     from trainer.ml.layers import ConvGRUCell, ResidualBlock
     from trainer.ml.torch_utils import ModelMode, ModelTrainer, InMemoryDataset, device as torch_device, \
-        TrainerMetric, AccuracyMetric
+        TrainerMetric, AccuracyMetric, SemSegDataset
     from trainer.ml.seg_network import SegNetwork, SegCrit
 except ImportError as e:
     print(f"Please install all requirements: {e}")

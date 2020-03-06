@@ -69,15 +69,16 @@ class SegNetwork:
         self.opti = optim.Adam(self.model.parameters(), lr=5e-3)
         self.crit = SegCrit(1., 2., (0.5, 0.5))
 
-    def visualize_input_batch(self, te: List[Tuple[List[np.ndarray], np.ndarray]]) -> plt.Figure:
-        x, y = te[0]
-        x = x[0]
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-        sns.heatmap(x[0, 0, :, :], ax=ax1)
-        sns.heatmap(x[0, 1, :, :], ax=ax2)
-        sns.heatmap(y[0, 0, :, :], ax=ax3)
-        sns.heatmap(y[0, 1, :, :], ax=ax4)
-        return fig
+    @staticmethod
+    def visualize_input_batch(te: Tuple[np.ndarray, np.ndarray]) -> None:
+        x, y = te
+        for batch_id in range(x.size()[0]):
+            fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+            sns.heatmap(x[batch_id, 0, :, :], ax=ax1)
+            sns.heatmap(x[batch_id, 1, :, :], ax=ax2)
+            sns.heatmap(y[batch_id, 0, :, :], ax=ax3)
+            sns.heatmap(y[batch_id, 1, :, :], ax=ax4)
+            fig.show()
 
     @staticmethod
     def preprocess_segmap(s: lib.Subject,
@@ -92,7 +93,7 @@ class SegNetwork:
             raise NotImplementedError()
             # mask = random.randint(0, imstack.get_ndarray().shape[0])
         im = imstack.get_ndarray()[mask.for_frame]
-        im = cv2.cvtColor(imstack.get_ndarray()[mask.for_frame], cv2.COLOR_GRAY2RGB)
+        # im = cv2.cvtColor(imstack.get_ndarray()[mask.for_frame], cv2.COLOR_GRAY2RGB)
 
         if mode == ml.ModelMode.Train:
             # Augmentation
@@ -122,8 +123,8 @@ class SegNetwork:
         im = np.rollaxis(ml.normalize_im(im), 2, 0)
 
         if not mode == ml.ModelMode.Usage:
-            gt_inv = np.invert(gt.astype(np.bool)).astype(np.float32)
-            gt = gt.astype(np.float32)
+            gt_inv = np.invert(gt[:, :, 0].astype(np.bool)).astype(np.float32)
+            gt = gt[:, :, 0].astype(np.float32)
             # gt = cv2.resize(gt, (384, 384))
             # # gt = np.expand_dims(gt, 0)
             gt_stacked = np.zeros((2, 384, 384), dtype=np.float32)

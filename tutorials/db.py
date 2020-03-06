@@ -10,8 +10,8 @@ if __name__ == '__main__':
     ss_tpl = lib.SemSegTpl.build_new(
         'us_bone',
         {
-            "gt": lib.MaskType.Line,
-            # "tibia": lib.MaskType.Line
+            "femur": lib.MaskType.Line,
+            "tibia": lib.MaskType.Line
         }
     )
     session.add(ss_tpl)
