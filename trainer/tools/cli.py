@@ -94,13 +94,13 @@ def dataset_annotate(dataset_name: str, subject_name: str):
     run_window(AnnotationGui, d, s, sess)
 
 
-@ds.command(name="export")
+@ds.command(name="export-predictions")
 @click.option('--dataset-name', '-n', prompt='Dataset Name', help='Name of the dataset')
 @click.option('--split-name', '-s', prompt='Split Name', help='Name of the dataset split')
 @click.option('--weights-path', '-w', help='Path to the weights of the network')
-def dataset_export(dataset_name: str, split_name: str, weights_path: str):
+def export_predictions(dataset_name: str, split_name: str, weights_path: str):
     """
-    Export the dataset to disk.
+    Export the dataset to disk using the model for autocompletion.
 
     :param dataset_name:
     :param split_name:
@@ -114,24 +114,36 @@ def dataset_export(dataset_name: str, split_name: str, weights_path: str):
     dataset.export_to_dir(os.path.join(os.getcwd(), lib.create_identifier('export')), model)
 
 
+@ds.command(name='export-all')
+@click.option('--export-folder', '-p', default=os.getcwd())
+@click.option('--data-split', '-s', prompt='Enter name of the data split to be exported')
+def dataset_export_all(export_folder: str, data_split: str):
+    split = lib.Session().query(lib.Split).filter(lib.Split.name == data_split).first()
+    lib.export_to_folder(split, export_folder)
+
+
 @ds.command(name="train")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
+@click.option('--split-name', '-sn', prompt='Split Name:', help='Name of the training split')
 @click.option('--weights-path', '-w', help='A starting point for the learnable model parameters', default='')
 @click.option('--target-path', '-w', help='Path where the model weights are saved', default='')
 @click.option('--batch-size', default=4, help='Batch Size for training and evaluation')
 @click.option('--epochs', default=50, help='Epochs: One training pass through the training data')
-def dataset_train(dataset_name: str, weights_path: str, target_path: str, batch_size: int, epochs: int):
+@click.option('--eval-split', default='', help='Split that the model is evaluated on')
+def dataset_train(dataset_name: str, split_name: str, weights_path: str, target_path: str, batch_size: int,
+                  epochs: int, eval_split: str):
     """
     Start annotating subjects in the dataset.
     """
-    if not weights_path:
-        weights_path, _ = lib.standalone_foldergrab(folder_not_file=False)
+    # if not weights_path:
+    #     weights_path, _ = lib.standalone_foldergrab(folder_not_file=False)
     if not target_path:
         target_path, _ = lib.standalone_foldergrab(folder_not_file=True)
+    if not eval_split:
+        eval_split = split_name
 
-    train_set = ml.SemSegDataset(dataset_name, 'imported', f=ml.SemSegDataset.aug_preprocessor, mode=ml.ModelMode.Train)
-    # train_set.export_to_dir(r'C:\Users\rapha\Desktop\data\export_semseg')
-    eval_set = ml.SemSegDataset(dataset_name, 'imported', mode=ml.ModelMode.Eval)
+    train_set = ml.SemSegDataset(dataset_name, split_name, f=ml.SemSegDataset.aug_preprocessor, mode=ml.ModelMode.Train)
+    eval_set = ml.SemSegDataset(dataset_name, eval_split, mode=ml.ModelMode.Eval)
 
     train_loader = train_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
     eval_loader = eval_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
@@ -171,7 +183,7 @@ def dataset_train(dataset_name: str, weights_path: str, target_path: str, batch_
     for epoch in range(epochs):
         vis_loader(train_loader)
         net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=batch_size)
-        net.save_to_disk(r'C:\Users\rapha\sciebo\Students\Raphael Schaefer\200306_weights', hint=f'{epoch}')
+        net.save_to_disk(target_path, hint=f'{epoch}')
         vis_loader(eval_loader)
 
 

@@ -158,6 +158,22 @@ def add_import_folder(split: lib.Split, folder_path: str, semsegtpl: lib.SemSegT
         import_subject(split, sp, semsegtpl)
 
 
+def export_to_folder(split: lib.Split, folder_path: str):
+    os.mkdir(folder_path)
+    for s in split.sbjts:
+        # All information about the subject is now capsuled in s
+        print(s.name)
+        subject_folder = os.path.join(folder_path, s.name)
+        os.mkdir(subject_folder)
+        for i, im in enumerate(s.ims):
+            imstack_folder = os.path.join(subject_folder, f"{i}")
+            os.mkdir(imstack_folder)
+            np.save(os.path.join(imstack_folder, f'im.npy'), im.get_ndarray())
+            for gt in im.semseg_masks:
+                np.save(os.path.join(imstack_folder, f'{gt.for_frame}.npy'), gt.get_ndarray())
+
+
+
 def append_subject(ds: lib.Dataset,
                    im_path: Tuple[str, str],
                    gt_paths: List[Tuple[str, str]],
