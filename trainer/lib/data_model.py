@@ -395,11 +395,12 @@ class Dataset(Base):
         res.name = name
         return res
 
-    def add_split(self, split_name: str):
+    def add_split(self, split_name: str) -> Split:
         split = Split()
         split.name = split_name
         split.sbjts = []
         self.splits.append(split)
+        return split
 
     def get_split_by_name(self, split_name: str):
         for split in self.splits:
@@ -428,7 +429,7 @@ def reset_database():
     # Reset storage on disk
     from trainer.lib.misc import delete_dir
     bin_dir_path = NumpyBinary.get_bin_disk_folder()
-    print(f"Deleting {len(os.listdir(bin_dir_path))} from {bin_dir_path}")
+    print(f"Deleting {len(os.listdir(bin_dir_path))} binaries from {bin_dir_path}")
     delete_dir(bin_dir_path)
 
     sbjts_splits_association.drop(bind=engine)

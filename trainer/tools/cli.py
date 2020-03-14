@@ -35,6 +35,14 @@ def trainer():
     pass
 
 
+@trainer.command(name='reset-database')
+def trainer_reset_database():
+    """
+    Removes all tables from the database and clears the big binary directory if it exists.
+    """
+    lib.reset_database()
+
+
 @trainer.command(name='list-subjects')
 def trainer_list_subjects():
     res = lib.Session().query(lib.Subject)  # @.filter(lib.Dataset.name == dataset_name)
@@ -43,28 +51,33 @@ def trainer_list_subjects():
 
 
 @trainer.command(name='list-datasets')
-def trainer_list_subjects():
+def trainer_list_datasets():
     res = lib.Session().query(lib.Dataset)  # @.filter(lib.Dataset.name == dataset_name)
     for d in res:
         print(d)
 
 
-@trainer.command(name='init')
-@click.option('--parent-path', '-p', default=os.getcwd, help='Directory that the dataset will appear in')
-@click.option('--name', '-n', prompt=True, help='Name of the dataset created')
-def dataset_init(parent_path, name):
+@trainer.command(name='import')
+@click.option('--dataset-name', '-d', prompt='Dataset name')
+@click.option('--split-name', '-sn', prompt='How should the split for the imported data be called?')
+@click.option('--folder-path', '-p', default=os.getcwd())
+@click.option('--tpl-name', '-tpl', prompt='Name of the semantic segmentation template of the masks?')
+def trainer_import(dataset_name: str, split_name: str, folder_path: str, tpl_name: str):
     """
-    Create a new dataset
+    Imports data from a folder of the following structure:
+    - split
+      - subject1
+        - imagestack1
+          - im.npy (The actual image data)
+          - 1.npy (mask for frame 1)
+      ...
     """
-    ls = os.listdir(parent_path)
-    # click.echo(f"Other datasets in {parent_path}")
-    # for p in ls:
-    #     if os.path.isdir(p):
-    #         click.echo(f"Dirname: {os.path.basename(p)}")
-    if click.confirm(f"The dataset {name} will be created in {parent_path}"):
-        d = lib.Dataset.build_new(name, parent_path)
-        d.to_disk(parent_path)
-    click.echo(f"For working with the dataset {name}, please switch into the directory")
+    sess = lib.Session()
+    d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
+    semseg_tpl = sess.query(lib.SemSegTpl).filter(lib.SemSegTpl.name == tpl_name).first()
+    split = d.add_split(split_name)
+    lib.add_import_folder(split, folder_path, semseg_tpl)
+    sess.commit()
 
 
 @trainer.group()

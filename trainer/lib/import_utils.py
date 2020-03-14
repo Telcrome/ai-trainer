@@ -173,7 +173,6 @@ def export_to_folder(split: lib.Split, folder_path: str):
                 np.save(os.path.join(imstack_folder, f'{gt.for_frame}.npy'), gt.get_ndarray())
 
 
-
 def append_subject(ds: lib.Dataset,
                    im_path: Tuple[str, str],
                    gt_paths: List[Tuple[str, str]],
