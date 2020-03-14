@@ -12,10 +12,10 @@ class TConsole(RichJupyterWidget):
         self.kernel.gui = 'qt4'
         self.kernel.shell.push({'console_object': self})
 
-        kernel_client = kernel_manager.client()
-        kernel_client.start_channels()
+        # kernel_client = kernel_manager.client()
+        # kernel_client.start_channels()
         self.kernel_manager = kernel_manager
-        self.kernel_client = kernel_client
+        # self.kernel_client = kernel_client
 
         def stop():
             print("This does not work yet")
