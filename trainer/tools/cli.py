@@ -117,12 +117,18 @@ def dataset_export(dataset_name: str, split_name: str, weights_path: str):
 @ds.command(name="train")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
 @click.option('--weights-path', '-w', help='A starting point for the learnable model parameters', default='')
+@click.option('--target-path', '-w', help='Path where the model weights are saved', default='')
 @click.option('--batch-size', default=4, help='Batch Size for training and evaluation')
 @click.option('--epochs', default=50, help='Epochs: One training pass through the training data')
-def dataset_train(dataset_name: str, weights_path: str, batch_size: int, epochs: int):
+def dataset_train(dataset_name: str, weights_path: str, target_path: str, batch_size: int, epochs: int):
     """
     Start annotating subjects in the dataset.
     """
+    if not weights_path:
+        weights_path, _ = lib.standalone_foldergrab(folder_not_file=False)
+    if not target_path:
+        target_path, _ = lib.standalone_foldergrab(folder_not_file=True)
+
     train_set = ml.SemSegDataset(dataset_name, 'imported', f=ml.SemSegDataset.aug_preprocessor, mode=ml.ModelMode.Train)
     # train_set.export_to_dir(r'C:\Users\rapha\Desktop\data\export_semseg')
     eval_set = ml.SemSegDataset(dataset_name, 'imported', mode=ml.ModelMode.Eval)
