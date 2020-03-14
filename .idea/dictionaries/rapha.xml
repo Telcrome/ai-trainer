@@ -44,6 +44,7 @@
       <w>mnist</w>
       <w>mtype</w>
       <w>ndarray</w>
+      <w>oldstates</w>
       <w>oneshot</w>
       <w>opti</w>
       <w>optim</w>
@@ -58,6 +59,7 @@
       <w>progs</w>
       <w>progtree</w>
       <w>pyplot</w>
+      <w>reducedatt</w>
       <w>relu</w>
       <w>rmost</w>
       <w>sbjt</w>

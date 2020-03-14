@@ -427,7 +427,9 @@ class Dataset(Base):
 def reset_database():
     # Reset storage on disk
     from trainer.lib.misc import delete_dir
-    delete_dir(NumpyBinary.get_bin_disk_folder())
+    bin_dir_path = NumpyBinary.get_bin_disk_folder()
+    print(f"Deleting {len(os.listdir(bin_dir_path))} from {bin_dir_path}")
+    delete_dir(bin_dir_path)
 
     sbjts_splits_association.drop(bind=engine)
     mappers = [

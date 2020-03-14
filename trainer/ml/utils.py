@@ -39,6 +39,23 @@ def normalize_im(im: np.ndarray, norm_type=ImageNormalizations.UnitRange) -> np.
         raise Exception("Unknown Normalization type")
 
 
+def reduce_by_attention(arr: np.ndarray, att: np.ndarray):
+    """
+    Reduce an array by a field of attention, such that the result is a rectangle with the empty borders cropped.
+
+    :param arr: Target array. The last two dimensions need to be of the same shape as the attention field
+    :param att: field of attention
+    :return: cropped array
+    """
+    assert arr.shape[-2] == att.shape[0] and arr.shape[-1] == att.shape[1]
+    ones = np.argwhere(att)
+    lmost, rmost = np.min(ones[:, 0]), np.max(ones[:, 0]) + 1
+    bmost, tmost = np.min(ones[:, 1]), np.max(ones[:, 1]) + 1
+    grid_slice = [slice(None) for _ in range(len(arr.shape) - 2)]
+    grid_slice.extend([slice(lmost, rmost), slice(bmost, tmost)])
+    return arr[tuple(grid_slice)], att[lmost:rmost, bmost:tmost], (lmost, rmost, bmost, tmost)
+
+
 def pair_augmentation(g: Iterable[Tuple[np.ndarray, np.ndarray]], aug_ls) -> Iterable[Tuple[np.ndarray, np.ndarray]]:
     import imgaug.augmenters as iaa
     seq = iaa.Sequential(aug_ls)
