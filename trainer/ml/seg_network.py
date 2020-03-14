@@ -36,7 +36,7 @@ class SegNetwork:
         # pan.load_state_dict(torch.load(r'C:\Users\rapha\Desktop\epoch78.pt'))
         self.model = WrapperNet(pan)
         self.opti = optim.Adam(self.model.parameters(), lr=5e-3)
-        self.crit = SegCrit(1., 2., (0.5, 0.5))
+        self.crit = ml.SegCrit(1., 2., (0.5, 0.5))
 
     @staticmethod
     def preprocess_segmap(s: lib.Subject,

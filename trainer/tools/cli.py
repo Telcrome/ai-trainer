@@ -116,23 +116,19 @@ def dataset_export(dataset_name: str, split_name: str, weights_path: str):
 
 @ds.command(name="train")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
-@click.option('--weights-path', '-w', help='Weights to start from', default='')
-def dataset_train(dataset_name: str, weights_path: str):
+@click.option('--weights-path', '-w', help='A starting point for the learnable model parameters', default='')
+@click.option('--batch-size', default=4, help='Batch Size for training and evaluation')
+@click.option('--epochs', default=50, help='Epochs: One training pass through the training data')
+def dataset_train(dataset_name: str, weights_path: str, batch_size: int, epochs: int):
     """
     Start annotating subjects in the dataset.
     """
-    # sess = lib.Session()
-    # d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
-
-    BATCH_SIZE = 4
-    EPOCHS = 50
-
     train_set = ml.SemSegDataset(dataset_name, 'imported', f=ml.SemSegDataset.aug_preprocessor, mode=ml.ModelMode.Train)
     # train_set.export_to_dir(r'C:\Users\rapha\Desktop\data\export_semseg')
     eval_set = ml.SemSegDataset(dataset_name, 'imported', mode=ml.ModelMode.Eval)
 
-    train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
-    eval_loader = eval_set.get_torch_dataloader(batch_size=BATCH_SIZE, shuffle=True)
+    train_loader = train_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
+    eval_loader = eval_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
 
     def vis(inps: np.ndarray, preds: np.ndarray, targets: np.ndarray) -> None:
         for batch_id in range(inps.shape[0]):
@@ -166,9 +162,9 @@ def dataset_train(dataset_name: str, weights_path: str):
             out = torch.sigmoid(out)
             vis(x.numpy(), out.cpu().numpy(), y.numpy())
 
-    for epoch in range(EPOCHS):
+    for epoch in range(epochs):
         vis_loader(train_loader)
-        net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=BATCH_SIZE)
+        net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=batch_size)
         net.save_to_disk(r'C:\Users\rapha\sciebo\Students\Raphael Schaefer\200306_weights', hint=f'{epoch}')
         vis_loader(eval_loader)
 
