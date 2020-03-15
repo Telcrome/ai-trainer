@@ -156,7 +156,7 @@ def trainer_import(dataset_name: str, split_name: str, folder_path: str, tpl_nam
 @trainer.command(name="annotate")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
 @click.option('--subject-name', '-s', default='', help='If provided, opens the given subject from the dataset')
-def dataset_annotate(dataset_name: str, subject_name: str):
+def trainer_annotate(dataset_name: str, subject_name: str):
     """
     Start annotating subjects in the dataset.
     """
@@ -183,7 +183,6 @@ def export_predictions(dataset_name: str, split_name: str, weights_path: str):
     :param dataset_name:
     :param split_name:
     :param weights_path:
-    :return:
     """
     model = smp.PAN(in_channels=3, classes=3)
     model.eval()
@@ -195,7 +194,7 @@ def export_predictions(dataset_name: str, split_name: str, weights_path: str):
 @trainer.command(name='export-all')
 @click.option('--export-folder', '-p', default=os.getcwd())
 @click.option('--data-split', '-s', prompt='Enter name of the data split to be exported')
-def dataset_export_all(export_folder: str, data_split: str):
+def trainer_export_all(export_folder: str, data_split: str):
     split = lib.Session().query(lib.Split).filter(lib.Split.name == data_split).first()
     lib.export_to_folder(split, export_folder)
 
@@ -208,7 +207,7 @@ def dataset_export_all(export_folder: str, data_split: str):
 @click.option('--batch-size', default=4, help='Batch Size for training and evaluation')
 @click.option('--epochs', default=50, help='Epochs: One training pass through the training data')
 @click.option('--eval-split', default='', help='Split that the model is evaluated on')
-def dataset_train(dataset_name: str, split_name: str, weights_path: str, target_path: str, batch_size: int,
+def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_path: str, batch_size: int,
                   epochs: int, eval_split: str):
     """
     Start annotating subjects in the dataset.

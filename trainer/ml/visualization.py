@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 
@@ -34,6 +36,10 @@ class LogWriter:
             # Logging to Tensorboard
             self.visboard = VisBoard(run_name=self.log_id, dir_name=os.path.join(self.log_dir, 'tb'))
         self.prepped = True
+
+    def get_visboard(self) -> VisBoard:
+        self.prep()
+        return self.visboard
 
     def log(self, c: str):
         self.prep()
