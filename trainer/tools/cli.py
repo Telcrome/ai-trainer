@@ -51,8 +51,8 @@ def trainer_print_summary():
             print(f"Semantic Segmentation class {ss_class.name} of type {ss_class.ss_type}")
 
     print("### Class Definitions ###")
-    clss: List[lib.ClassDefinition] = sess.query(lib.ClassDefinition).all()
-    for cls_def in clss:
+    cls_defs: List[lib.ClassDefinition] = sess.query(lib.ClassDefinition).all()
+    for cls_def in cls_defs:
         print(cls_def)
 
     print("### Dataset Summaries ###")
@@ -62,8 +62,58 @@ def trainer_print_summary():
 
 
 @trainer.command(name='add-semseg-tpl')
-def trainer_add_semseg_tpl():
-    pass
+@click.option('--tpl-name', '-n', prompt='Enter name of semantic segmentation template')
+def trainer_add_semseg_tpl(tpl_name: str):
+    cls_type_mapper = {
+        'line': lib.MaskType.Line,
+        'blob': lib.MaskType.Blob,
+        'point': lib.MaskType.Point
+    }
+
+    sess = lib.Session()
+    ss_types = {}
+    while click.prompt("Enter other classes", type=click.Choice(['yes', 'no'], case_sensitive=False)) == 'yes':
+        ss_cls_name = click.prompt('Name of the segmentation class')
+        ss_cls_type = click.prompt(
+            'Type of the segmentation class',
+            type=click.Choice(cls_type_mapper.keys(), case_sensitive=False)
+        )
+        ss_types[ss_cls_name] = cls_type_mapper[ss_cls_type]
+    if ss_types:
+        print(f"Creating semantic segmentation template {tpl_name} with classes: \n {ss_types}")
+        ss_tpl = lib.SemSegTpl.build_new(tpl_name, ss_types)
+        sess.add(ss_tpl)
+        sess.commit()
+    else:
+        print(f"{ss_types} not valid")
+
+
+@trainer.command(name='add-class-def')
+@click.option('--cls-name', '-n', prompt='Class Name', help='Name of the class')
+@click.option('--cls-type', '-t', prompt='Class Type',
+              type=click.Choice([e.value for e in lib.ClassType], case_sensitive=True))
+def add_class_def(cls_name: str, cls_type: lib.ClassType):
+    sess = lib.Session()
+    cls_type_instance = lib.make_converter_dict_for_enum(lib.ClassType)[cls_type]
+
+    vals: List[str] = []
+    while True:
+        user_choice = click.prompt("Enter class name, empty space if finished")
+        if user_choice == ' ':
+            break
+        else:
+            vals.append(user_choice)
+
+    if not vals:
+        raise Exception("Please provide class names")
+
+    cls_def = lib.ClassDefinition.build_new(
+        cls_name,
+        cls_type=cls_type_instance,
+        values=vals
+    )
+    sess.add(cls_def)
+    sess.commit()
 
 
 @trainer.command(name='list-subjects')
