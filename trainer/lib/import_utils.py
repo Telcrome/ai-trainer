@@ -170,43 +170,4 @@ def export_to_folder(split: lib.Split, folder_path: str):
             os.mkdir(imstack_folder)
             np.save(os.path.join(imstack_folder, f'im.npy'), im.get_ndarray())
             for gt in im.semseg_masks:
-                np.save(os.path.join(imstack_folder, f'{gt.for_frame}.npy'), gt.get_ndarray())
-
-
-def append_subject(ds: lib.Dataset,
-                   im_path: Tuple[str, str],
-                   gt_paths: List[Tuple[str, str]],
-                   seg_structs: Dict[str, str],
-                   split='',
-                   artefact_threshold=150) -> None:
-    """
-    Appends one subject with an image and corresponding masks to a dataset split.
-
-    TODO: Add support for adding subjects with multiple images with corresponding gts
-    :param ds:
-    :param im_path:
-    :param gt_paths:
-    :param seg_structs:
-    :param split:
-    :param artefact_threshold: Threshold for removing artifacts. Pass none if no thresholding should happen.
-    """
-    im_path, im_file = im_path
-    im_name, im_ext = os.path.splitext(im_file)
-    s = lib.Subject.build_empty(name=im_name)
-    ds.save_subject(s, split=split, auto_save=False)
-
-    add_imagestack(s, im_path, binary_id=im_name, structures=seg_structs)
-    im_arr = s._get_binary(im_name)
-
-    if gt_paths:
-        gt_arr = np.zeros((im_arr.shape[1], im_arr.shape[2], len(gt_paths)), dtype=np.bool)
-        for i, (gt_path, gt_name) in enumerate(gt_paths):
-            arr = imageio.imread(os.path.join(gt_path, im_file))
-            if artefact_threshold is not None:
-                arr = arr > artefact_threshold
-            gt_arr[:, :, i] = arr
-        s.add_sem_seg(gt_arr, structure_names=[v for (_, v) in gt_paths], mask_of=im_name, frame_number=0)
-
-    # print(f'File path: {im_path} with name: {im_name}')
-
-    s.to_disk()
+                np.save(os.path.join(imstack_folder, f'{gt.tpl}{gt.for_frame}.npy'), gt.get_ndarray())

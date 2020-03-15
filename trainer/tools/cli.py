@@ -5,6 +5,7 @@ This module contains the tooling for:
 """
 
 import os
+from typing import List
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,11 +17,6 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
-
-from ignite.engine import Events, create_supervised_trainer, create_supervised_evaluator
-from ignite.metrics import Accuracy, Loss, RunningAverage
-
-from ignite.contrib.handlers import ProgressBar
 
 import trainer.lib as lib
 import trainer.ml as ml
@@ -41,6 +37,33 @@ def trainer_reset_database():
     Removes all tables from the database and clears the big binary directory if it exists.
     """
     lib.reset_database()
+
+
+@trainer.command(name='print-summary')
+def trainer_print_summary():
+    sess = lib.Session()
+
+    print("### Semantic Segmentation Templates ###")
+    ss_tpls: List[lib.SemSegTpl] = sess.query(lib.SemSegTpl).all()
+    for ss_tpl in ss_tpls:
+        print(f"Semantic segmentation template {ss_tpl.name} contains the following classes:")
+        for ss_class in ss_tpl.ss_classes:
+            print(f"Semantic Segmentation class {ss_class.name} of type {ss_class.ss_type}")
+
+    print("### Class Definitions ###")
+    clss: List[lib.ClassDefinition] = sess.query(lib.ClassDefinition).all()
+    for cls_def in clss:
+        print(cls_def)
+
+    print("### Dataset Summaries ###")
+    dss: List[lib.Dataset] = sess.query(lib.Dataset).all()
+    for ds in dss:
+        print(ds.get_summary())
+
+
+@trainer.command(name='add-semseg-tpl')
+def trainer_add_semseg_tpl():
+    pass
 
 
 @trainer.command(name='list-subjects')
@@ -80,15 +103,7 @@ def trainer_import(dataset_name: str, split_name: str, folder_path: str, tpl_nam
     sess.commit()
 
 
-@trainer.group()
-def ds():
-    """"
-    Command line tools concerned with one dataset
-    """
-    pass
-
-
-@ds.command(name="annotate")
+@trainer.command(name="annotate")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
 @click.option('--subject-name', '-s', default='', help='If provided, opens the given subject from the dataset')
 def dataset_annotate(dataset_name: str, subject_name: str):
@@ -107,9 +122,9 @@ def dataset_annotate(dataset_name: str, subject_name: str):
     run_window(AnnotationGui, d, s, sess)
 
 
-@ds.command(name="export-predictions")
-@click.option('--dataset-name', '-n', prompt='Dataset Name', help='Name of the dataset')
-@click.option('--split-name', '-s', prompt='Split Name', help='Name of the dataset split')
+@trainer.command(name="export-predictions")
+@click.option('--dataset-name', '-ds', prompt='Dataset Name', help='Name of the dataset')
+@click.option('--split-name', '-sp', prompt='Split Name', help='Name of the dataset split')
 @click.option('--weights-path', '-w', help='Path to the weights of the network')
 def export_predictions(dataset_name: str, split_name: str, weights_path: str):
     """
@@ -127,7 +142,7 @@ def export_predictions(dataset_name: str, split_name: str, weights_path: str):
     dataset.export_to_dir(os.path.join(os.getcwd(), lib.create_identifier('export')), model)
 
 
-@ds.command(name='export-all')
+@trainer.command(name='export-all')
 @click.option('--export-folder', '-p', default=os.getcwd())
 @click.option('--data-split', '-s', prompt='Enter name of the data split to be exported')
 def dataset_export_all(export_folder: str, data_split: str):
@@ -135,7 +150,7 @@ def dataset_export_all(export_folder: str, data_split: str):
     lib.export_to_folder(split, export_folder)
 
 
-@ds.command(name="train")
+@trainer.command(name="train")
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
 @click.option('--split-name', '-sn', prompt='Split Name:', help='Name of the training split')
 @click.option('--weights-path', '-w', help='A starting point for the learnable model parameters', default='')
@@ -198,80 +213,6 @@ def dataset_train(dataset_name: str, split_name: str, weights_path: str, target_
         net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=batch_size)
         net.save_to_disk(target_path, hint=f'{epoch}')
         vis_loader(eval_loader)
-
-
-@ds.command(name='add-image-folder')
-@click.option('--dataset-path', '-p', default=os.getcwd)
-@click.option('--folder-path', '-ip', default='')
-@click.option('--structure-tpl', '-st', default='')
-def dataset_add_image_folder(dataset_path: str, folder_path: str, structure_tpl: str):
-    d = lib.Dataset.from_disk(dataset_path)
-    if not folder_path:
-        folder_path, inputs_dict = lib.standalone_foldergrab(
-            folder_not_file=True,
-            title='Pick Image folder',
-            optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]
-        )
-        structure_tpl = inputs_dict['str_tpl']
-    seg_structs = d.get_structure_template_by_name(structure_tpl)
-    lib.add_image_folder(d, folder_path, structures=seg_structs)
-
-
-@ds.command(name='add-ml-folder')
-@click.option('--dataset-path', '-p', default=os.getcwd)
-@click.option('--folder-path', '-ip', default='')
-@click.option('--structure-tpl', '-st', default='')
-def dataset_add_ml_folder(dataset_path: str, folder_path: str, structure_tpl: str):
-    """
-    Imports a computer vision related folder into the trainer format.
-    Currently supports:
-    - Images with segmentation masks
-
-    Assumes a folder structure of the following form:
-
-    - train
-        - im (training images)
-            - single_image.jpg
-            - subject_folder
-                - one.jpg
-                - ...
-        - gt_humans (binary segmentation maps for class humans)
-            - single_image.jpg
-            - subject_folder
-                - one.jpg
-                - ...
-        - gt_cars (segmentation maps for class cars)
-        - ...
-    - test
-        - ...
-
-    The name of the source image and its corresponding ground truths must be identical.
-    The structure template must exist beforehand and must contain the knowledge about the given supervised data.
-    """
-    d = lib.Dataset.from_disk(dataset_path)
-    if not folder_path:
-        folder_path, inputs_dict = lib.standalone_foldergrab(
-            folder_not_file=True,
-            title='Pick Image folder',
-            optional_choices=[('Structure Template', 'str_tpl', d.get_structure_template_names())]
-        )
-        structure_tpl = inputs_dict['str_tpl']
-    seg_structs = d.get_structure_template_by_name(structure_tpl)
-
-    # Iterate over splits (top-level-directories)
-    for split in filter(os.path.isdir, [os.path.join(folder_path, fn) for fn in os.listdir(folder_path)]):
-        ims_folder = os.path.join(split, 'im')
-        for path_dir, path_name in tqdm([(os.path.join(ims_folder, fn), fn) for fn in os.listdir(ims_folder)]):
-            # Compute the ground truths
-            gt_folders = [(os.path.join(split, p), p) for p in os.listdir(split) if p != 'im']
-            lib.import_utils.append_subject(
-                d,
-                (path_dir, path_name),
-                gt_folders,
-                seg_structs,
-                split=os.path.split(split)[-1])
-        # lib.import_utils.add_to_split(d, dicts)
-    d.to_disk()
 
 
 if __name__ == '__main__':

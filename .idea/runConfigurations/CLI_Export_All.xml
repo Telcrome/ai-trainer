@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/../trainer/tools/cli.py" />
-    <option name="PARAMETERS" value="ds export-all -p C:\Users\rapha\Desktop\data\export\ -s imported" />
+    <option name="PARAMETERS" value="export-all -p C:\Users\rapha\Desktop\data\export\ -s imported" />
     <option name="SHOW_COMMAND_LINE" value="true" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />
