@@ -52,6 +52,11 @@ class LogWriter:
         self.prep()
         self.visboard.writer.add_scalar(tag, val, step)
 
+    def save_fig(self, fig: plt.Figure):
+        self.prep()
+        fig.savefig(os.path.join(self.get_run_path(),
+                                 f"{lib.create_identifier('fig')}_{len(os.listdir(self.get_run_path()))}.png"))
+
     def save_tensor(self, arr: torch.Tensor, name="tensor"):
         self.prep()
         tensor_dir = os.path.join(self.get_run_path(), name)

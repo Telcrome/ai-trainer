@@ -246,6 +246,7 @@ class AnnotationGui(TWindow):
 
     def lst_src_binaries_changed(self, item):
         if item is not None:
+            self.change_frame(0)
             src_item = item.text()
             print(f"Selected Source binary: {src_item}")
             self.select_source_binary(self.current_subject.ims[self.lst_source_binaries.currentIndex().row()])
@@ -286,21 +287,10 @@ class AnnotationGui(TWindow):
             self.lst_source_binaries.addItem(f'({im.shape}) with {len(im.semseg_masks)} masks')
 
     def select_source_binary(self, im: lib.ImStack):
-        # if auto_save and self.mask_data is not None and self._made_changes:
-        #     self.save_to_disk()
-        # self.mask_data, self.mask_name, self.frame_number = None, name, 0
-
         self._selected_source_binary, self._selected_gt_binary = im, None
         self.seg_tool.set_img_stack(self._selected_source_binary)
 
-        # meta = self.current_subject._get_binary_model(name)
-        # self.seg_structs = list(meta["meta_data"]["structures"].keys())
-
         self.select_gt_binary()
-        # if self.current_subject._get_binary_list_filtered(lambda x: binary_filter(x, name, self.frame_number)):
-        #     self.select_gt_binary(self.seg_structs[0], for_name=name)
-        # else:
-        #     self._selected_gt_binary, self.mask_data = None, None
 
         # Inform the class selector about the new selected binary
         self.class_selector.set_img_stack(self._selected_source_binary)
@@ -310,7 +300,7 @@ class AnnotationGui(TWindow):
 
     def select_gt_binary(self, auto_create=False):
         """
-        This function looks for the ground truth and if there is none creates a new fitting one.
+        Looks for the ground truth and if there is none creates a new fitting one.
 
         :param auto_create: Automatically write a new ground truth array on disk if there is none
         """

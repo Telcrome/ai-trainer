@@ -33,7 +33,9 @@ Miscellaneous objects are general pickled objects.
 from __future__ import annotations  # Important for function annotations of symbols that are not loaded yet
 
 from functools import reduce
+import json
 import os
+import pathlib
 from ast import literal_eval as make_tuple
 from enum import Enum
 from typing import List, Dict, Union
@@ -47,10 +49,23 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
-# engine = create_engine('sqlite:///:memory:', echo=True)
+config_path = os.path.join(str(pathlib.Path.home()), 'trainer_config.json')
 
-DB_CON = os.getenv('DB_CON')
-con_string = f'postgresql+psycopg2://postgres:{DB_CON}'
+
+def load_config_json():
+    with open(config_path, 'r') as f:
+        return json.load(f)
+
+
+def get_bin_storage_folder() -> str:
+    return load_config_json()["big_bin_path"]
+
+
+def get_db_con_string() -> str:
+    return f'postgresql+psycopg2://postgres:{load_config_json()["db_con"]}'
+
+
+con_string = get_db_con_string()
 engine = create_engine(con_string)
 Session = sessionmaker(bind=engine)
 
@@ -95,7 +110,7 @@ class NumpyBinary:
 
     @staticmethod
     def get_bin_disk_folder() -> str:
-        p = os.getenv('BinStorage')
+        p = get_bin_storage_folder()
         if not p:
             raise Exception("Please set the path where I may store binaries which are too big for the db")
         if not os.path.exists(p):
