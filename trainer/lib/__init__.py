@@ -1,3 +1,4 @@
+from trainer.lib.config import config, BIG_BIN_KEY, DB_CON_KEY
 from trainer.lib.data_model import Session, NumpyBinary, ClassType, ClassDefinition, Classifiable, MaskType, \
     SemSegClass, SemSegTpl, SemSegMask, ImStack, Subject, Split, Dataset, reset_database, sbjts_splits_association
 from trainer.lib.import_utils import add_imagestack, add_image_folder, import_dicom, add_import_folder, export_to_folder

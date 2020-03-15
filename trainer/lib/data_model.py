@@ -49,24 +49,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
-config_path = os.path.join(str(pathlib.Path.home()), 'trainer_config.json')
+import trainer.lib as lib
 
-
-def load_config_json():
-    with open(config_path, 'r') as f:
-        return json.load(f)
-
-
-def get_bin_storage_folder() -> str:
-    return load_config_json()["big_bin_path"]
-
-
-def get_db_con_string() -> str:
-    return f'postgresql+psycopg2://postgres:{load_config_json()["db_con"]}'
-
-
-con_string = get_db_con_string()
-engine = create_engine(con_string)
+engine = create_engine(lib.config[lib.DB_CON_KEY])
 Session = sessionmaker(bind=engine)
 
 Base = declarative_base()
@@ -99,32 +84,14 @@ class NumpyBinary:
         """
         self.tmp_arr: Union[np.ndarray, None] = None
 
-    # @staticmethod
-    # def commit_handler(sess):
-    #     for obj in sess.dirty:
-    #         if isinstance(obj, NumpyBinary):
-    #             print(f"Preparing {obj}")
-    #             obj.set_array(obj.tmp_arr)
-    #         else:
-    #             print(obj)
-
-    @staticmethod
-    def get_bin_disk_folder() -> str:
-        p = get_bin_storage_folder()
-        if not p:
-            raise Exception("Please set the path where I may store binaries which are too big for the db")
-        if not os.path.exists(p):
-            os.mkdir(p)
-        return p
-
     def get_bin_disk_path(self):
         if not self.file_path:
-            existing = os.listdir(NumpyBinary.get_bin_disk_folder())
+            existing = os.listdir(lib.config[lib.BIG_BIN_KEY])
             shape_str = reduce(lambda x, y: f'{x}_{y}', make_tuple(f'({self.shape})'))
             proposal: str = f'NPY_{self.dtype}_{shape_str}'
             while f'{proposal}.npy' in existing:
                 proposal += f'_{random.randint(0, 50000):05d}'
-            self.file_path = os.path.join(NumpyBinary.get_bin_disk_folder(), f'{proposal}.npy')
+            self.file_path = os.path.join(lib.config[lib.BIG_BIN_KEY], f'{proposal}.npy')
         return self.file_path
 
     def set_array(self, arr: np.ndarray) -> None:
@@ -443,7 +410,7 @@ class Dataset(Base):
 def reset_database():
     # Reset storage on disk
     from trainer.lib.misc import delete_dir
-    bin_dir_path = NumpyBinary.get_bin_disk_folder()
+    bin_dir_path = lib.config[lib.BIG_BIN_KEY]
     print(f"Deleting {len(os.listdir(bin_dir_path))} binaries from {bin_dir_path}")
     delete_dir(bin_dir_path)
 
