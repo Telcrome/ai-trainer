@@ -142,7 +142,7 @@ def trainer_list_datasets():
 @trainer.command(name='import')
 @click.option('--dataset-name', '-d', prompt='Dataset name')
 @click.option('--split-name', '-sn', prompt='How should the split for the imported data be called?')
-@click.option('--folder-path', '-p', default=os.getcwd())
+@click.option('--folder-path', '-p', default='')
 @click.option('--tpl-name', '-tpl', prompt='Name of the semantic segmentation template of the masks?')
 def trainer_import(dataset_name: str, split_name: str, folder_path: str, tpl_name: str):
     """
@@ -154,6 +154,8 @@ def trainer_import(dataset_name: str, split_name: str, folder_path: str, tpl_nam
           - 1.npy (mask for frame 1)
       ...
     """
+    if not folder_path:
+        folder_path, _ = lib.standalone_foldergrab(folder_not_file=True, title='Select folder to import data from')
     sess = lib.Session()
     d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
     semseg_tpl = sess.query(lib.SemSegTpl).filter(lib.SemSegTpl.name == tpl_name).first()
