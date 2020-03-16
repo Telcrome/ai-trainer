@@ -239,15 +239,16 @@ def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_
     train_loader = train_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
     eval_loader = eval_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
 
-    def vis(inps: np.ndarray, preds: np.ndarray, targets: np.ndarray) -> None:
+    def vis(inps: np.ndarray, preds: np.ndarray, targets: np.ndarray, epoch: int) -> None:
         for batch_id in range(inps.shape[0]):
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
+            fig.suptitle(f'')
             sns.heatmap(inps[batch_id, 0, :, :], ax=ax1)
             sns.heatmap(targets[batch_id, :, :], ax=ax2)
             # sns.heatmap(preds[batch_id, 0, :, :], ax=ax2)
             sns.heatmap(preds[batch_id, 1, :, :], ax=ax3)
             sns.heatmap(preds[batch_id, 2, :, :], ax=ax4)
-            fig.show()
+            ml.logger.save_fig(fig)
 
     model = smp.PAN(in_channels=3, classes=3)
     opti = optim.Adam(model.parameters(), lr=5e-3)
@@ -262,22 +263,22 @@ def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_
     if weights_path:
         net.load_from_disk(weights_path)
 
-    def vis_loader(loader):
+    def vis_loader(loader, epoch: int):
         with torch.no_grad():
             b = next(iter(loader))
             x, y = b
             # ml.SegNetwork.visualize_input_batch(b)
             out = model(x.to(ml.torch_device))
             out = torch.sigmoid(out)
-            vis(x.numpy(), out.cpu().numpy(), y.numpy())
+            vis(x.numpy(), out.cpu().numpy(), y.numpy(), epoch)
 
     for epoch in range(epochs):
         if visualize:
-            vis_loader(train_loader)
+            vis_loader(train_loader, epoch)
         net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=batch_size)
         net.save_to_disk(target_path, hint=f'{epoch}')
         if visualize:
-            vis_loader(eval_loader)
+            vis_loader(eval_loader, epoch)
 
 
 if __name__ == '__main__':
