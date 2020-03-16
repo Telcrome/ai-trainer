@@ -242,7 +242,7 @@ def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_
     def vis(inps: np.ndarray, preds: np.ndarray, targets: np.ndarray, epoch: int) -> None:
         for batch_id in range(inps.shape[0]):
             fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-            fig.suptitle(f'')
+            fig.suptitle(f'Epoch: {epoch}')
             sns.heatmap(inps[batch_id, 0, :, :], ax=ax1)
             sns.heatmap(targets[batch_id, :, :], ax=ax2)
             # sns.heatmap(preds[batch_id, 0, :, :], ax=ax2)
