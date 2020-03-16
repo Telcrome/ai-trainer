@@ -39,6 +39,15 @@ def trainer_reset_database():
     lib.reset_database()
 
 
+@trainer.command(name='init-dataset')
+@click.option('--dataset-name', '-n', prompt='Dataset Name')
+def trainer_init_dataset(dataset_name: str):
+    session = lib.Session()
+    d = lib.Dataset.build_new('US_BONE')
+    session.add(d)
+    session.commit()
+
+
 @trainer.command(name='print-summary')
 def trainer_print_summary():
     sess = lib.Session()
@@ -203,19 +212,21 @@ def trainer_export_all(export_folder: str, data_split: str):
 @click.option('--dataset-name', '-n', prompt='Dataset Name:', help='Name of the dataset')
 @click.option('--split-name', '-sn', prompt='Split Name:', help='Name of the training split')
 @click.option('--weights-path', '-w', help='A starting point for the learnable model parameters', default='')
-@click.option('--target-path', '-w', help='Path where the model weights are saved', default='')
+@click.option('--target-path', '-t', help='Path where the model weights are saved', default='')
 @click.option('--batch-size', default=4, help='Batch Size for training and evaluation')
 @click.option('--epochs', default=50, help='Epochs: One training pass through the training data')
 @click.option('--eval-split', default='', help='Split that the model is evaluated on')
+@click.option('--visualize', '-v', default=True, type=click.BOOL, help='Decides if intermediate samples are plotted')
 def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_path: str, batch_size: int,
-                  epochs: int, eval_split: str):
+                  epochs: int, eval_split: str, visualize: bool):
     """
     Start annotating subjects in the dataset.
     """
     # if not weights_path:
     #     weights_path, _ = lib.standalone_foldergrab(folder_not_file=False)
     if not target_path:
-        target_path, _ = lib.standalone_foldergrab(folder_not_file=True)
+        target_path, _ = lib.standalone_foldergrab(folder_not_file=True,
+                                                   title='Select folder where I will store weights')
     if not eval_split:
         eval_split = split_name
 
@@ -258,10 +269,12 @@ def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_
             vis(x.numpy(), out.cpu().numpy(), y.numpy())
 
     for epoch in range(epochs):
-        vis_loader(train_loader)
+        if visualize:
+            vis_loader(train_loader)
         net.run_epoch(train_loader, epoch=epoch, mode=ml.ModelMode.Train, batch_size=batch_size)
         net.save_to_disk(target_path, hint=f'{epoch}')
-        vis_loader(eval_loader)
+        if visualize:
+            vis_loader(eval_loader)
 
 
 if __name__ == '__main__':

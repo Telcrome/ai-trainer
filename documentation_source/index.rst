@@ -12,10 +12,8 @@ Welcome to AI-Trainer's documentation!
 
    getting_started
    mission
-   next_major_version
    cli
-
-   code/modules
+   contribution
 
 
 AI-Trainer is a toolbox that defines multiple exciting simplifications to your workflow:
