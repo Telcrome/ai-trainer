@@ -141,8 +141,8 @@ def import_subject(split: lib.Split, subject_path: str, semsegtpl: lib.SemSegTpl
     split.sbjts.append(s)
     imstack_paths = [os.path.join(subject_path, p) for p in os.listdir(subject_path)]
     for imstack_path in imstack_paths:
-        gts_paths = [(os.path.join(imstack_path, p), os.path.splitext(p)[0]) for p in os.listdir(imstack_path) if
-                     p != 'im.npy']
+        gts_paths = [(os.path.join(imstack_path, p), os.path.splitext(p)[0].replace('us_bone', '')) for p in
+                     os.listdir(imstack_path) if p != 'im.npy']
         im_arr = np.load(os.path.join(imstack_path, 'im.npy'))
         imstack = lib.ImStack.build_new(src_im=im_arr)
         s.ims.append(imstack)

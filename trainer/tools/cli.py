@@ -159,7 +159,7 @@ def trainer_import(dataset_name: str, split_name: str, folder_path: str, tpl_nam
     sess = lib.Session()
     d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
     semseg_tpl = sess.query(lib.SemSegTpl).filter(lib.SemSegTpl.name == tpl_name).first()
-    print(f'Loading masks for {semseg_tpl}')
+    print(f'Loading masks for {semseg_tpl.name}')
     split = d.add_split(split_name)
     lib.add_import_folder(split, folder_path, semseg_tpl)
     sess.commit()
