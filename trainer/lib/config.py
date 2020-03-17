@@ -1,9 +1,16 @@
+"""
+The config of trainer is stored in the user directory in a folder '.trainer'.
+
+The database connection string should be in the file configfile accessible by the key 'db_con':
+postgresql+psycopg2://postgres:password@127.0.0.1:5432/db_name
+"""
+
 import os
 import pathlib
 import json
 
 trainer_config_folder = os.path.join(str(pathlib.Path.home()), '.trainer')
-BIG_BIN_DIRNAME = 'bin_bin'
+BIG_BIN_DIRNAME = 'big_bin'
 BIG_BIN_KEY = 'big_bin_dir'
 DB_CON_KEY = 'db_con'
 config_path = os.path.join(trainer_config_folder, 'trainer_config.json')

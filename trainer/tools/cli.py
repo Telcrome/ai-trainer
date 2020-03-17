@@ -233,11 +233,14 @@ def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_
     if not eval_split:
         eval_split = split_name
 
-    train_set = ml.SemSegDataset(dataset_name, split_name, f=ml.SemSegDataset.aug_preprocessor, mode=ml.ModelMode.Train)
+    train_set = ml.SemSegDataset(dataset_name,
+                                 split_name,
+                                 f=ml.SemSegDataset.aug_preprocessor,
+                                 mode=ml.ModelMode.Train)
     eval_set = ml.SemSegDataset(dataset_name, eval_split, mode=ml.ModelMode.Eval)
 
-    train_loader = train_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
-    eval_loader = eval_set.get_torch_dataloader(batch_size=batch_size, shuffle=True)
+    train_loader = train_set.get_torch_dataloader(batch_size=batch_size, shuffle=True, drop_last=True)
+    eval_loader = eval_set.get_torch_dataloader(batch_size=batch_size, shuffle=True, drop_last=True)
 
     def vis(inps: np.ndarray, preds: np.ndarray, targets: np.ndarray, epoch: int, desc='') -> None:
         for batch_id in range(inps.shape[0]):
