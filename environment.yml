@@ -7,3 +7,4 @@ dependencies:
     - opencv-python
     - PySimpleGui
     - pydicom
+    - psycopg2
