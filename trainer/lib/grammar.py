@@ -3,11 +3,15 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Union
 
 
-class TS:
+class Symbol:
+    name = 'GenericSymbol'
+
+
+class TS(Symbol):
     pass
 
 
-class NTS:
+class NTS(Symbol):
     pass
 
 
@@ -25,6 +29,6 @@ class Grammar:
         for prod_rule_key in self.prod_rules:
             right_repr = ''
             for rule in self.prod_rules[prod_rule_key]:
-                right_repr += f"{rule} | "
-            res += f'{prod_rule_key} -> {right_repr}'
+                right_repr += f"{[item.name for item in rule]} | "
+            res += f'{prod_rule_key.name} -> {right_repr[:-3]}'
         return res

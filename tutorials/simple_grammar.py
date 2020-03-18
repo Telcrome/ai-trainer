@@ -6,15 +6,11 @@ import trainer.lib as lib
 
 
 class Action(lib.TS):
-
-    def __repr__(self):
-        return 'a'
+    name = 'a'
 
 
 class S(lib.NTS):
-
-    def __repr__(self):
-        return 'S'
+    name = 'S'
 
 
 if __name__ == '__main__':
@@ -22,3 +18,4 @@ if __name__ == '__main__':
     sg.add_prod_rule(S, [
         [Action, S], [Action]
     ])
+    print(sg)
