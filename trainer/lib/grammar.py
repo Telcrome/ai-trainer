@@ -3,6 +3,8 @@ import random
 from abc import ABC, abstractmethod
 from typing import Dict, List, Union, Tuple
 
+import trainer.lib as lib
+
 
 class Symbol:
     name = 'GenericSymbol'
@@ -16,12 +18,13 @@ class NTS(Symbol):
     pass
 
 
-class SyntaxTree:
+class NonTermNode(lib.TreeNode[NTS, lib.TreeNode]):  # lib.TreeNode as child is a workaround for making annotations work
+    pass
 
-    def __init__(self, value: Symbol, parent: Union[SyntaxTree, None] = None):
-        self.value = value
-        self.children: List[SyntaxTree] = []
-        self.parent = parent
+
+class RuleNode(lib.TreeNode[List[Symbol], NonTermNode]):
+    def asdf(self):
+        self.value.
 
 
 class Program:
@@ -51,7 +54,6 @@ class Grammar:
         p = Program(self.start_symbol)
         p_index, nts = p.get_nts()
         while nts is not None:
-
             prod_rule, proba = random.choice(self.prod_rules[nts])
 
             p.use_rule(p_index, prod_rule)
