@@ -13,9 +13,16 @@ class S(lib.NTS):
     name = 'S'
 
 
+class SimpleGrammar(lib.Grammar):
+    prod_rules = {
+        S: [
+            ([Action, S], 0.5),
+            ([Action], 0.5)
+        ]
+    }
+
+
 if __name__ == '__main__':
-    sg = lib.Grammar(S)
-    sg.add_prod_rule(S, [
-        [Action, S], [Action]
-    ])
+    sg = SimpleGrammar(S)
     print(sg)
+    print(sg.build_random_word())
