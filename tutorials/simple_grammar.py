@@ -5,8 +5,8 @@ Demonstrates how to generate programs of simple languages using the probabilisti
 import trainer.lib as lib
 
 plus = lib.TS('plus')
-zero = lib.TS('zero')
-one = lib.TS('one')
+magicnumber = lib.TS('magicnumber')
+numbers = [([lib.TS(str(i))], float(i)) for i in range(30)]
 Number = lib.NTS('Number')
 S = lib.NTS('S')
 
@@ -17,10 +17,7 @@ class SimpleGrammar(lib.Grammar):
             ([S, S], 1.),
             ([plus, Number, Number], 1.),
         ],
-        Number: [
-            ([zero], 0.9),
-            ([one], 0.1)
-        ]
+        Number: [([magicnumber], 5.)] + numbers
     }
 
 

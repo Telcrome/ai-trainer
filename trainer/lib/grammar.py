@@ -73,11 +73,11 @@ class ProgramSearchTree:
     def expand_node(self, node: SymbolNode) -> None:
         # node = self.expand_nodes.pop(0)
         for substitution, p in self.grammar.get_rule(node.value):
-            exp_node = ExpressionNode(substitution)
+            exp_node = ExpressionNode(substitution, parent=node)
             node.children.append(exp_node)
 
             for sym in exp_node.value:
-                sym_node = SymbolNode(sym)
+                sym_node = SymbolNode(sym, parent=exp_node)
                 if isinstance(sym, NTS):
                     self.expand_nodes.append(sym_node)
                 exp_node.children.append(sym_node)
