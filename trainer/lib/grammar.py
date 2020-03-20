@@ -8,7 +8,12 @@ import trainer.lib as lib
 
 
 class Symbol:
-    name = 'GenericSymbol'
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
 
 
 class TS(Symbol):
@@ -19,7 +24,7 @@ class NTS(Symbol):
     pass
 
 
-RULE = List[Tuple[List[Union[Symbol]], int]]
+RULE = List[Tuple[List[Symbol], int]]
 
 
 class SymbolNode(lib.TreeNode[Symbol, lib.TreeNode]):
@@ -36,12 +41,12 @@ class ExpressionNode(lib.TreeNode[List[Symbol], SymbolNode]):
 
 
 class Grammar:
-    prod_rules: Dict[type(NTS), RULE] = {}
+    prod_rules: Dict[NTS, RULE] = {}
 
-    def __init__(self, start_symbol: type(NTS)):
+    def __init__(self, start_symbol: NTS):
         self.start_symbol: NTS = start_symbol
 
-    def get_rule(self, nts: type(NTS)) -> RULE:
+    def get_rule(self, nts: NTS) -> RULE:
         if nts in self.prod_rules:
             return self.prod_rules[nts]
         else:
@@ -54,7 +59,7 @@ class Grammar:
             for rule in self.prod_rules[prod_rule_key]:
                 prod_abbreviation = [s.name for s in rule[0]]
                 right_repr += f" {prod_abbreviation} ({rule[1]}) | "
-            res += f'{prod_rule_key.name} -> {right_repr[:-3]}'
+            res += f'{prod_rule_key} -> {right_repr[:-3]}\n'
         return res
 
 
@@ -77,10 +82,10 @@ class ProgramSearchTree:
                     self.expand_nodes.append(sym_node)
                 exp_node.children.append(sym_node)
 
-    def read_program(self, node: SymbolNode) -> List[type(TS)]:
-        if issubclass(node.value, TS):
+    def read_program(self, node: SymbolNode) -> List[TS]:
+        if isinstance(node.value, TS):
             return [node.value]
-        elif issubclass(node.value, NTS):
+        elif isinstance(node.value, NTS):
             if not node.children:
                 self.expand_node(node)
 
@@ -96,9 +101,3 @@ class ProgramSearchTree:
             return res
         else:
             raise Exception(f"Can only read nodes that contain single symbols, not {node.value}")
-
-    def prog_to_str(self, prog: List[type(TS)]) -> str:
-        res = ""
-        for a in prog:
-            res += a.name
-        return res

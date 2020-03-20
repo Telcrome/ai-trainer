@@ -4,20 +4,22 @@ Demonstrates how to generate programs of simple languages using the probabilisti
 
 import trainer.lib as lib
 
-
-class Action(lib.TS):
-    name = 'a'
-
-
-class S(lib.NTS):
-    name = 'S'
+plus = lib.TS('plus')
+zero = lib.TS('zero')
+one = lib.TS('one')
+Number = lib.NTS('Number')
+S = lib.NTS('S')
 
 
 class SimpleGrammar(lib.Grammar):
     prod_rules = {
         S: [
-            ([Action, S], 0.5),
-            ([Action], 0.5)
+            ([S, S], 1.),
+            ([plus, Number, Number], 1.),
+        ],
+        Number: [
+            ([zero], 0.9),
+            ([one], 0.1)
         ]
     }
 
@@ -30,4 +32,5 @@ if __name__ == '__main__':
     # t.expand_node()
     for _ in range(10):
         prog = t.read_program(t.tree_root)
-        print(t.prog_to_str(prog))
+        # print(t.prog_to_str(prog))
+        print(prog)
