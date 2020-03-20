@@ -25,4 +25,9 @@ class SimpleGrammar(lib.Grammar):
 if __name__ == '__main__':
     sg = SimpleGrammar(S)
     print(sg)
-    print(sg.build_random_word())
+    # print(sg.build_random_word())
+    t = lib.ProgramSearchTree(sg)
+    # t.expand_node()
+    for _ in range(10):
+        prog = t.read_program(t.tree_root)
+        print(t.prog_to_str(prog))
