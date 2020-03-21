@@ -16,9 +16,15 @@ class TreeNode(Generic[V, C]):
     """
 
     def __init__(self, value: V, parent: Union[C, None] = None):
-        self.children: List[TreeNode] = []
+        self._children: List[TreeNode] = []
         self.value = value
         self.parent = parent
 
+    def add_child(self, c: C):
+        self._children.append(c)
+
+    def get_all_children(self):
+        return self._children
+
     def __repr__(self):
-        return f"Node {type(self)}\nValue: {self.value}\nChildren:{[type(c) for c in self.children]}"
+        return f"Node {type(self)}\nValue: {self.value}\nChildren:{[type(c) for c in self._children]}"

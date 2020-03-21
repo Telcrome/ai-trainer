@@ -41,6 +41,7 @@
       <w>logdir</w>
       <w>logits</w>
       <w>logwriter</w>
+      <w>magicnumber</w>
       <w>matplot</w>
       <w>matplotlib</w>
       <w>minibatch</w>
@@ -96,6 +97,7 @@
       <w>tpls</w>
       <w>tqdm</w>
       <w>trgt</w>
+      <w>unflagged</w>
       <w>visboard</w>
     </words>
   </dictionary>

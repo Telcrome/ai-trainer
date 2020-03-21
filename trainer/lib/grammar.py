@@ -1,7 +1,9 @@
 from __future__ import annotations
+import itertools
+import infinite
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, Callable, Iterable
 from functools import reduce
 
 import trainer.lib as lib
@@ -31,7 +33,7 @@ class SymbolNode(lib.TreeNode[Symbol, lib.TreeNode]):
     """
     Node of ProgramSearchTree
 
-    lib.TreeNode as child type is a workaround for making annotations work, it should be RuleNode
+    lib.TreeNode as child type is a workaround for making annotations work, it should be ExpressionNode
     """
     pass
 
@@ -67,37 +69,28 @@ class ProgramSearchTree:
 
     def __init__(self, grammar: Grammar):
         self.grammar = grammar
-        self.tree_root = SymbolNode(self.grammar.start_symbol)
-        self.expand_nodes: List[SymbolNode] = [self.tree_root]  # Store the nodes that can still be expanded
 
-    def expand_node(self, node: SymbolNode) -> None:
-        # node = self.expand_nodes.pop(0)
-        for substitution, p in self.grammar.get_rule(node.value):
-            exp_node = ExpressionNode(substitution, parent=node)
-            node.children.append(exp_node)
+    # def read_program(self) -> Iterable[Union[List[TS], None]]:
+    #     for item in self._read_symbol(self.grammar.start_symbol):
+    #         yield item
 
-            for sym in exp_node.value:
-                sym_node = SymbolNode(sym, parent=exp_node)
-                if isinstance(sym, NTS):
-                    self.expand_nodes.append(sym_node)
-                exp_node.children.append(sym_node)
+    def _read_symbol(self, sym: Symbol):
+        if isinstance(sym, TS):
+            yield [sym]
+        elif isinstance(sym, NTS):
+            rules, probas = [], []
+            for substitution, p in self.grammar.get_rule(sym):
+                rules.append(substitution)
+                probas.append(p)
 
-    def read_program(self, node: SymbolNode) -> List[TS]:
-        if isinstance(node.value, TS):
-            return [node.value]
-        elif isinstance(node.value, NTS):
-            if not node.children:
-                self.expand_node(node)
-
-            # Choose an expression to go further from here
-            exp_node = random.choice(node.children)
-
-            progs = [self.read_program(sym_node) for sym_node in exp_node.children]
-            res = []
-            for prog in progs:
-                for a in prog:
-                    res.append(a)
-            # res = reduce(lambda p1, p2: p1.extend(p2), progs)
-            return res
+            # For making it probabilistic: Sort probabilistic
+            for rule in rules:
+                gens = [self._read_symbol(sym) for sym in rule]
+                for rule_tuple in itertools.product(*gens):
+                    res = reduce(lambda x, y: x + y, [i for i in rule_tuple])
+                    yield res
+            # for exp_node in sym_node.get_all_children():
+            #     res = [prog for prog in self._read_expression(exp_node)]
+            #     yield res
         else:
-            raise Exception(f"Can only read nodes that contain single symbols, not {node.value}")
+            raise Exception(f"Can only read nodes that contain single symbols, not {sym_node.value}")
