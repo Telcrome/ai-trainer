@@ -39,25 +39,38 @@ class GenCacher(Generic[V]):
         return self._cache[idx]
 
 
-def get_combinations(level: int, lx: int, ly: int) -> Generator[Tuple, None, None]:
-    if level < ly:
-        for i in range(min(level, lx)):
-            yield level, i
-    if level < lx and level < ly:
-        yield level, level
-    if level < lx:
-        for i in range(min(level, ly)):
-            yield i, level
+def summations(sum_to: int, n=2) -> Generator[Tuple, None, None]:
+    if n == 1:
+        yield sum_to,
+    else:
+        for head in range(sum_to + 1):
+            for tail in summations(sum_to - head, n - 1):
+                yield (head,) + tail
+
+
+def get_combinations(level: int, ls: List[int]) -> Generator[Tuple, None, None]:
+    if len(ls) == 1:
+        yield level,
+    else:
+        # if level < ls[1]:
+        #     for i in range(min(level, ls[0])):
+        #         yield level, i
+        # if level < ls[0] and level < ls[1]:
+        #     yield level, level
+        # if level < ls[0]:
+        for i in range(min(level, ls[0])):
+            for other in get_combinations(level, ls[1:]):
+                yield (i,) + other
 
 
 def product_two_gens(g1: GenCacher, g2: GenCacher) -> Generator:
     for level in itertools.count(0):
         print(f"Exploring level {level}")
 
-    # while not g1.is_exhausted() or not g2.is_exhausted():
+        # while not g1.is_exhausted() or not g2.is_exhausted():
         g1.fill_cache(level)
         g2.fill_cache(level)
-        for coord in get_combinations(level, g1.get_cache_len(), g2.get_cache_len()):
+        for coord in get_combinations(level, [g1.get_cache_len(), g2.get_cache_len()]):
             yield coord
 
         if g1.is_exhausted() and g2.is_exhausted():
@@ -77,15 +90,6 @@ def product_two_gens(g1: GenCacher, g2: GenCacher) -> Generator:
     #         yield g1[t[0]], g2[t[1]]
 
 
-def summations(sum_to: int, n=2) -> Generator[Tuple, None, None]:
-    if n == 1:
-        yield sum_to,
-    else:
-        for head in range(sum_to + 1):
-            for tail in summations(sum_to - head, n - 1):
-                yield (head,) + tail
-
-
 def product(*gens):
     gens = list(map(GenCacher, gens))
 
@@ -98,35 +102,35 @@ def product(*gens):
 
 if __name__ == '__main__':
     def finite_test_gen():
-        for item in range(30):
+        for item in range(3):
             yield item
 
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    fig, ax = plt.subplots()
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    # fig, ax = plt.subplots()
 
     xs, ys, zs = [], [], []
-    for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
-        # print(c)
-        xs.append(c[0])
-        ys.append(c[1])
-        # zs.append(c[2])
-        ax.scatter(c[0], c[1], s=10, c=1)
-    # for l in range(20):
-    #     for c in get_combinations(l, 12, 15):
-    #         xs.append(c[0])
-    #         ys.append(c[1])
-    #         # zs.append(c[2])
-    #         ax.scatter(c[0], c[1], s=l, c=l)
-    #         ax.annotate(str(l), c)
-    #         print(c)
-            # ax.plot(xs=xs, ys=ys)
-        # for t in summations(l, n=3):
-        #     xs.append(t[0])
-        #     ys.append(t[1])
-        #     zs.append(t[2])
-        #     ax.plot(xs=xs, ys=ys, zs=zs)
-        #     print(t)
-    ax.plot(xs, ys)
+    # for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
+    #     # print(c)
+    #     xs.append(c[0])
+    #     ys.append(c[1])
+    #     # zs.append(c[2])
+    #     ax.scatter(c[0], c[1], s=10, c=1)
+    for l in range(20):
+        for c in get_combinations(l, [12, 15, 5]):
+            xs.append(c[0])
+            ys.append(c[1])
+            zs.append(c[2])
+            # ax.scatter(c[0], c[1], s=l, c=l)
+            # ax.annotate(str(l), c)
+            print(c)
+    # ax.plot(xs=xs, ys=ys)
+    # for t in summations(l, n=3):
+    #     xs.append(t[0])
+    #     ys.append(t[1])
+    #     zs.append(t[2])
+    #     print(t)
+    ax.plot(xs=xs, ys=ys, zs=zs)
+    # ax.plot(xs, ys)
     fig.show()
