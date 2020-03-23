@@ -26,12 +26,16 @@ class GenCacher(Generic[V]):
     def get_cache_len(self) -> int:
         return len(self._cache)
 
-    def __getitem__(self, idx: int) -> V:
-        while len(self._cache) <= idx:
+    def fill_cache(self, level: int):
+        while not self.is_exhausted() and level >= self.get_cache_len():
+            # while len(self._cache) <= idx:
             try:
                 self._cache.append(next(self._g))
             except StopIteration as _:
                 self._is_exhausted = True
+
+    def __getitem__(self, idx: int) -> V:
+        self.fill_cache(idx)
         return self._cache[idx]
 
 
@@ -47,14 +51,22 @@ def get_combinations(level: int, lx: int, ly: int) -> Generator[Tuple, None, Non
 
 
 def product_two_gens(g1: GenCacher, g2: GenCacher) -> Generator:
-    l1, l2 = 0, 0
-    while not g1.is_exhausted() or not g2.is_exhausted():
-        for coord in get_combinations(l1, l2):
-            yield g1[coord[0]], g2[coord[1]]
-        if not g1.is_exhausted():
-            l1 += 1
-        if not g2.is_exhausted():
-            l2 += 1
+    for level in itertools.count(0):
+        print(f"Exploring level {level}")
+
+    # while not g1.is_exhausted() or not g2.is_exhausted():
+        g1.fill_cache(level)
+        g2.fill_cache(level)
+        for coord in get_combinations(level, g1.get_cache_len(), g2.get_cache_len()):
+            yield coord
+
+        if g1.is_exhausted() and g2.is_exhausted():
+            return
+        #     yield g1[coord[0]], g2[coord[1]]
+        # if not g1.is_exhausted():
+        #     l1 += 1
+        # if not g2.is_exhausted():
+        #     l2 += 1
 
     # l = 0
     # for level in itertools.count(0):
@@ -86,7 +98,7 @@ def product(*gens):
 
 if __name__ == '__main__':
     def finite_test_gen():
-        for item in range(3):
+        for item in range(30):
             yield item
 
 
@@ -95,20 +107,20 @@ if __name__ == '__main__':
     fig, ax = plt.subplots()
 
     xs, ys, zs = [], [], []
-    # for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
-    #     xs.append(c[0])
-    #     ys.append(c[1])
-    #     # zs.append(c[2])
-    #     ax.scatter(c[0], c[1], s=10, c=1)
-    #     print(c)
-    for l in range(20):
-        for c in get_combinations(l, 12, 15):
-            xs.append(c[0])
-            ys.append(c[1])
-            # zs.append(c[2])
-            ax.scatter(c[0], c[1], s=l, c=l)
-            ax.annotate(str(l), c)
-            print(c)
+    for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
+        # print(c)
+        xs.append(c[0])
+        ys.append(c[1])
+        # zs.append(c[2])
+        ax.scatter(c[0], c[1], s=10, c=1)
+    # for l in range(20):
+    #     for c in get_combinations(l, 12, 15):
+    #         xs.append(c[0])
+    #         ys.append(c[1])
+    #         # zs.append(c[2])
+    #         ax.scatter(c[0], c[1], s=l, c=l)
+    #         ax.annotate(str(l), c)
+    #         print(c)
             # ax.plot(xs=xs, ys=ys)
         # for t in summations(l, n=3):
         #     xs.append(t[0])
