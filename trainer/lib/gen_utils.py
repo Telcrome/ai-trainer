@@ -39,12 +39,13 @@ class GenCacher(Generic[V]):
         return self._cache[idx]
 
 
-def summations(sum_to: int, n=2) -> Generator[Tuple, None, None]:
-    if n == 1:
-        yield sum_to,
+def summations(sum_to: int, ls: List[int]) -> Generator[Tuple, None, None]:
+    if len(ls) == 1:
+        if sum_to < ls[0]:
+            yield sum_to,
     else:
-        for head in range(sum_to + 1):
-            for tail in summations(sum_to - head, n - 1):
+        for head in range(min(sum_to + 1, ls[0])):
+            for tail in summations(sum_to - head, ls[1:]):
                 yield (head,) + tail
 
 
@@ -115,7 +116,7 @@ if __name__ == '__main__':
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    fig, ax = plt.subplots()
+    # fig, ax = plt.subplots()
 
     xs, ys, zs = [], [], []
     # for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
@@ -126,12 +127,12 @@ if __name__ == '__main__':
     #     ax.scatter(c[0], c[1], s=10, c=1)
     for l in range(20):
         print(f'Explore level {l}')
-        for c in get_all_combinations(l, [12, 15]):
+        for c in summations(l, [12, 15, 14]):
             xs.append(c[0])
             ys.append(c[1])
-            # zs.append(c[2])
-            ax.scatter(c[0], c[1], s=l, c=l)
-            ax.annotate(str(l), c)
+            zs.append(c[2])
+            # ax.scatter(c[0], c[1], s=l, c=l)
+            # ax.annotate(str(l), c)
             print(c)
     # ax.plot(xs=xs, ys=ys)
     # for t in summations(l, n=3):
@@ -139,6 +140,6 @@ if __name__ == '__main__':
     #     ys.append(t[1])
     #     zs.append(t[2])
     #     print(t)
-    # ax.plot(xs=xs, ys=ys, zs=zs)
-    ax.plot(xs, ys)
+    ax.plot(xs=xs, ys=ys, zs=zs)
+    # ax.plot(xs, ys)
     fig.show()
