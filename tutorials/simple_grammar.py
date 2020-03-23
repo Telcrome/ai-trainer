@@ -8,7 +8,7 @@ import trainer.lib as lib
 
 plus = lib.TS('plus')
 magicnumber = lib.TS('magicnumber')
-N = 5
+N = 2
 numbers = [([lib.TS(str(i))], N - float(i)) for i in range(N)]
 Number = lib.NTS('Number')
 S = lib.NTS('S')
@@ -17,8 +17,8 @@ S = lib.NTS('S')
 class SimpleGrammar(lib.Grammar):
     prod_rules = {
         S: [
-            # ([S, S], 1.),
-            ([plus, Number, Number, Number, Number], 1.),
+            # ([S, S], 0.1),
+            ([plus, Number, Number, Number, Number], 0.9),
         ],
         Number: [([magicnumber], 5.)] + numbers
     }
@@ -31,4 +31,7 @@ if __name__ == '__main__':
     t = lib.ProgramSearchTree(sg)
     # t.expand_node()
 
-    progs = [prog for prog in t._read_symbol(t.grammar.start_symbol)]
+    for prog in t.read_program():
+        print(prog)
+
+    # progs = [prog for prog in t._read_symbol(t.grammar.start_symbol)]

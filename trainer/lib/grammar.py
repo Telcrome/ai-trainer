@@ -3,8 +3,11 @@ import itertools
 import infinite
 import random
 from abc import ABC, abstractmethod
-from typing import Dict, List, Union, Tuple, Callable, Iterable
+from typing import Dict, List, Union, Tuple, Callable, Iterable, Generator, TypeVar
 from functools import reduce
+
+import numpy as np
+from scipy.special import softmax
 
 import trainer.lib as lib
 
@@ -27,19 +30,6 @@ class NTS(Symbol):
 
 
 RULE = List[Tuple[List[Symbol], int]]
-
-
-class SymbolNode(lib.TreeNode[Symbol, lib.TreeNode]):
-    """
-    Node of ProgramSearchTree
-
-    lib.TreeNode as child type is a workaround for making annotations work, it should be ExpressionNode
-    """
-    pass
-
-
-class ExpressionNode(lib.TreeNode[List[Symbol], SymbolNode]):
-    pass
 
 
 class Grammar:
@@ -69,28 +59,37 @@ class ProgramSearchTree:
 
     def __init__(self, grammar: Grammar):
         self.grammar = grammar
+        self.max_depth = 10
+        self.rule_counter: Dict[Symbol, int] = {key: 0 for key in self.grammar.prod_rules}
 
-    # def read_program(self) -> Iterable[Union[List[TS], None]]:
-    #     for item in self._read_symbol(self.grammar.start_symbol):
-    #         yield item
+    def read_program(self) -> Iterable[Union[List[TS], None]]:
+        for item in self._read_symbol(0, self.grammar.start_symbol):
+            yield item
 
-    def _read_symbol(self, sym: Symbol):
+    def _read_symbol(self, depth: int, sym: Symbol) -> List[TS]:
         if isinstance(sym, TS):
             yield [sym]
         elif isinstance(sym, NTS):
+            # if depth < self.max_depth:
             rules, probas = [], []
             for substitution, p in self.grammar.get_rule(sym):
                 rules.append(substitution)
                 probas.append(p)
 
+            # p_arr = np.array(probas)
+            # random_indices = np.random.choice(len(rules), len(rules), p=softmax(probas), replace=False)
+            random_indices = np.arange(len(rules))
             # For making it probabilistic: Sort probabilistic
-            for rule in rules:
-                gens = [self._read_symbol(sym) for sym in rule]
-                for rule_tuple in itertools.product(*gens):
+            # shuffle_list = zip(rules, probas)
+            # random.shuffle(shuffle_list)
+            # rules, probas = zip(*shuffle_list)
+
+            for rule_i in random_indices:
+                gens = [self._read_symbol(depth + 1, sym) for sym in rules[rule_i]]
+                for rule_tuple in product(*gens):
                     res = reduce(lambda x, y: x + y, [i for i in rule_tuple])
                     yield res
-            # for exp_node in sym_node.get_all_children():
-            #     res = [prog for prog in self._read_expression(exp_node)]
-            #     yield res
+            # else:
+            #     yield []
         else:
-            raise Exception(f"Can only read nodes that contain single symbols, not {sym_node.value}")
+            raise Exception(f"Cannot read symbol {sym}")
