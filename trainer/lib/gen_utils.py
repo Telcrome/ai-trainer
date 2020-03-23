@@ -36,14 +36,14 @@ class GenCacher(Generic[V]):
 
 
 def get_combinations(level: int, lx: int, ly: int) -> Generator[Tuple, None, None]:
-    if level < lx:
-        for i in range(min(level, ly)):
-            yield i, level
-    if level < lx and level < ly:
-        yield level, level
     if level < ly:
         for i in range(min(level, lx)):
             yield level, i
+    if level < lx and level < ly:
+        yield level, level
+    if level < lx:
+        for i in range(min(level, ly)):
+            yield i, level
 
 
 def product_two_gens(g1: GenCacher, g2: GenCacher) -> Generator:
