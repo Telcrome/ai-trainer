@@ -102,44 +102,50 @@ def product(*gens):
     gens = list(map(GenCacher, gens))
 
     for distance in itertools.count(0):
-        for idxs in get_combinations(gens):
+        changed = False
+        for gen in gens:
+            gen.fill_cache(distance)
+        for idxs in summations(distance, [gen.get_cache_len() for gen in gens]):
             print(idxs)
-            # res = tuple(gen[idx] for gen, idx in zip(gens, idxs))
-            # yield res
+            res = tuple(gen[idx] for gen, idx in zip(gens, idxs))
+            yield res
+            changed = True
+        if not changed:
+            return
 
 
 if __name__ == '__main__':
     def finite_test_gen():
-        for item in range(3):
+        for item in range(50):
             yield item
 
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    # fig, ax = plt.subplots()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    fig, ax = plt.subplots()
 
     xs, ys, zs = [], [], []
-    # for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
-    #     # print(c)
-    #     xs.append(c[0])
-    #     ys.append(c[1])
-    #     # zs.append(c[2])
-    #     ax.scatter(c[0], c[1], s=10, c=1)
-    for l in range(20):
-        print(f'Explore level {l}')
-        for c in summations(l, [12, 15, 14]):
-            xs.append(c[0])
-            ys.append(c[1])
-            zs.append(c[2])
-            # ax.scatter(c[0], c[1], s=l, c=l)
-            # ax.annotate(str(l), c)
-            print(c)
+    for c in product(finite_test_gen(), finite_test_gen()):
+        # print(c)
+        xs.append(c[0])
+        ys.append(c[1])
+        # zs.append(c[2])
+        ax.scatter(c[0], c[1], s=10, c=1)
+    # for l in range(20):
+    #     print(f'Explore level {l}')
+    #     for c in summations(l, [12, 8]):
+    #         xs.append(c[0])
+    #         ys.append(c[1])
+    #         # zs.append(c[2])
+    #         ax.scatter(c[0], c[1], s=l, c=l)
+    #         ax.annotate(str(l), c)
+    #         print(c)
     # ax.plot(xs=xs, ys=ys)
     # for t in summations(l, n=3):
     #     xs.append(t[0])
     #     ys.append(t[1])
     #     zs.append(t[2])
     #     print(t)
-    ax.plot(xs=xs, ys=ys, zs=zs)
-    # ax.plot(xs, ys)
+    # ax.plot(xs=xs, ys=ys, zs=zs)
+    ax.plot(xs, ys)
     fig.show()
