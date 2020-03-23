@@ -48,19 +48,26 @@ def summations(sum_to: int, n=2) -> Generator[Tuple, None, None]:
                 yield (head,) + tail
 
 
-def get_combinations(level: int, ls: List[int]) -> Generator[Tuple, None, None]:
+def get_combinations(level: int, ls: List[int], direction=True) -> Generator[Tuple, None, None]:
     if len(ls) == 1:
-        yield level,
+        if level < ls[0]:
+            yield level,
     else:
-        # if level < ls[1]:
-        #     for i in range(min(level, ls[0])):
-        #         yield level, i
-        # if level < ls[0] and level < ls[1]:
-        #     yield level, level
-        # if level < ls[0]:
         for i in range(min(level, ls[0])):
             for other in get_combinations(level, ls[1:]):
-                yield (i,) + other
+                if direction:
+                    yield (i,) + other
+                else:
+                    yield other + (i,)
+
+
+def get_all_combinations(level: int, ls: List[int]):
+    for c in get_combinations(level, ls, direction=True):
+        yield c
+    for c in get_combinations(level, list(reversed(ls)), direction=False):
+        yield c
+    if level < min(ls):
+        yield tuple(level for _ in ls)
 
 
 def product_two_gens(g1: GenCacher, g2: GenCacher) -> Generator:
@@ -108,7 +115,7 @@ if __name__ == '__main__':
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    # fig, ax = plt.subplots()
+    fig, ax = plt.subplots()
 
     xs, ys, zs = [], [], []
     # for c in product_two_gens(GenCacher(finite_test_gen()), GenCacher(finite_test_gen())):
@@ -118,12 +125,13 @@ if __name__ == '__main__':
     #     # zs.append(c[2])
     #     ax.scatter(c[0], c[1], s=10, c=1)
     for l in range(20):
-        for c in get_combinations(l, [12, 15, 5]):
+        print(f'Explore level {l}')
+        for c in get_all_combinations(l, [12, 15]):
             xs.append(c[0])
             ys.append(c[1])
-            zs.append(c[2])
-            # ax.scatter(c[0], c[1], s=l, c=l)
-            # ax.annotate(str(l), c)
+            # zs.append(c[2])
+            ax.scatter(c[0], c[1], s=l, c=l)
+            ax.annotate(str(l), c)
             print(c)
     # ax.plot(xs=xs, ys=ys)
     # for t in summations(l, n=3):
@@ -131,6 +139,6 @@ if __name__ == '__main__':
     #     ys.append(t[1])
     #     zs.append(t[2])
     #     print(t)
-    ax.plot(xs=xs, ys=ys, zs=zs)
-    # ax.plot(xs, ys)
+    # ax.plot(xs=xs, ys=ys, zs=zs)
+    ax.plot(xs, ys)
     fig.show()
