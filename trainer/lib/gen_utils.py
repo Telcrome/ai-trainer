@@ -1,5 +1,6 @@
 from typing import Generator, TypeVar, Generic, Tuple, List
 import itertools
+import time
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -116,21 +117,39 @@ def product(*gens):
 
 if __name__ == '__main__':
     def finite_test_gen():
-        for item in range(50):
+        for item in range(5):
             yield item
 
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    fig, ax = plt.subplots()
+    def infinite_test_gen():
+        for item in itertools.count(0):
+            yield item
+
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.set_xlim3d([0.0, 10.0])
+    ax.set_xlabel('X')
+
+    ax.set_ylim3d([0.0, 10.0])
+    ax.set_ylabel('Y')
+
+    ax.set_zlim3d([0.0, 10.0])
+    ax.set_zlabel('Z')
+    # fig, ax = plt.subplots()
 
     xs, ys, zs = [], [], []
-    for c in product(finite_test_gen(), finite_test_gen()):
+    for c in product(finite_test_gen(), infinite_test_gen(), finite_test_gen()):
         # print(c)
         xs.append(c[0])
         ys.append(c[1])
-        # zs.append(c[2])
-        ax.scatter(c[0], c[1], s=10, c=1)
+        zs.append(c[2])
+        # ax.scatter(c[0], c[1], s=10, c=1)
+        # ax.plot(xs, ys)
+        ax.plot(xs=xs, ys=ys, zs=zs)
+        fig.show()
+        plt.pause(0.01)
     # for l in range(20):
     #     print(f'Explore level {l}')
     #     for c in summations(l, [12, 8]):
@@ -146,6 +165,4 @@ if __name__ == '__main__':
     #     ys.append(t[1])
     #     zs.append(t[2])
     #     print(t)
-    # ax.plot(xs=xs, ys=ys, zs=zs)
-    ax.plot(xs, ys)
-    fig.show()
+    #
