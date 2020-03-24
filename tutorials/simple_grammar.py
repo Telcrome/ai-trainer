@@ -17,7 +17,7 @@ S = lib.NTS('S')
 class SimpleGrammar(lib.Grammar):
     prod_rules = {
         S: [
-            # ([S, S], 0.1),
+            ([S, S], 0.1),
             ([plus, Number, Number, Number, Number], 0.9),
         ],
         Number: [([magicnumber], 5.)] + numbers

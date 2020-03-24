@@ -77,8 +77,8 @@ class ProgramSearchTree:
                 probas.append(p)
 
             # p_arr = np.array(probas)
-            # random_indices = np.random.choice(len(rules), len(rules), p=softmax(probas), replace=False)
-            random_indices = np.arange(len(rules))
+            random_indices = np.random.choice(len(rules), len(rules), p=softmax(probas), replace=False)
+            # random_indices = np.arange(len(rules))
             # For making it probabilistic: Sort probabilistic
             # shuffle_list = zip(rules, probas)
             # random.shuffle(shuffle_list)
@@ -86,7 +86,7 @@ class ProgramSearchTree:
 
             for rule_i in random_indices:
                 gens = [self._read_symbol(depth + 1, sym) for sym in rules[rule_i]]
-                for rule_tuple in product(*gens):
+                for rule_tuple in lib.product(*gens):
                     res = reduce(lambda x, y: x + y, [i for i in rule_tuple])
                     yield res
             # else:
