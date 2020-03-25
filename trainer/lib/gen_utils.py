@@ -4,6 +4,7 @@ import time
 import random
 
 import numpy as np
+from scipy.special import softmax
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
@@ -114,12 +115,13 @@ def product(gens: List[Generator]) -> Generator:
 
 def sample_randomly(gens: List[Generator], probas: List[float]):
     while gens:
-        i = random.choice(range(len(gens)))  # TODO use probas and sample i
+        i = np.random.choice(range(len(gens)), 1, p=softmax(probas))[0]
         try:
             x = next(gens[i])
             yield x
         except StopIteration as e:
             gens.pop(i)
+            probas.pop(i)
 
 
 if __name__ == '__main__':
