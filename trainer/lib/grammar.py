@@ -66,7 +66,7 @@ class ProgramSearchTree:
         for item in self._read_symbol(0, self.grammar.start_symbol):
             yield item
 
-    def _read_symbol(self, depth: int, sym: Symbol) -> List[TS]:
+    def _read_symbol(self, depth: int, sym: Symbol) -> Generator[List[TS]]:
         if isinstance(sym, TS):
             yield [sym]
         elif isinstance(sym, NTS):
@@ -83,13 +83,18 @@ class ProgramSearchTree:
             # shuffle_list = zip(rules, probas)
             # random.shuffle(shuffle_list)
             # rules, probas = zip(*shuffle_list)
+            rule_gens = []
+            for rule in rules:
+                sym_gens = [self._read_symbol(depth + 1, sym) for sym in rule]
+                rule_gens.append(lib.product(sym_gens))
 
-            for rule_i in random_indices:
-                gens = [self._read_symbol(depth + 1, sym) for sym in rules[rule_i]]
-                for rule_tuple in lib.product(*gens):
-                    res = reduce(lambda x, y: x + y, [i for i in rule_tuple])
-                    yield res
-            # else:
-            #     yield []
+            for random_rule_gen in lib.sample_randomly(rule_gens, []):
+                yield reduce(lambda x, y: x + y, [i for i in random_rule_gen])
+
+            # for rule_i in random_indices:
+            #     gens = [self._read_symbol(depth + 1, sym) for sym in rules[rule_i]]
+            #     for rule_tuple in lib.product(*gens):
+            #         res = reduce(lambda x, y: x + y, [i for i in rule_tuple])
+            #         yield res
         else:
             raise Exception(f"Cannot read symbol {sym}")
