@@ -39,8 +39,8 @@ def build_test_subject() -> lib.Subject:
     return res
 
 
-def finite_test_gen(until=5):
-    for item in range(until):
+def finite_test_gen(start=0, end=5):
+    for item in range(start, end):
         yield item
 
 

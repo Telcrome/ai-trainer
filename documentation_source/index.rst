@@ -14,6 +14,7 @@ Welcome to AI-Trainer's documentation!
    mission
    cli
    contribution
+   modules/modules
 
 
 AI-Trainer is a toolbox that defines multiple exciting simplifications to your workflow:

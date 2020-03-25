@@ -1,6 +1,7 @@
 from typing import Generator, TypeVar, Generic, Tuple, List
 import itertools
 import time
+import random
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,7 +50,53 @@ def summations(sum_to: int, ls: List[int]) -> Generator[Tuple, None, None]:
                 yield (head,) + tail
 
 
-def product(*gens):
+def product(gens: List[Generator]) -> Generator:
+    """
+    Utility to compute the cartesian product between an arbitrary number of generators.
+    Developed to handle the case of a possible mix of finite and infinite generators.
+    The built-in itertools.product can only compute the cartesian product between finite generators.
+
+    The exploration strategy can be visualized using the following code block:
+
+    .. code-block:: python
+        :linenos:
+        :emphasize-lines: 21
+
+        import matplotlib.pyplot as plt
+        import trainer.demo_data as dd
+        import trainer.lib as lib
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlim3d([0.0, 10.0])
+        ax.set_xlabel('X')
+        ax.set_ylim3d([0.0, 10.0])
+        ax.set_ylabel('Y')
+        ax.set_zlim3d([0.0, 10.0])
+        ax.set_zlabel('Z')
+        xs, ys, zs = [], [], []
+
+        gens = [
+            dd.finite_test_gen(start=0, end=3),
+            dd.infinite_test_gen(first=0),
+            dd.finite_test_gen(start=0, end=3)
+        ]
+
+        for c in lib.product(gens):
+            xs.append(c[0])
+            ys.append(c[1])
+            zs.append(c[2])
+            ax.plot(xs=xs[-2:], ys=ys[-2:], zs=zs[-2:])
+            fig.show()
+            plt.pause(0.01)
+
+    The result looks as following:
+
+    .. image:: ../media/gen_product_exploration.gif
+
+    :param gens: Between 1 and N generators
+    :return: One generator that returns all N-tuples, built from the input generators
+    """
     gens = list(map(GenCacher, gens))
 
     for distance in itertools.count(0):
@@ -66,38 +113,18 @@ def product(*gens):
 
 
 def sample_randomly(gens: List[Generator], probas: List[float]):
-    i = 0  # TODO use probas and sample i
     while gens:
+        i = random.choice(range(len(gens)))  # TODO use probas and sample i
         try:
             x = next(gens[i])
             yield x
         except StopIteration as e:
             gens.pop(i)
-            i = 0
 
 
 if __name__ == '__main__':
     import trainer.demo_data as dd
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    gens = [dd.finite_test_gen(start=0, end=5), dd.finite_test_gen(start=10, end=15)]
 
-    ax.set_xlim3d([0.0, 10.0])
-    ax.set_xlabel('X')
-
-    ax.set_ylim3d([0.0, 10.0])
-    ax.set_ylabel('Y')
-
-    ax.set_zlim3d([0.0, 10.0])
-    ax.set_zlabel('Z')
-
-    xs, ys, zs = [], [], []
-    for c in product(dd.finite_test_gen(), dd.infinite_test_gen(), dd.finite_test_gen()):
-        # print(c)
-        xs.append(c[0])
-        ys.append(c[1])
-        zs.append(c[2])
-        # ax.scatter(c[0], c[1], s=10, c=1)
-        # ax.plot(xs, ys)
-        ax.plot(xs=xs, ys=ys, zs=zs)
-        fig.show()
-        plt.pause(0.5)
+    for x in sample_randomly(gens, [0.5, 0.5]):
+        print(x)

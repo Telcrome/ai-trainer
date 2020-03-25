@@ -4,15 +4,22 @@ Contribution
 
 .. Docs
 
-Currently, [Read the Docs](https://readthedocs.org/) is used
+Currently, https://readthedocs.org/ is used
 for CI of the docs.
 Before submitting changes, test the make command in the environment:
-```shell script
-conda env create -f environment.yml
-conda activate trainer_env
-make html
-```
-If this throws warnings or errors, `Read the Docs` won`t publish them.
+
+.. code-block:: bash
+
+    conda env create -f environment.yml
+    conda activate trainer_env
+
+    # Generating docs from code
+    sphinx-apidoc.exe ./trainer/ -o ./documentation_source/modules
+
+    # Compiling the docs
+    make html
+
+If this throws warnings or errors, https://readthedocs.org/ won`t be able to publish the docs.
 
 .. Tutorials inside the repo
 
@@ -22,7 +29,7 @@ If this throws warnings or errors, `Read the Docs` won`t publish them.
 
 .. Uploading to PyPi by hand
 
-```shell script
-python setup.py sdist bdist_wheel
-twine upload dist/* # The asterisk is important
-```
+.. code-block:: bash
+
+    python setup.py sdist bdist_wheel
+    twine upload dist/* # The asterisk is important

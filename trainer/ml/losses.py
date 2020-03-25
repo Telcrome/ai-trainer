@@ -12,10 +12,10 @@ def dice_loss(logits: torch.FloatTensor, true: torch.LongTensor, eps=1e-7):
     case, we would like to maximize the dice loss so we
     return the negated dice loss.
 
-    :logits a tensor of shape [B, C, H, W]. Corresponds to
+    :param logits: a tensor of shape [B, C, H, W]. Corresponds to
         the raw output or logits of the model.
-    :true a tensor of shape [B, 1, H, W].
-    :eps added to the denominator for numerical stability.
+    :param true: a tensor of shape [B, 1, H, W].
+    :param eps: added to the denominator for numerical stability.
     :returns dice_loss: the Sørensen–Dice loss.
     """
     if len(true.size()) < 4:
@@ -42,7 +42,7 @@ def dice_loss(logits: torch.FloatTensor, true: torch.LongTensor, eps=1e-7):
     intersection = torch.sum(probas * true_1_hot, dims)
     cardinality = torch.sum(probas + true_1_hot, dims)
     dice_loss = (2. * intersection / (cardinality + eps)).mean()
-    return (1 - dice_loss)
+    return 1 - dice_loss
 
 
 class FocalLoss(nn.Module):
