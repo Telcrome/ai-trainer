@@ -65,16 +65,19 @@ def product(*gens):
             return
 
 
+def sample_randomly(gens: List[Generator], probas: List[float]):
+    i = 0  # TODO use probas and sample i
+    while gens:
+        try:
+            x = next(gens[i])
+            yield x
+        except StopIteration as e:
+            gens.pop(i)
+            i = 0
+
+
 if __name__ == '__main__':
-    def finite_test_gen():
-        for item in range(5):
-            yield item
-
-
-    def infinite_test_gen():
-        for item in itertools.count(0):
-            yield item
-
+    import trainer.demo_data as dd
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -88,7 +91,7 @@ if __name__ == '__main__':
     ax.set_zlabel('Z')
 
     xs, ys, zs = [], [], []
-    for c in product(finite_test_gen(), infinite_test_gen(), finite_test_gen()):
+    for c in product(dd.finite_test_gen(), dd.infinite_test_gen(), dd.finite_test_gen()):
         # print(c)
         xs.append(c[0])
         ys.append(c[1])
@@ -97,4 +100,4 @@ if __name__ == '__main__':
         # ax.plot(xs, ys)
         ax.plot(xs=xs, ys=ys, zs=zs)
         fig.show()
-        plt.pause(0.01)
+        plt.pause(0.5)

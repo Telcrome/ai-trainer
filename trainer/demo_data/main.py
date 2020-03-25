@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from typing import Tuple
+import itertools
 
 import numpy as np
 import skimage
@@ -36,6 +37,16 @@ def build_test_subject() -> lib.Subject:
     res.add_image_stack(im_stack)
 
     return res
+
+
+def finite_test_gen(until=5):
+    for item in range(until):
+        yield item
+
+
+def infinite_test_gen(first=0):
+    for item in itertools.count(first):
+        yield item
 
 
 class DemoDataset(ABC):
