@@ -11,7 +11,7 @@ import trainer.ml as ml
 
 plus = lib.TS('plus')
 magicnumber = lib.TS('magicnumber')
-N = 20
+N = 3
 numbers = [([lib.TS(str(i))], N - float(i)) for i in range(N)]
 Number = lib.NTS('Number')
 S = lib.NTS('S')

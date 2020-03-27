@@ -42,7 +42,7 @@ class Grammar:
             return self.prod_rules[nts]
         else:
             raise Exception(f"There is no rule for NTS {nts}")
-\
+
     def __repr__(self):
         res = ""
         for prod_rule_key in self.prod_rules:
