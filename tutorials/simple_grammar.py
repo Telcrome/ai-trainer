@@ -4,6 +4,8 @@ ic grammar module
 """
 import itertools
 
+from tqdm import tqdm
+
 import trainer.lib as lib
 import trainer.ml as ml
 
@@ -29,11 +31,6 @@ class SimpleGrammar(lib.Grammar):
 if __name__ == '__main__':
     sg = SimpleGrammar(S)
     print(sg)
-    # print(sg.build_random_word())
-    t = lib.ProgramSearchTree(sg)
-    # t.expand_node()
 
-    for prog in t.read_program():
+    for prog in tqdm(sg.read_program()):
         ml.logger.log(prog)
-
-    # progs = [prog for prog in t._read_symbol(t.grammar.start_symbol)]

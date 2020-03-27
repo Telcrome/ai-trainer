@@ -105,7 +105,6 @@ def product(gens: List[Generator]) -> Generator:
         for gen in gens:
             gen.fill_cache(distance)
         for idxs in summations(distance, [gen.get_cache_len() for gen in gens]):
-            # print(idxs)
             res = tuple(gen[idx] for gen, idx in zip(gens, idxs))
             yield res
             changed = True
@@ -117,8 +116,7 @@ def sample_randomly(gens: List[Generator], probas: List[float]):
     while gens:
         i = np.random.choice(range(len(gens)), 1, p=softmax(probas))[0]
         try:
-            x = next(gens[i])
-            yield x
+            yield next(gens[i])
         except StopIteration as e:
             gens.pop(i)
             probas.pop(i)

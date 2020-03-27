@@ -42,7 +42,7 @@ class Grammar:
             return self.prod_rules[nts]
         else:
             raise Exception(f"There is no rule for NTS {nts}")
-
+\
     def __repr__(self):
         res = ""
         for prod_rule_key in self.prod_rules:
@@ -53,25 +53,16 @@ class Grammar:
             res += f'{prod_rule_key} -> {right_repr[:-3]}\n'
         return res
 
-
-class ProgramSearchTree:
-
-    def __init__(self, grammar: Grammar):
-        self.grammar = grammar
-        self.max_depth = 10
-        self.rule_counter: Dict[Symbol, int] = {key: 0 for key in self.grammar.prod_rules}
-
     def read_program(self) -> Iterable[Union[List[TS], None]]:
-        for item in self._read_symbol(0, self.grammar.start_symbol):
+        for item in self._read_symbol(0, self.start_symbol):
             yield item
 
     def _read_symbol(self, depth: int, sym: Symbol) -> Generator[List[TS]]:
         if isinstance(sym, TS):
             yield [sym]
         elif isinstance(sym, NTS):
-            # if depth < self.max_depth:
             rules, probas = [], []
-            for substitution, p in self.grammar.get_rule(sym):
+            for substitution, p in self.get_rule(sym):
                 rules.append(substitution)
                 probas.append(p)
 
