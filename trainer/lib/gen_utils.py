@@ -115,11 +115,16 @@ def product(gens: List[Generator]) -> Generator:
 def sample_randomly(gens: List[Generator], probas: List[float]):
     while gens:
         i = np.random.choice(range(len(gens)), 1, p=softmax(probas))[0]
-        try:
-            yield next(gens[i])
-        except StopIteration as e:
+        if not isinstance(gens[i], Generator):
+            yield gens[i]
             gens.pop(i)
             probas.pop(i)
+        else:
+            try:
+                yield next(gens[i])
+            except StopIteration as e:
+                gens.pop(i)
+                probas.pop(i)
 
 
 if __name__ == '__main__':
