@@ -126,17 +126,21 @@ class DslSemantics(ABC):
     def __init__(self, max_resources=10000):
         self.resources, self.max_resources, self.state = 0, max_resources, {}
         self.fs: Dict[str, Any] = {}
+        self.prog = None
 
-    def execute_program(self, prog: str, state: Dict):
+    def compile_prog(self, prog: str):
+        self.prog = compile(prog, 'dslprog', mode='eval')
+
+    def execute_program(self, state: Dict):
         self.state = state
         self.resources = self.max_resources
         try:
             res = eval(
-                prog,
+                self.prog,
                 self.fs,
                 self.state
             )
         except Exception as e:
             print(f'Tried to execute {prog}')
-            print(Exception)
+            print(e)
         return res
