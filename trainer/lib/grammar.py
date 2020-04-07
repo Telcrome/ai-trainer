@@ -14,10 +14,6 @@ import numpy as np
 import trainer.lib as lib
 
 
-def get_func_name(f: Callable) -> str:
-    return f.__qualname__
-
-
 class SyntaxNode:
 
     def __init__(self, f: Callable, score: float):
@@ -80,7 +76,9 @@ class Grammar(typing.Generic[NTS]):
             yield [sym]
         else:
             rules, probas = [], []
-            for substitution, p in self.get_rule(sym):
+            r = self.get_rule(sym)
+            # print(r)
+            for substitution, p in r:
                 rules.append(substitution)
                 probas.append(p)
 
@@ -96,12 +94,6 @@ class Grammar(typing.Generic[NTS]):
 def analyse_function_type(f: Callable) -> Tuple[List[type], type]:
     type_dict = get_type_hints(f)
     return [type_dict[key] for key in type_dict if key != 'return'], type_dict['return']
-
-
-def f_to_str(f: Callable):
-    args, ret = analyse_function_type(f)
-    params = " ".join([str(args)])
-    return f'{get_func_name(f)} {params}'
 
 
 def prepend_gen(prep, gens):
@@ -126,10 +118,15 @@ class DslSemantics(ABC):
     def __init__(self, max_resources=10000):
         self.resources, self.max_resources, self.state = 0, max_resources, {}
         self.fs: Dict[str, Any] = {}
-        self.prog = None
+        self.prog, self.prog_str = None, ''
 
     def compile_prog(self, prog: str):
+        self.prog_str = prog
         self.prog = compile(prog, 'dslprog', mode='eval')
+
+    def bind_object(self, f: Callable):
+        short_name = f.__qualname__.split('.')[-1]
+        self.fs[short_name] = f
 
     def execute_program(self, state: Dict):
         self.state = state
@@ -141,6 +138,7 @@ class DslSemantics(ABC):
                 self.state
             )
         except Exception as e:
-            print(f'Tried to execute {prog}')
+            print(f'Tried to execute {self.prog}')
             print(e)
+            res = None
         return res
