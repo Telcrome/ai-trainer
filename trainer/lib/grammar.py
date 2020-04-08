@@ -62,8 +62,8 @@ class Grammar(typing.Generic[NTS]):
             # prog_str = reduce(lambda x, y: str(x) + str(y), tss)
             yield prog_str
 
-    def read_program(self) -> Generator[Union[List[TS], None]]:
-        for item in self._read_symbol(0, self.start_symbol):
+    def read_program(self, start_symbol) -> Generator[Union[List[str], None]]:
+        for item in self._read_symbol(0, start_symbol):
             yield item
 
     def _read_symbol(self, depth: int, sym: Union[NTS, str]) -> Generator[List[str]]:
