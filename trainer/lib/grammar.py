@@ -1,4 +1,5 @@
 from __future__ import annotations
+import inspect
 import functools
 import typing
 from enum import Enum
@@ -124,11 +125,53 @@ class DslSemantics(ABC):
         self.prog_str = prog
         self.prog = compile(prog, 'dslprog', mode='eval')
 
-    def bind_object(self, f: Callable):
-        short_name = f.__qualname__.split('.')[-1]
-        self.fs[short_name] = f
+    @staticmethod
+    def generate_enum(e: typing.Iterable):
+        for v in e:
+            yield v
 
-    def execute_program(self, state: Dict):
+    @staticmethod
+    def gen_wrapper(f: Callable) -> type(Generator):
+        """
+        Converts a function f: bool -> int to a generator f: Generator[bool] -> Generator[int]
+        :param f: A callable
+        :return: A generator with the semantics of f
+        """
+        para_num = inspect.signature(f).parameters.__len__()
+        if para_num == 0:
+            def simple_gen() -> Generator:
+                yield f()
+
+            return simple_gen
+        else:
+            def gen_f(*iters) -> Generator:
+                for c in itertools.product(*iters):
+                    yield f(*c)
+
+            return gen_f
+
+    # noinspection PyBroadException,PyStatementEffect
+    @staticmethod
+    def is_callable(f: Any) -> bool:
+        try:
+            f.__call__
+            return True
+        except:
+            return False
+
+    def bind_object(self, o: Any):
+        short_name = o.__qualname__.split('.')[-1]
+
+        if isinstance(o, type(Enum)) or isinstance(o, list):
+            o = DslSemantics.generate_enum(o)
+        elif inspect.isgeneratorfunction(o):
+            pass
+        elif DslSemantics.is_callable(o):
+            o = DslSemantics.gen_wrapper(o)
+
+        self.fs[short_name] = o
+
+    def execute_program(self, state: Dict) -> Generator:
         self.state = state
         self.resources = self.max_resources
         try:
