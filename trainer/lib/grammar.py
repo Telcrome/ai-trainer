@@ -126,9 +126,9 @@ class DslSemantics(ABC):
         self.prog = compile(prog, 'dslprog', mode='eval')
 
     @staticmethod
-    def generate_enum(e: typing.Iterable):
+    def generate_enum(e: type(Enum)):
         for v in e:
-            yield v
+            yield v.value
 
     @staticmethod
     def gen_wrapper(f: Callable) -> type(Generator):
