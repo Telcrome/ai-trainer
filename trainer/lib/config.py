@@ -20,6 +20,7 @@ def save_config_json(obj=None):
     if obj is None:
         obj = {
             BIG_BIN_KEY: os.path.join(trainer_config_folder, BIG_BIN_DIRNAME),
+            "db_con": "postgresql+psycopg2://postgres:password@127.0.0.1:5432/db_name"
         }
 
     if not os.path.exists(obj[BIG_BIN_KEY]):
@@ -42,3 +43,6 @@ if not os.path.exists(config_path):
     config = save_config_json()
 else:
     config = load_config_json()
+
+if not os.path.exists(config[BIG_BIN_KEY]):
+    os.mkdir(config[BIG_BIN_KEY])

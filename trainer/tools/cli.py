@@ -43,7 +43,7 @@ def trainer_reset_database():
 @click.option('--dataset-name', '-n', prompt='Dataset Name')
 def trainer_init_dataset(dataset_name: str):
     session = lib.Session()
-    d = lib.Dataset.build_new('US_BONE')
+    d = lib.Dataset.build_new(dataset_name)
     session.add(d)
     session.commit()
 
@@ -71,8 +71,13 @@ def trainer_print_summary():
 
 
 @trainer.command(name='add-semseg-tpl')
-@click.option('--tpl-name', '-n', prompt='Enter name of semantic segmentation template')
-def trainer_add_semseg_tpl(tpl_name: str):
+@click.option('--tpl-name', '-n', prompt='Enter name of the new semantic segmentation template')
+def trainer_add_semseg_tpl(tpl_name: str) -> None:
+    """
+    Create a semantic segmentation template. SS-tpls are shared between datasets.
+
+    :param tpl_name: Name of the semantic segmentation template.
+    """
     cls_type_mapper = {
         'line': lib.MaskType.Line,
         'blob': lib.MaskType.Blob,

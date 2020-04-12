@@ -391,7 +391,7 @@ class Dataset(Base):
         raise Exception(f"Split {split_name} does not exist")
 
     def get_summary(self) -> str:
-        split_summary = ""
+        split_summary = f"Summary of dataset {self.name} with splits: \n"
         for split in self.splits:
             split_summary += f'{split}\n'
         return split_summary
