@@ -2,10 +2,11 @@
 Command Line Tools
 ==================
 
-Creating a new Dataset
+Resetting the database
 ======================
+
+The command removes all content from the database and the big-binary folder on disk (if it exists).
 
 .. code-block:: shell
 
-    $ trainer init-ds
-    $ cd YOUR_DATASET
+    $ trainer reset-database
