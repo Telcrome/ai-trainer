@@ -55,13 +55,18 @@ def pick_from_list(ls: List[T], title='Title', rows=-1, columns=-1) -> T:
     return values[0][0]
 
 
-def delete_dir(dir_path: str, blocking=True):
+def delete_dir(dir_path: str, blocking=True, verbose=True):
     if os.path.exists(dir_path):
+        if verbose:
+            print(f"Deleting {len(os.listdir(dir_path))} binaries from {dir_path}")
         import shutil
         shutil.rmtree(dir_path, ignore_errors=True)
         if blocking:
             while os.path.exists(dir_path):
                 pass
+    else:
+        if verbose:
+            print(f"f{dir_path} already did not exist on disk")
 
 
 def standalone_foldergrab(

@@ -411,9 +411,9 @@ def reset_database():
     # Reset storage on disk
     from trainer.lib.misc import delete_dir
     bin_dir_path = lib.config[lib.BIG_BIN_KEY]
-    print(f"Deleting {len(os.listdir(bin_dir_path))} binaries from {bin_dir_path}")
     delete_dir(bin_dir_path)
 
+    print(f"Cleaning up database")
     sbjts_splits_association.drop(bind=engine)
     mappers = [
         ClassDefinition,
