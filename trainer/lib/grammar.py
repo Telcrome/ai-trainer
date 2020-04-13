@@ -126,9 +126,9 @@ class DslSemantics(ABC):
         self.prog = compile(prog, 'dslprog', mode='eval')
 
     @staticmethod
-    def generate_enum(e: type(Enum)):
+    def generate_enum(e: type(Enum)) -> Generator:
         for v in e:
-            yield v.value
+            yield v.value, str(e)
 
     @staticmethod
     def gen_wrapper(f: Callable) -> type(Generator):
@@ -137,18 +137,16 @@ class DslSemantics(ABC):
         :param f: A callable
         :return: A generator with the semantics of f
         """
-        para_num = inspect.signature(f).parameters.__len__()
-        if para_num == 0:
-            def simple_gen() -> Generator:
-                yield f()
+        def gen_f(*iters) -> Generator:
+            if iters:
+                for t in itertools.product(*iters):
+                    ps = [p for p, _ in t]
+                    ss = reduce(lambda s1, s2: f'{s1}, {s2}', [s for _, s in t])
+                    yield f(*ps), ss
+            else:
+                yield f(), f.__qualname__.split('.')[-1]
 
-            return simple_gen
-        else:
-            def gen_f(*iters) -> Generator:
-                for c in itertools.product(*iters):
-                    yield f(*c)
-
-            return gen_f
+        return gen_f
 
     # noinspection PyBroadException,PyStatementEffect
     @staticmethod
