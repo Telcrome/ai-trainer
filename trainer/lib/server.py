@@ -7,6 +7,7 @@ import numpy as np
 app = Flask(__name__)
 CORS(app)
 
+
 @app.route('/')
 def hello_world():
     return jsonify({'Description': 'Main Page of the trainer web gui'})

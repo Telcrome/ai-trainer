@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { LogServiceService } from './log-service.service';
 
 @Component({
   selector: 'app-root',
@@ -7,14 +6,6 @@ import { LogServiceService } from './log-service.service';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-  constructor(private logs: LogServiceService) { }
+  constructor() { }
 
-  title = this.logs.welcome;
-  logList = this.logs.getLogs();
-  model = {
-    left: true,
-    middle: false,
-    right: false
-  };
-  
 }
