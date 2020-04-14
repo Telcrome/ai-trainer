@@ -33,3 +33,8 @@ If this throws warnings or errors, https://readthedocs.org/ won`t be able to pub
 
     python setup.py sdist bdist_wheel
     twine upload dist/* # The asterisk is important
+
+.. Development Web GUI
+
+Install the debugger extension for your browser of choice, we recommend Microsoft Edge:
+https://marketplace.visualstudio.com/items?itemName=msjsdiag.debugger-for-edge
