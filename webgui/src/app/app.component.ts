@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { LogServiceService } from './log-service.service';
 
 @Component({
   selector: 'app-root',
@@ -6,7 +7,9 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent {
-  title = 'webgui';
+  constructor(private logs: LogServiceService) {}
+
+  title = this.logs.welcome;
   model = {
     left: true,
     middle: false,
