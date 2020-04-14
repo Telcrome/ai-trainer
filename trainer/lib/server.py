@@ -1,10 +1,11 @@
 import datetime
 from flask import Flask, jsonify
+from flask_cors import CORS
 
 import numpy as np
 
 app = Flask(__name__)
-
+CORS(app)
 
 @app.route('/')
 def hello_world():
@@ -17,6 +18,7 @@ def get_logs():
         {'time': datetime.datetime.now(), 'title': 'plot1', 'type': 'text', 'payload': "Hello"},
         {'time': datetime.datetime.now(), 'title': 'plot1', 'type': 'arr', 'payload': '/big_bin/id1'}
     ]
+    print('answering')
     return jsonify(res)
 
 
