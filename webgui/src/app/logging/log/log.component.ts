@@ -13,7 +13,6 @@ import { CellComponent } from '../cell/cell.component';
 export class LogComponent implements OnInit {
 
   constructor(private logservice: LogService) { }
-  title = this.logservice.welcome;
 
   logList: any[];
 

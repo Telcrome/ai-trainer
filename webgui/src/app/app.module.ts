@@ -9,6 +9,7 @@ import { LogComponent } from './logging/log/log.component';
 import { RouterModule } from '@angular/router';
 import { HomeComponent } from './main/home/home.component';
 import { CellComponent } from './logging/cell/cell.component';
+import { SocketioService } from './socketio.service';
 
 
 
@@ -29,7 +30,7 @@ import { CellComponent } from './logging/cell/cell.component';
     FormsModule,
     HttpClientModule
   ],
-  providers: [],
+  providers: [SocketioService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

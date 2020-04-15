@@ -3,17 +3,17 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Log } from './log';
+import { ConfigService } from '../config.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class LogService {
 
-  constructor(private http: HttpClient) { }
-
-  welcome = 'Test';
+  constructor(private http: HttpClient, private config: ConfigService) { }
 
   getLogs(): Observable<any> {
-    return this.http.get('http://127.0.0.1:5000/logs/');
+    const endpointString = `${this.config.serverCreds.url}/logs/`;
+    return this.http.get(endpointString);
   }
 }

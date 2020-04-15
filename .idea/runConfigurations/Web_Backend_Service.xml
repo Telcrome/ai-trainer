@@ -2,8 +2,8 @@
   <configuration default="false" name="Web Backend Service" type="Python.FlaskServer">
     <option name="flaskDebug" value="true" />
     <module name="ai-trainer" />
-    <option name="target" value="C:\Users\rapha\Desktop\ai-trainer\trainer\server" />
-    <option name="targetType" value="PATH" />
+    <option name="target" value="server.server" />
+    <option name="targetType" value="PYTHON" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <option name="SDK_HOME" value="C:\Users\rapha\Desktop\ai-trainer\envs\python.exe" />

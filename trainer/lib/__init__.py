@@ -6,4 +6,3 @@ from trainer.lib.misc import get_img_from_fig, create_identifier, standalone_fol
     load_grayscale_from_disk, slugify, download_and_extract, delete_dir, pick_from_list
 from trainer.lib.gen_utils import product, sample_randomly
 from trainer.lib.grammar import Grammar
-from trainer.lib.debug import debug_var
