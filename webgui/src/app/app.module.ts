@@ -8,6 +8,7 @@ import { AppComponent } from './app.component';
 import { LogComponent } from './logging/log/log.component';
 import { RouterModule } from '@angular/router';
 import { HomeComponent } from './main/home/home.component';
+import { CellComponent } from './logging/cell/cell.component';
 
 
 
@@ -15,7 +16,8 @@ import { HomeComponent } from './main/home/home.component';
   declarations: [
     AppComponent,
     LogComponent,
-    HomeComponent
+    HomeComponent,
+    CellComponent
   ],
   imports: [
     BrowserModule,
