@@ -33,25 +33,9 @@ def log_message(content: str) -> None:
     emit('log', content, broadcast=True)
 
 
-def send_message(content: Dict):
-    send(content, json=True)
-
-
 @socketio.on('connect')
 def handle_user():
-    print('connect event')
-
-
-@socketio.on('message')
-def handle_message(message):
-    print(message)
-    send_message(message)
-    # send(message, namespace='/chat')
-
-
-@socketio.on('json')
-def handle_json(json: Dict):
-    print('received json: ' + str(json))
+    print('A connection happened')
 
 
 if __name__ == '__main__':

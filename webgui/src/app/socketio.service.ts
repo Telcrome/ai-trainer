@@ -12,8 +12,12 @@ export class SocketioService {
   setupSocketConnection() {
     this.socket = io(this.config.serverCreds.url);
     this.socket.emit('json', this.config);
-    this.socket.on('log', (data: any) => {
+    this.listenOn('log', (data: any) => {
       console.log(data);
     });
+  }
+
+  listenOn(eventName: string, f: (data: any) => void) {
+    return this.socket.on(eventName, f)
   }
 }
