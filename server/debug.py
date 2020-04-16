@@ -26,20 +26,18 @@ def debug_arr(arr: np.ndarray):
 def debug_var(o: typ.Any):
     if isinstance(o, np.ndarray):
         debug_arr(o)
-
-
-def log(s: str) -> None:
-    sio.emit('log_broadcast',
-             {
-                 'msg_type': 'print',
-                 'payload': s
-             })
+    elif isinstance(o, str):
+        sio.emit('log_broadcast',
+                 {
+                     'string': o
+                 })
 
 
 if __name__ == '__main__':
     test_arr = np.random.random((5, 5))
 
-    log("Starting debugging application")
+    debug_var("Starting debugging application")
+
 
     def draw_plot():
         plt.plot([0.1, 0.2, 0.5, 0.7])
@@ -61,5 +59,5 @@ if __name__ == '__main__':
             draw_plot()
         elif event == 'Popup':
             # sg.popup('Yes, your application is still running')
-            log('pressed a button')
+            debug_var('pressed a button')
     window.close()

@@ -2,6 +2,7 @@ import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
+import { SocketIoModule, SocketIoConfig } from 'ngx-socket-io';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -9,9 +10,8 @@ import { LogComponent } from './logging/log/log.component';
 import { RouterModule } from '@angular/router';
 import { HomeComponent } from './main/home/home.component';
 import { CellComponent } from './logging/cell/cell.component';
-import { SocketioService } from './socketio.service';
 
-
+const config: SocketIoConfig = { url: 'http://localhost:5000', options: {} };
 
 @NgModule({
   declarations: [
@@ -28,9 +28,10 @@ import { SocketioService } from './socketio.service';
       { path: 'debug', component: LogComponent },
     ]),
     FormsModule,
-    HttpClientModule
+    HttpClientModule,
+    SocketIoModule.forRoot(config)
   ],
-  providers: [SocketioService],
+  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
