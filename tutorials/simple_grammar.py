@@ -33,4 +33,4 @@ if __name__ == '__main__':
     print(sg)
 
     for prog in tqdm(sg.read_program()):
-        ml.logger.log_str(prog)
+        ml.logger._log_str(prog)

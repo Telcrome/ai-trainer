@@ -35,7 +35,7 @@ if __name__ == '__main__':
                         fig.suptitle(f'{s.name}: {im_i}, {gt.for_frame} {ss_cls_name}')
                         sns.heatmap(im_arr[gt.for_frame, :, :, 0], ax=ax1)
                         sns.heatmap(tmp_mask, ax=ax2)
-                        ml.logger.save_fig(fig)
+                        ml.logger._save_fig(fig)
                         plt.close(fig)
                         # ml.logger.get_visboard().add_figure(fig)
 

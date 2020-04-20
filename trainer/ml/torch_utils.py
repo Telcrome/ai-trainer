@@ -426,7 +426,7 @@ class ModelTrainer:
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
-        ml.logger.log_str(f'Starting epoch: {epoch} with N={len(torch_loader) * batch_size} and {steps} steps\n')
+        ml.logger._log_str(f'Starting epoch: {epoch} with N={len(torch_loader) * batch_size} and {steps} steps\n')
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
@@ -455,7 +455,7 @@ class ModelTrainer:
                 else:
                     pbar.set_description(
                         f'{orientation_str}, Loss: {display_loss:05f}')
-        ml.logger.log_str(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
+        ml.logger._log_str(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
 
     def save_to_disk(self, dir_path: str = '.', hint=''):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}{hint}.pt'))

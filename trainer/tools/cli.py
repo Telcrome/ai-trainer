@@ -256,7 +256,7 @@ def trainer_train(dataset_name: str, split_name: str, weights_path: str, target_
             # sns.heatmap(preds[batch_id, 0, :, :], ax=ax2)
             sns.heatmap(preds[batch_id, 1, :, :], ax=ax3)
             sns.heatmap(preds[batch_id, 2, :, :], ax=ax4)
-            ml.logger.save_fig(fig)
+            ml.logger._save_fig(fig)
             plt.close(fig)
 
     model = smp.PAN(in_channels=3, classes=3)
