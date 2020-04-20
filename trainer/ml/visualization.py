@@ -1,20 +1,33 @@
 from __future__ import annotations
 
+from typing import Any
 import logging
 import os
 
+import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
 
 import trainer.lib as lib
 from trainer.lib import get_img_from_fig, create_identifier
 
 
+def debug_arr(arr: np.ndarray) -> plt.Figure:
+    print(f"Debugging array with shape: {arr.shape} of type {arr.dtype}")
+    unique_values = np.unique(arr, return_counts=True)
+    print(unique_values)
+
+    if len(arr.shape) == 2:
+        fig, ax = plt.subplots()
+        sns.heatmap(arr.astype(np.float32), ax=ax)
+        return fig
+
+
 class LogWriter:
 
-    def __init__(self, log_dir: str = './logs', id_hint='log'):
+    def __init__(self, log_dir: str = './logs', id_hint='log_str'):
         self.prepped = False
         self.log_dir, self.log_id, self.logger, self.visboard = log_dir, lib.create_identifier(hint=id_hint), None, None
 
@@ -27,23 +40,26 @@ class LogWriter:
             # Logging to file
             self.logger = logging.getLogger('spam')
             self.logger.setLevel(logging.DEBUG)
-            fh = logging.FileHandler(os.path.join(self.get_run_path(), 'logs.log'))
+            fh = logging.FileHandler(os.path.join(self.get_run_path(), 'logs.txt'))
             fh.setLevel(logging.DEBUG)
             self.logger.addHandler(fh)
             self.logger.propagate = False
             logging.info(self.log_id)
-
-            # Logging to Tensorboard
-            self.visboard = VisBoard(run_name=self.log_id, dir_name=os.path.join(self.log_dir, 'tb'))
         self.prepped = True
 
-    def get_visboard(self) -> VisBoard:
-        self.prep()
-        return self.visboard
-
-    def log(self, c: str):
+    def log_str(self, c: str):
         self.prep()
         self.logger.info(c)
+
+    def debug_var(self, o: Any):
+        if isinstance(o, np.ndarray):
+            fig = debug_arr(o)
+            self.save_fig(fig)
+            self.log_str(f'{o.shape}, {o.dtype}. Values: {np.unique(o, return_counts=True)}')
+        elif isinstance(o, str):
+            self.log_str(o)
+        else:
+            self.log_str(str(o))
 
     def get_run_path(self) -> str:
         return os.path.join(self.log_dir, self.log_id)
@@ -68,42 +84,6 @@ class LogWriter:
         self.prep()
         self.visboard.writer.add_graph(model, input_batch)
         # TODO: Write down some textual representation
-
-
-class VisBoard:
-    """
-    Allows visualizing various information during the training process.
-
-    Builds on Tensorboard.
-
-    Can be invoked by the following command
-    ```bash
-    tensorboard --logdir=tb --samples_per_plugin=images=100
-    ```
-    """
-
-    def __init__(self, run_name='', dir_name='tb'):
-        self.dir_name = dir_name
-        self.run_name = run_name
-        if not self.run_name:
-            self.run_name = create_identifier()
-        self.writer = SummaryWriter(f'{self.dir_name}/{self.run_name}')
-
-    def add_figure(self, fig: plt.Figure, group_name: str = "Default", close_figure: bool = True) -> None:
-        """
-        Logs a matplotlib.pyplot Figure.
-        @param fig: The figure to be logged
-        @param group_name: Multiple figures can be grouped by using an identical group name
-        @param close_figure: If the figure should not be closed specify False
-        """
-        img = torch.from_numpy(get_img_from_fig(fig)).permute((2, 0, 1))
-        self.writer.add_image(group_name, img)
-        if close_figure:
-            plt.close(fig)
-
-    def visualize_subject(self, s: lib.Subject):
-        fig, ax = plt.subplots()
-        raise NotImplementedError()
 
 
 logger = LogWriter()

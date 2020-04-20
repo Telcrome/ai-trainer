@@ -36,9 +36,8 @@ RULE = List[Tuple[List[Union[str, NTS]], float]]
 
 class Grammar(typing.Generic[NTS]):
 
-    def __init__(self, prod_rules: Dict[NTS, RULE], start_symbol: Enum):
+    def __init__(self, prod_rules: Dict[NTS, RULE]):
         self.prod_rules: Dict[NTS, RULE] = prod_rules
-        self.start_symbol = start_symbol
 
     def get_rule(self, nts: NTS) -> RULE:
         if nts in self.prod_rules:
@@ -78,7 +77,6 @@ class Grammar(typing.Generic[NTS]):
         else:
             rules, probas = [], []
             r = self.get_rule(sym)
-            # print(r)
             for substitution, p in r:
                 rules.append(substitution)
                 probas.append(p)
@@ -88,7 +86,7 @@ class Grammar(typing.Generic[NTS]):
                 sym_gens = [self._read_symbol(depth + 1, sym) for sym in rule]
                 rule_gens.append(lib.product(sym_gens))
 
-            for random_rule_gen in lib.sample_randomly(rule_gens, probas):
+            for random_rule_gen in lib.sample_randomly(rule_gens, probas, use_softmax=False):
                 yield reduce(lambda x, y: x + y, [i for i in random_rule_gen])
 
 

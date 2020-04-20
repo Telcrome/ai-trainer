@@ -112,9 +112,12 @@ def product(gens: List[Generator]) -> Generator:
             return
 
 
-def sample_randomly(gens: List[Generator], probas: List[float]):
+def sample_randomly(gens: List[Generator], probas: List[float], use_softmax=False):
     while gens:
-        i = np.random.choice(range(len(gens)), 1, p=softmax(probas))[0]
+        if use_softmax:
+            i = np.random.choice(range(len(gens)), 1, p=softmax(probas))[0]
+        else:
+            i = np.random.choice(range(len(gens)), 1, p=probas/np.sum(probas))[0]
         if not isinstance(gens[i], Generator):
             yield gens[i]
             gens.pop(i)
