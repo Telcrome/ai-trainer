@@ -49,7 +49,7 @@ class LogWriter:
         f_name = f"{lib.slugify(title)}"
         if f_name in os.listdir(self._get_run_path()):
             f_name = f'{f_name}_{len(os.listdir(self._get_run_path()))}'
-        fig.savefig(os.path.join(self._get_run_path(),f'{f_name}.png'))
+        fig.savefig(os.path.join(self._get_run_path(), f'{f_name}.png'))
 
     def _debug_arr(self, arr: np.ndarray) -> plt.Figure:
         self._log_str(f'{arr.shape}, {arr.dtype}. Values: {np.unique(arr, return_counts=True)}')
@@ -74,6 +74,9 @@ class LogWriter:
             self._log_str(o)
         else:
             self._log_str(str(o))
+
+    def get_absolute_log_folder(self) -> str:
+        return self._get_run_path()
 
 
 logger = LogWriter()

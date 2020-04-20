@@ -55,22 +55,22 @@ class Grammar(typing.Generic[NTS]):
             res += f'{prod_rule_key} -> {right_repr[:-3]}\n'
         return res
 
-    def sample_prog_strings(self):
-        for tss in self.read_program():
+    def sample_prog_strings(self, sym: NTS):
+        for tss in self.read_program(sym):
             prog_str = ''.join([str(ts) for ts in tss])
-            # prog_str = reduce(lambda x, y: str(x) + str(y), tss)
             yield prog_str
 
-    def read_program(self, start_symbol) -> Generator[Union[List[str], None]]:
+    def read_program(self, start_symbol: NTS) -> Generator[Union[List[str], None]]:
         for item in self._read_symbol(0, start_symbol):
             yield item
 
     def _read_symbol(self, depth: int, sym: Union[NTS, str]) -> Generator[List[str]]:
         """
+        Recursively create words from grammar
 
-        :param depth:
-        :param sym:
-        :return:
+        :param depth: depth contains the current depth
+        :param sym: Symbol that is expanded
+        :return: Generator that iterates over all words that can be expanded from sym
         """
         if isinstance(sym, str):
             yield [sym]
@@ -152,7 +152,7 @@ class DslSemantics(ABC):
         try:
             f.__call__
             return True
-        except:
+        except AttributeError as _:
             return False
 
     def bind_object(self, o: Any):
