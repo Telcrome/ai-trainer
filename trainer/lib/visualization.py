@@ -43,13 +43,15 @@ class LogWriter:
         self._prep()
         self.logger.info(c)
 
-    def _save_fig(self, fig: plt.Figure, title='fig'):
+    def _save_fig(self, fig: plt.Figure, title='fig', close=True):
         self._prep()
 
         f_name = f"{lib.slugify(title)}"
         if f_name in os.listdir(self._get_run_path()):
             f_name = f'{f_name}_{len(os.listdir(self._get_run_path()))}'
         fig.savefig(os.path.join(self._get_run_path(), f'{f_name}.png'))
+        if close:
+            plt.close(fig)
 
     def _debug_arr(self, arr: np.ndarray) -> plt.Figure:
         self._log_str(f'{arr.shape}, {arr.dtype}. Values: {np.unique(arr, return_counts=True)}')
@@ -58,7 +60,14 @@ class LogWriter:
             sns.heatmap(arr.astype(np.float32), ax=ax)
             return fig
 
-    def debug_var(self, o: Any):
+    def debug_var(self, o: Any) -> None:
+        """
+        Allows to inspect an arbitrary type on disk.
+
+        For saving an array with a description debug a (np.ndarray, str) tuple.
+
+        :param o: Any variable
+        """
         if isinstance(o, tuple):
             if isinstance(o[0], np.ndarray) and isinstance(o[1], str):
                 fig = self._debug_arr(o[0])

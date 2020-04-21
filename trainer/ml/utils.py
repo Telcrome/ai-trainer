@@ -7,9 +7,22 @@ import numpy as np
 import seaborn as sns
 from scipy.ndimage.morphology import distance_transform_edt as dist_trans
 
+import trainer.lib as lib
+
 
 class ImageNormalizations(Enum):
     UnitRange = 1
+
+
+def normalize_im(im: np.ndarray, norm_type=ImageNormalizations.UnitRange) -> np.ndarray:
+    """
+    Currently just normalizes an image with pixel intensities in range [0, 255] to [-1, 1]
+    :return: The normalized image
+    """
+    if norm_type == ImageNormalizations.UnitRange:
+        return (im.astype(np.float32) / 127.5) - 1
+    else:
+        raise Exception("Unknown Normalization type")
 
 
 def distance_transformed(mask: np.ndarray) -> np.ndarray:
@@ -26,17 +39,6 @@ def one_hot_to_cont(x: np.ndarray) -> np.ndarray:
     :return: np.ndarray with (W, H)
     """
     return np.argmax(x, axis=len(x.shape) - 3)
-
-
-def normalize_im(im: np.ndarray, norm_type=ImageNormalizations.UnitRange) -> np.ndarray:
-    """
-    Currently just normalizes an image with pixel intensities in range [0, 255] to [-1, 1]
-    :return: The normalized image
-    """
-    if norm_type == ImageNormalizations.UnitRange:
-        return (im.astype(np.float32) / 127.5) - 1
-    else:
-        raise Exception("Unknown Normalization type")
 
 
 def reduce_by_attention(arr: np.ndarray, att: np.ndarray):
@@ -64,3 +66,19 @@ def pair_augmentation(g: Iterable[Tuple[np.ndarray, np.ndarray]], aug_ls) -> Ite
         gt_prep = np.expand_dims(gt, len(gt.shape))
         images_aug = seq(images=[im_prep], segmentation_maps=[gt_prep])
         yield images_aug[0][0].astype(np.float32), images_aug[1][0][:, :, 0].astype(np.float32), frame_number
+
+
+# def put_array(big_arr: np.ndarray, small_arr: np.ndarray, offset=(0, 0)) -> np.ndarray:
+#     """
+#     Puts the small array into the big array. Ignores problems and does its best to fulfill the task
+#     """
+#     b, t =
+#     big_arr[]
+#     big_arr = np.putmask(big_arr, )
+
+
+# if __name__ == '__main__':
+# #     a = np.zeros((10, 10))
+# #     b = np.random.random((4, 4))
+# #     c = put_array(a, b)
+# #     lib.logger.debug_var(c)

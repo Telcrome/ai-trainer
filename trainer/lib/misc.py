@@ -127,7 +127,9 @@ def slugify(value):
     Normalizes string, converts to lowercase, removes non-alpha characters,
     and converts spaces to hyphens.
     """
-    return re.sub(r'[\\/*?:"<>|]', "", value)
+    res = re.sub(r'[\\/*?:"<>|]', "", value)
+    res = res.replace('\n', '_')
+    return res
 
 
 def load_b8(file_path: str) -> np.ndarray:

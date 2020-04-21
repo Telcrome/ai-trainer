@@ -51,6 +51,7 @@
       <w>mnist</w>
       <w>mtype</w>
       <w>ndarray</w>
+      <w>objectness</w>
       <w>oldstates</w>
       <w>oneshot</w>
       <w>opti</w>
