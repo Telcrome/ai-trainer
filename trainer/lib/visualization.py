@@ -43,10 +43,10 @@ class LogWriter:
         self._prep()
         self.logger.info(c)
 
-    def _save_fig(self, fig: plt.Figure, title='fig', close=True):
+    def _save_fig(self, fig: plt.Figure, title='fig', close=True, max_file_path_len=140):
         self._prep()
 
-        f_name = f"{lib.slugify(title)}"
+        f_name = f"{lib.slugify(title)}"[:max_file_path_len]
         if f_name in os.listdir(self._get_run_path()):
             f_name = f'{f_name}_{len(os.listdir(self._get_run_path()))}'
         fig.savefig(os.path.join(self._get_run_path(), f'{f_name}.png'))
@@ -80,7 +80,7 @@ class LogWriter:
             fig = self._debug_arr(o)
             self._save_fig(fig)
         elif isinstance(o, str):
-            self._log_str(o)
+            self._log_str(f'\n{o}\n')
         else:
             self._log_str(str(o))
 

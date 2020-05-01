@@ -98,7 +98,7 @@ def analyse_function_type(f: Callable) -> Tuple[List[type], type]:
 def prepend_gen(prep, gens):
     for item in gens:
         yield prep, [x for x in item]
-
+        
 
 def dsl_func(priority: float):
     def wrapper(func: Callable):
@@ -164,6 +164,8 @@ class DslSemantics(ABC):
             pass
         elif DslSemantics.is_callable(o):
             o = DslSemantics.gen_wrapper(o)
+        else:
+            raise Exception("This object cannot be binded, maybe remove parenthesis?")
 
         self.fs[short_name] = o
 

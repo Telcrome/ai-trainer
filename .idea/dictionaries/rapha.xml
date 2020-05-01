@@ -2,6 +2,7 @@
   <dictionary name="rapha">
     <words>
       <w>annos</w>
+      <w>arrs</w>
       <w>artefact</w>
       <w>astype</w>
       <w>autocompletion</w>
@@ -25,6 +26,7 @@
       <w>datasets</w>
       <w>depthmap</w>
       <w>dicom</w>
+      <w>dota</w>
       <w>downsample</w>
       <w>dtype</w>
       <w>fgsm</w>
@@ -51,7 +53,10 @@
       <w>mnist</w>
       <w>mtype</w>
       <w>ndarray</w>
+      <w>ndimage</w>
+      <w>nongene</w>
       <w>objectness</w>
+      <w>objts</w>
       <w>oldstates</w>
       <w>oneshot</w>
       <w>opti</w>

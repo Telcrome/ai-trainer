@@ -68,6 +68,35 @@ def pair_augmentation(g: Iterable[Tuple[np.ndarray, np.ndarray]], aug_ls) -> Ite
         yield images_aug[0][0].astype(np.float32), images_aug[1][0][:, :, 0].astype(np.float32), frame_number
 
 
+def insert_np_at(a1: np.ndarray, a2: np.ndarray, pos: Tuple[int, int], filter_arr=None) -> np.ndarray:
+    assert len(a1.shape) == 2 and len(a2.shape) == 2
+    if filter_arr is None:
+        filter_arr = np.ones_like(a2).astype(np.bool)
+    x, y = pos
+    res = np.copy(a1)
+    a1_x = slice(x, min(x + a2.shape[0], a1.shape[0]))
+    a1_y = slice(y, min(y + a2.shape[1], a1.shape[1]))
+
+    if x + a2.shape[0] <= a1.shape[0]:
+        a2_x = slice(0, a2.shape[0])
+    else:
+        a2_x = slice(0, a1.shape[0] - (x + a2.shape[0]))
+
+    if y + a2.shape[1] <= a1.shape[1]:
+        a2_y = slice(0, a2.shape[1])
+    else:
+        a2_y = slice(0, a1.shape[1] - (y + a2.shape[1]))
+    item_filter = filter_arr[(a2_x, a2_y)]
+    assert res[(a1_x, a1_y)].shape == a2[(a2_x, a2_y)].shape
+    res[(a1_x, a1_y)][item_filter] = a2[(a2_x, a2_y)][item_filter]
+    return res
+
+
+if __name__ == '__main__':
+    fit = insert_np_at(np.ones((10, 10)), np.ones((3, 3)) * 2, (2, 3))
+    too_big1 = insert_np_at(np.ones((10, 10)), np.ones((3, 10)) * 2, (2, 3))
+    too_big = insert_np_at(np.ones((10, 10)), np.ones((10, 10)) * 2, (2, 3))
+
 # def put_array(big_arr: np.ndarray, small_arr: np.ndarray, offset=(0, 0)) -> np.ndarray:
 #     """
 #     Puts the small array into the big array. Ignores problems and does its best to fulfill the task
