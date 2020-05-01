@@ -14,22 +14,6 @@ import numpy as np
 
 import trainer.lib as lib
 
-
-class SyntaxNode:
-
-    def __init__(self, f: Callable, score: float):
-        self.f = f
-        self.score = score
-        type_dict = typing.get_type_hints(self.f)
-        self.return_type: type = type_dict['return']
-        self.child_types: List[type] = [type_dict[key] for key in type_dict if key != 'return']
-        print(type_dict)
-        self._is_terminal = len(self.child_types) > 0
-
-    def is_terminal(self) -> bool:
-        return self._is_terminal
-
-
 NTS = typing.TypeVar('NTS')
 RULE = List[Tuple[List[Union[str, NTS]], float]]
 
@@ -38,6 +22,7 @@ class Grammar(typing.Generic[NTS]):
 
     def __init__(self, prod_rules: Dict[NTS, RULE]):
         self.prod_rules: Dict[NTS, RULE] = prod_rules
+        self.d = -1
 
     def get_rule(self, nts: NTS) -> RULE:
         if nts in self.prod_rules:
@@ -62,7 +47,7 @@ class Grammar(typing.Generic[NTS]):
 
     def read_program(self, start_symbol: NTS) -> Generator[Union[List[str], None]]:
         for item in self._read_symbol(0, start_symbol):
-            yield item
+            yield item, self.d
 
     def _read_symbol(self, depth: int, sym: Union[NTS, str]) -> Generator[List[str]]:
         """
@@ -73,6 +58,7 @@ class Grammar(typing.Generic[NTS]):
         :return: Generator that iterates over all words that can be expanded from sym
         """
         if isinstance(sym, str):
+            self.d = depth  # Simple hack for outside functions to access depth of generated words
             yield [sym]
         else:
             rules, probas = [], []
@@ -98,7 +84,7 @@ def analyse_function_type(f: Callable) -> Tuple[List[type], type]:
 def prepend_gen(prep, gens):
     for item in gens:
         yield prep, [x for x in item]
-        
+
 
 def dsl_func(priority: float):
     def wrapper(func: Callable):
@@ -131,10 +117,11 @@ class DslSemantics(ABC):
     @staticmethod
     def gen_wrapper(f: Callable) -> type(Generator):
         """
-        Converts a function f: bool -> int to a generator f: Generator[bool] -> Generator[int]
+        For example, converts a function f: bool -> int to a generator f: Generator[bool] -> Generator[int]
         :param f: A callable
         :return: A generator with the semantics of f
         """
+
         def gen_f(*iters) -> Generator:
             if iters:
                 for t in itertools.product(*iters):
