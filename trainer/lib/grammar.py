@@ -20,9 +20,10 @@ RULE = List[Tuple[List[Union[str, NTS]], float]]
 
 class Grammar(typing.Generic[NTS]):
 
-    def __init__(self, prod_rules: Dict[NTS, RULE]):
+    def __init__(self, prod_rules: Dict[NTS, RULE], use_softmax=True):
         self.prod_rules: Dict[NTS, RULE] = prod_rules
         self.d = -1
+        self.use_softmax = use_softmax
 
     def get_rule(self, nts: NTS) -> RULE:
         if nts in self.prod_rules:
@@ -72,7 +73,7 @@ class Grammar(typing.Generic[NTS]):
                 sym_gens = [self._read_symbol(depth + 1, sym) for sym in rule]
                 rule_gens.append(lib.product(sym_gens))
 
-            for random_rule_gen in lib.sample_randomly(rule_gens, probas, use_softmax=False):
+            for random_rule_gen in lib.sample_randomly(rule_gens, probas, use_softmax=self.use_softmax):
                 yield reduce(lambda x, y: x + y, [i for i in random_rule_gen])
 
 

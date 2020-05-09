@@ -4,6 +4,7 @@
       <w>annos</w>
       <w>arrs</w>
       <w>artefact</w>
+      <w>asso</w>
       <w>astype</w>
       <w>autocompletion</w>
       <w>autodoc</w>
@@ -24,6 +25,7 @@
       <w>cuda</w>
       <w>dataloader</w>
       <w>datasets</w>
+      <w>denoise</w>
       <w>depthmap</w>
       <w>dicom</w>
       <w>dota</w>
@@ -38,11 +40,13 @@
       <w>imstack</w>
       <w>imstacks</w>
       <w>inps</w>
+      <w>insta</w>
       <w>iters</w>
       <w>jsonclass</w>
       <w>kaggle</w>
       <w>learnable</w>
       <w>lmost</w>
+      <w>locs</w>
       <w>logdir</w>
       <w>logits</w>
       <w>logwriter</w>
@@ -54,6 +58,7 @@
       <w>mtype</w>
       <w>ndarray</w>
       <w>ndimage</w>
+      <w>nodecount</w>
       <w>nongene</w>
       <w>objectness</w>
       <w>objts</w>
@@ -68,6 +73,7 @@
       <w>preds</w>
       <w>preprocessing</w>
       <w>pretrain</w>
+      <w>prios</w>
       <w>probas</w>
       <w>prog</w>
       <w>progs</w>
@@ -93,6 +99,7 @@
       <w>semsegtpls</w>
       <w>skdata</w>
       <w>socketio</w>
+      <w>softmax</w>
       <w>ssmask</w>
       <w>statedict</w>
       <w>strs</w>
@@ -110,6 +117,7 @@
       <w>tqdm</w>
       <w>trgt</w>
       <w>unflagged</w>
+      <w>vals</w>
       <w>visboard</w>
     </words>
   </dictionary>
