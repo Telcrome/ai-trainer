@@ -33,6 +33,7 @@
       <w>dtype</w>
       <w>fgsm</w>
       <w>foldergrab</w>
+      <w>heatmap</w>
       <w>imagemasks</w>
       <w>imagestack</w>
       <w>imagestacks</w>
@@ -53,6 +54,7 @@
       <w>magicnumber</w>
       <w>matplot</w>
       <w>matplotlib</w>
+      <w>mcmc</w>
       <w>minibatch</w>
       <w>mnist</w>
       <w>mtype</w>
@@ -73,6 +75,7 @@
       <w>preds</w>
       <w>preprocessing</w>
       <w>pretrain</w>
+      <w>prio</w>
       <w>prios</w>
       <w>probas</w>
       <w>prog</w>
