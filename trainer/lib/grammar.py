@@ -43,6 +43,8 @@ class Grammar(typing.Generic[NTS, TS]):
         for arg_type in arg_types:
             rule_str.append(arg_type)
             rule_str.append(',')
+        if rule_str[-1] == ',':
+            rule_str.pop(-1)
         rule_str.append(']}')
 
         new_rule = rule_str, prio
