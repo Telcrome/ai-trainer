@@ -20,14 +20,12 @@ class LogWriter:
         self.prepped = False
         self.log_dir, self.log_id, self.logger = log_dir, lib.create_identifier(hint=id_hint), None
 
-    def _get_run_path(self) -> str:
-        return os.path.join(self.log_dir, self.log_id)
-
     def _prep(self):
         if not self.prepped:
             if not os.path.exists(self.log_dir):
                 os.mkdir(self.log_dir)
-            os.mkdir(self._get_run_path())
+            if not os.path.exists(self._get_run_path()):
+                os.mkdir(self._get_run_path())
 
             # Logging to file
             self.logger = logging.getLogger('spam')
@@ -84,7 +82,19 @@ class LogWriter:
         else:
             self._log_str(str(o))
 
-    def get_absolute_log_folder(self) -> str:
+    def _get_run_path(self) -> str:
+        return os.path.join(self.get_parent_log_folder(), self.log_id)
+
+    def get_parent_log_folder(self) -> str:
+        # self._prep()
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
+        return self.log_dir
+
+    def get_absolute_run_folder(self) -> str:
+        # self._prep()
+        if not os.path.exists(self._get_run_path()):
+            os.mkdir(self._get_run_path())
         return self._get_run_path()
 
 

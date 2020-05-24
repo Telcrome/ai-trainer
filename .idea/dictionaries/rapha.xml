@@ -11,6 +11,7 @@
       <w>binstorage</w>
       <w>bmost</w>
       <w>booleanizer</w>
+      <w>boolf</w>
       <w>bytea</w>
       <w>cacher</w>
       <w>childclass</w>
@@ -32,6 +33,7 @@
       <w>downsample</w>
       <w>dtype</w>
       <w>fgsm</w>
+      <w>filt</w>
       <w>foldergrab</w>
       <w>heatmap</w>
       <w>imagemasks</w>
@@ -42,6 +44,7 @@
       <w>imstacks</w>
       <w>inps</w>
       <w>insta</w>
+      <w>insts</w>
       <w>iters</w>
       <w>jsonclass</w>
       <w>kaggle</w>
@@ -68,6 +71,7 @@
       <w>oneshot</w>
       <w>opti</w>
       <w>optim</w>
+      <w>ortho</w>
       <w>outputsize</w>
       <w>pbar</w>
       <w>postgre</w>
@@ -84,6 +88,7 @@
       <w>pyplot</w>
       <w>reducedatt</w>
       <w>relu</w>
+      <w>resample</w>
       <w>rmost</w>
       <w>sbjt</w>
       <w>sbjts</w>
