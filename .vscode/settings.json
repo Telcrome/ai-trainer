@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\rapha\\Desktop\\ai-trainer\\envs\\python.exe",
+    "python.pythonPath": "/home/telcrome/anaconda3/bin/python",
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
