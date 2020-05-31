@@ -1,7 +1,12 @@
 import os
-from flexx import app, ui, flx
+from flexx import flx
+
 
 class Example(flx.PyWidget):
+
+    def __init__(self):
+        self.button, self.lbl = None, None
+        super().__init__()
 
     def init(self):
         self.button = flx.Button(text='hello')
@@ -9,12 +14,9 @@ class Example(flx.PyWidget):
 
     @flx.reaction('button.pointer_click')
     def some_stuff(self, *events):
-        # with ui.TreeWidget(max_selected=2):
-
-        #     for t in ['foo', 'bar', 'spam', 'eggs']:
-        #         ui.TreeItem(text=t, checked=True)
-        # self.lbl.set_html('1<br/>2')
         self.lbl.set_html('<br />'.join(os.listdir('.')))
+        print(events)
+
 
 app = flx.App(Example)
 app.export('example.html', link=0)
