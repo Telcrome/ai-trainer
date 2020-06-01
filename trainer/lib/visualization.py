@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from bokeh.plotting import figure
 
-import trainer.lib as lib
+# import trainer.lib as lib
 
 x = np.linspace(0, 6, 50)
 p1 = figure()
