@@ -13,7 +13,7 @@ import trainer.lib as lib
 
 def get_test_logits(shape=(50, 50), bounds=(-50, 20)) -> np.ndarray:
     """
-    Returns a demo array for testing functionality with logits.
+    Returns a demo array for testing functionality with uniformly distributed logits.
 
     >>> import trainer.demo_data as dd
     >>> import numpy as np
