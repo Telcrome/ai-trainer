@@ -1,10 +1,11 @@
 from enum import Enum
-from typing import Generator, Tuple, Iterable, Dict
+from typing import Generator, Tuple, Iterable, Dict, List
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+from scipy.ndimage import label, generate_binary_structure
 from scipy.ndimage.morphology import distance_transform_edt as dist_trans
 
 import trainer.lib as lib
@@ -12,6 +13,46 @@ import trainer.lib as lib
 
 class ImageNormalizations(Enum):
     UnitRange = 1
+
+
+def duplicate_columns(data, minoccur=2):
+    ind = np.lexsort(data)
+    diff = np.any(data.T[ind[1:]] != data.T[ind[:-1]], axis=1)
+    edges = np.where(diff)[0] + 1
+    result = np.split(ind, edges)
+    result = [group for group in result if len(group) >= minoccur]
+    return result
+
+
+def pad(small_arr: np.ndarray, size=(30, 30)) -> np.ndarray:
+    # if small_arr.shape[0] < size[0] or small_arr.shape[1] < size[1]:
+    size = max(small_arr.shape[0], size[0]), max(small_arr.shape[1], size[1])
+    res = np.zeros(size, dtype=np.int32)
+    res[:small_arr.shape[0], :small_arr.shape[1]] = small_arr
+    return res
+    # else:
+    #     return small_arr  # There is no need for padding
+
+
+def split_into_regions(arr: np.ndarray, mode=0) -> List[np.ndarray]:
+    """
+    Splits an array into its coherent regions.
+
+    :param mode: 0 for orthogonal connection, 1 for full connection
+    :param arr: Numpy array with shape [W, H]
+    :return: A list with length #NumberOfRegions of arrays with shape [W, H]
+    """
+    res = []
+    if mode == 0:
+        rs, num_regions = label(arr)
+    elif mode == 1:
+        rs, num_regions = label(arr, structure=generate_binary_structure(2, 2))
+    else:
+        raise Exception("Please specify a valid Neighborhood mode for split_into_regions")
+
+    for i in range(1, num_regions + 1):
+        res.append(rs == i)
+    return res
 
 
 def normalize_im(im: np.ndarray, norm_type=ImageNormalizations.UnitRange) -> np.ndarray:

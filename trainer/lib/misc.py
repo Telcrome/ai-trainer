@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Tuple, List, Dict, Any, TypeVar
 
-import PySimpleGUI as sg
 import cv2
 import imageio
 import matplotlib.pyplot as plt

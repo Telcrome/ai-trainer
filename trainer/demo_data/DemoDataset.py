@@ -1,7 +1,6 @@
 import os
 from abc import ABC, abstractmethod
 from typing import Tuple
-import itertools
 
 import numpy as np
 import skimage
@@ -39,17 +38,10 @@ def build_test_subject() -> lib.Subject:
     return res
 
 
-def finite_test_gen(start=0, end=5):
-    for item in range(start, end):
-        yield item
-
-
-def infinite_test_gen(first=0):
-    for item in itertools.count(first):
-        yield item
-
-
 class DemoDataset(ABC):
+    """
+    Intended to be used to load standard machine learning datasets as mock-up data for the trainer dataset format.
+    """
 
     def __init__(self, data_path: str, ds_name: str):
         self.ds_name = ds_name

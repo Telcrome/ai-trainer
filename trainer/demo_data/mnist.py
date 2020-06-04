@@ -11,7 +11,7 @@ import trainer.lib as lib
 
 class MnistDataset(dd.DemoDataset):
     """
-    Intended to be used to load standard machine learning datasets as mock-up data for the trainer dataset format.
+    
 
     >>> import tempfile
     >>> import trainer.demo_data as dd

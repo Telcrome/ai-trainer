@@ -4,7 +4,6 @@ import functools
 import typing
 from enum import Enum
 import itertools
-import infinite
 import random
 from abc import ABC, abstractmethod
 from typing import get_type_hints, Optional, Dict, List, Union, Tuple, Callable, Generator, Any

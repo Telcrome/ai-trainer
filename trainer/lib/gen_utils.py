@@ -30,7 +30,6 @@ class GenCacher(Generic[V]):
 
     def fill_cache(self, idx: int):
         while not self.is_exhausted() and idx >= self.get_cache_len():
-            # while len(self._cache) <= idx:
             try:
                 self._cache.append(next(self._g))
             except StopIteration as _:
