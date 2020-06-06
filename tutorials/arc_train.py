@@ -146,11 +146,6 @@ if __name__ == '__main__':
                         for f_instance_id in f_instance_ids:
                             feature_pp.instances[f_instance_id].increment_used()
 
-                # Control the number of instances
-                # shrink_pool(feature_pp, FEATURE_N)
-                # shrink_pool(actions_pp, ACTION_N)
-                # TODO: The train leafs are pure by design, check if that is the case for test as well
-
                 if sols:
                     epoch_sol_found.append(epoch_step)
 
@@ -198,7 +193,8 @@ if __name__ == '__main__':
                                 for i, sol in enumerate(sols[:MAX_VIS]):
                                     sol.visualize(parent_path=epoch_logdir, f_vis=feature_pp.visualize_instance,
                                                   a_vis=actions_pp.visualize_instance,
-                                                  folder_appendix=str(all_gen_res[i][0]))
+                                                  folder_appendix=str(all_gen_res[i][0]),
+                                                  name=s.name)
 
                                 break  # TODO check if this makes sense
                     else:
