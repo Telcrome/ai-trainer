@@ -7,8 +7,12 @@ from typing import Tuple, Union, Callable, List, Iterator, Any
 
 import numpy as np
 import cv2
-import imgaug.augmenters as iaa
-from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+
+try:
+    import imgaug.augmenters as iaa
+    from imgaug.augmentables.segmaps import SegmentationMapsOnImage
+except ImportError as _:
+    pass
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import torch
@@ -426,7 +430,7 @@ class ModelTrainer:
         epoch_loss_sum = 0.
 
         steps = len(torch_loader) if steps == -1 else steps
-        ml.logger._log_str(f'Starting epoch: {epoch} with N={len(torch_loader) * batch_size} and {steps} steps\n')
+        lib.logger._log_str(f'Starting epoch: {epoch} with N={len(torch_loader) * batch_size} and {steps} steps\n')
         loader_iter = iter(torch_loader)
         with tqdm(total=steps, maxinterval=steps / 100) as pbar:
             for i in range(steps):
@@ -443,7 +447,7 @@ class ModelTrainer:
                 # Log metrics and loss
                 epoch_loss_sum += (loss / batch_size)
                 epoch_loss = epoch_loss_sum / (i + 1)
-                ml.logger.add_scalar(f'{mode.value}: loss/train epoch {epoch + 1}', epoch_loss, i)
+                lib.logger.add_scalar(f'{mode.value}: loss/train epoch {epoch + 1}', epoch_loss, i)
 
                 # Handle progress bar
                 pbar.update()
@@ -455,7 +459,7 @@ class ModelTrainer:
                 else:
                     pbar.set_description(
                         f'{orientation_str}, Loss: {display_loss:05f}')
-        ml.logger._log_str(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
+        lib.logger.debug_var(f"\n{mode.value} epoch result: {epoch_loss_sum / steps}\n")
 
     def save_to_disk(self, dir_path: str = '.', hint=''):
         torch.save(self.model.state_dict(), os.path.join(dir_path, f'{self.model_name}{hint}.pt'))

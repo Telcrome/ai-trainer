@@ -287,10 +287,7 @@ class ArcTransformation:
         """
         Judges the generalization performance given a test set in dt-format.
 
-        Provides a feedback object of the following form:
-        [
-            (action_instance_name, {f_inst})
-        ]
+        Provides a feedback object of the following form: [(action_instance_name, {f_inst})]
         """
         feedback = []
         for step, (a_i, dt) in enumerate(self.steps):
