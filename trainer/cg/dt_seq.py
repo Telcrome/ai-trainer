@@ -5,7 +5,6 @@ from typing import List, Generator, Tuple, Optional, Callable
 import numpy as np
 import sklearn.tree as tree
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 import trainer.lib as lib
 from trainer.demo_data.arc import plot_as_heatmap
