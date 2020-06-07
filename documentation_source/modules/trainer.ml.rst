@@ -60,14 +60,6 @@ trainer.ml.utils module
    :undoc-members:
    :show-inheritance:
 
-trainer.ml.visualization module
--------------------------------
-
-.. automodule:: trainer.ml.visualization
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 
 Module contents
 ---------------

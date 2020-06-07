@@ -17,11 +17,12 @@ Welcome to AI-Trainer's documentation!
    modules/modules
 
 
-AI-Trainer is a toolbox that defines multiple exciting simplifications to your workflow:
+AI-Trainer is a toolbox that defines multiple simplifications to your workflow:
 
 - A dataset format that allows to group several properties (e.g. images) for one entity (e.g. a medical patient)
-- A labelling tool that helps us with AI-assisted proposals for unlabelled data
+- A labelling tool that helps us using AI-assisted proposals for unlabelled data, given what is already labelled!
 - Data generators that actually work without further modification to train your own models!
+- A few-shot learning framework that does not require gradient descent
 
 Indices and tables
 ==================

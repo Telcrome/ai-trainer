@@ -22,7 +22,7 @@ from trainer.cg.samplers import Sampler
 
 
 class Context(ABC):
-    """Can be used to hold the context dependent semantics"""
+    """Can be used to hold the context dependent semantics, meant to be derived for a special purpose."""
 
     def __init__(self):
         self.state = {}

@@ -4,6 +4,9 @@
 data
 vsc/node_modules
 vsc/out
+
+# Documentation
+documentation_source/_build
 build
 
 # PyCharm

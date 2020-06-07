@@ -5,11 +5,20 @@ Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
    trainer.lib.tgui
 
 Submodules
 ----------
+
+trainer.lib.DslSemantics module
+-------------------------------
+
+.. automodule:: trainer.lib.DslSemantics
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 trainer.lib.config module
 -------------------------
@@ -63,6 +72,14 @@ trainer.lib.syn module
 ----------------------
 
 .. automodule:: trainer.lib.syn
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+trainer.lib.visualization module
+--------------------------------
+
+.. automodule:: trainer.lib.visualization
    :members:
    :undoc-members:
    :show-inheritance:

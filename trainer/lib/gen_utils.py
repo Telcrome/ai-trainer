@@ -1,4 +1,4 @@
-from typing import Generator, TypeVar, Generic, Tuple, List
+from typing import Generator, TypeVar, Generic, Tuple, List, Iterator, Union
 import itertools
 import time
 import random
@@ -14,7 +14,7 @@ V = TypeVar('V')
 
 class GenCacher(Generic[V]):
     """
-    Wrapper around a generator that stores the already sampled values and allows indexing.
+    Wrapper around a generator that stores the already yielded values and therefore allows indexing.
     """
 
     def __init__(self, generator: Generator[V, None, None]):
@@ -60,7 +60,6 @@ def product(gens: List[Generator]) -> Generator:
 
     .. code-block:: python
         :linenos:
-        :emphasize-lines: 21
 
         import matplotlib.pyplot as plt
         import trainer.demo_data as dd
@@ -111,13 +110,23 @@ def product(gens: List[Generator]) -> Generator:
             return
 
 
-def sample_randomly(gens: List[Generator], probas: List[float], use_softmax=False):
+def sample_randomly(gens: Union[List[Generator], List[Iterator]], probas: List[float], use_softmax=False):
+    """
+    Draw from one generator in a list according to uniformly distributed probabilities.
+
+    :param gens: A list of generators
+    :param probas: List of generator probabilities, must correspond to the list of generators
+    :param use_softmax: Use softmax to press priorities to one
+    :return: Randomly drawn value from one of the generators
+    """
+    assert len(gens) == len(probas)
+
     while gens:
         if use_softmax:
             i = np.random.choice(range(len(gens)), 1, p=softmax(probas))[0]
         else:
             i = np.random.choice(range(len(gens)), 1, p=probas/np.sum(probas))[0]
-        if not isinstance(gens[i], Generator):
+        if (not isinstance(gens[i], Generator)) and (not isinstance(gens[i], Iterator)):
             yield gens[i]
             gens.pop(i)
             probas.pop(i)
@@ -130,8 +139,10 @@ def sample_randomly(gens: List[Generator], probas: List[float], use_softmax=Fals
 
 
 if __name__ == '__main__':
-    import trainer.demo_data as dd
-    gens = [dd.finite_test_gen(start=0, end=5), dd.finite_test_gen(start=10, end=15)]
+    gens = [
+        itertools.islice(itertools.count(), 0, 5),
+        itertools.islice(itertools.count(), 10, 15)
+    ]
 
     for x in sample_randomly(gens, [0.5, 0.5]):
         print(x)

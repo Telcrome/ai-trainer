@@ -4,18 +4,18 @@ trainer.demo\_data package
 Submodules
 ----------
 
-trainer.demo\_data.arc module
------------------------------
+trainer.demo\_data.DemoDataset module
+-------------------------------------
 
-.. automodule:: trainer.demo_data.arc
+.. automodule:: trainer.demo_data.DemoDataset
    :members:
    :undoc-members:
    :show-inheritance:
 
-trainer.demo\_data.main module
-------------------------------
+trainer.demo\_data.arc module
+-----------------------------
 
-.. automodule:: trainer.demo_data.main
+.. automodule:: trainer.demo_data.arc
    :members:
    :undoc-members:
    :show-inheritance:

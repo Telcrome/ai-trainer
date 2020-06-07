@@ -10,7 +10,7 @@ try:  # The following modules depend on torch, for CI systems without torch a tr
         reduce_by_attention, insert_np_at, duplicate_columns, pad, split_into_regions
     from trainer.ml.losses import dice_loss, FocalLoss, SegCrit
     from trainer.ml.layers import ConvGRUCell, ResidualBlock
-    from trainer.ml.torch_utils import ModelMode, ModelTrainer, InMemoryDataset, device as torch_device, \
-        TrainerMetric, AccuracyMetric, SemSegDataset
+    # from trainer.ml.torch_utils import ModelMode, ModelTrainer, InMemoryDataset, device as torch_device, \
+    #     TrainerMetric, AccuracyMetric, SemSegDataset
 except ImportError as e:
     print(f"Please install all requirements: {e}")
