@@ -12,7 +12,7 @@ import trainer.lib as lib
 from trainer.demo_data.arc import game_from_subject, Value
 from trainer.cg.Dsl import Dsl, Context, ProgPool
 from trainer.cg.dsl_utils import colour_converter
-from trainer.cg.samplers import SamplerFloat, SamplerEnum, RandomNumber, NumberSampler
+from trainer.cg.samplers import FloatSampler, EnumSampler, RandomNumber, NumberSampler
 from trainer.cg.typed_dsl import *
 
 
@@ -97,8 +97,8 @@ def arc_specifics():
         (value_to_arr, 1.),
     ]
     enums = [B, Value, OneShotTransform, RegionProp, Structs, RFilters, Orientation]
-    feature_samplers = [SamplerEnum(e) for e in enums] + [NumberSampler(1, 10, PositiveNumber)]
-    action_samplers = [SamplerEnum(e) for e in enums] + [NumberSampler(1, 10, PositiveNumber)]
+    feature_samplers = [EnumSampler(e) for e in enums] + [NumberSampler(1, 10, PositiveNumber)]
+    action_samplers = [EnumSampler(e) for e in enums] + [NumberSampler(1, 10, PositiveNumber)]
     return c, feature_sems, feature_samplers, action_sems, action_samplers
 
 

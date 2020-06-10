@@ -21,6 +21,14 @@ class CNodeType(Enum):
 
 
 def val_to_label(v: Any, max_length=100, vis_depth=4) -> str:
+    """
+    Attempts to visualize any value using a string displayable in the dot language of graphviz
+
+    :param v: The value to be visualized
+    :param max_length: Maximum length of the resulting string
+    :param vis_depth: maximum lines that the string may occupy
+    :return:
+    """
     if isinstance(v, tuple):
         res = '<br/>'.join([val_to_label(x) for x in v])
     elif isinstance(v, np.ndarray) and len(v.shape) > 1:

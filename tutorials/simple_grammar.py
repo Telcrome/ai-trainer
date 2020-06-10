@@ -1,36 +1,33 @@
 """
-Demonstrates how to generate programs of simple languages using the probabilist
-ic grammar module
+Demonstrates how to generate programs of simple languages using the probabilistic grammar module.
+We define an enum with non-terminals and substrings of the final word as terminal-symbols.
 """
 import itertools
+from typing import Any
+from enum import Enum
 
 from tqdm import tqdm
 
 import trainer.lib as lib
 import trainer.ml as ml
 
-plus = lib.TS('plus')
-magicnumber = lib.TS('magicnumber')
-N = 3
-numbers = [([lib.TS(str(i))], N - float(i)) for i in range(N)]
-Number = lib.NTS('Number')
-S = lib.NTS('S')
 
-
-class SimpleGrammar(lib.Grammar):
-    prod_rules = {
-        S: [
-            ([S, S], 0.1),
-            # ([], 0.5),
-            ([plus, Number, Number, Number, Number], 0.9),
-        ],
-        Number: [([magicnumber], 5.)] + numbers
-    }
+class NonTerminals(Enum):
+    A, B = range(2)
 
 
 if __name__ == '__main__':
-    sg = SimpleGrammar(S)
+    sg = lib.Grammar[Any, str](prod_rules={
+        NonTerminals.A: [
+            ([NonTerminals.A, NonTerminals.B], 1.),
+            (['a'], 1.),
+        ],
+        NonTerminals.B: [
+            (['b', NonTerminals.B], 1.),
+            (['b'], 1.),
+        ]
+    }, ts_type=str, use_softmax=True)
     print(sg)
 
-    for prog in tqdm(sg.read_program()):
-        ml.logger._log_str(prog)
+    for prog in tqdm(sg.read_program(NonTerminals.A)):
+        print(prog)

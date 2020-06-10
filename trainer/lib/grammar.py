@@ -60,7 +60,7 @@ class Grammar(typing.Generic[NTS, TS]):
         for prod_rule_key in self.prod_rules:
             right_repr = ''
             for rule in self.prod_rules[prod_rule_key]:
-                prod_abbreviation = [s.name for s in rule[0]]
+                prod_abbreviation = [str(s) for s in rule[0]]
                 right_repr += f" {prod_abbreviation} ({rule[1]}) | "
             res += f'{prod_rule_key} -> {right_repr[:-3]}\n'
         return res
@@ -99,15 +99,3 @@ class Grammar(typing.Generic[NTS, TS]):
 
             for random_rule_gen in lib.sample_randomly(rule_gens, probas, use_softmax=self.use_softmax):
                 yield reduce(lambda x, y: x + y, [i for i in random_rule_gen])
-
-
-def prepend_gen(prep, gens):
-    for item in gens:
-        yield prep, [x for x in item]
-
-
-def dsl_func(priority: float):
-    def wrapper(func: Callable):
-        return func, priority
-
-    return wrapper

@@ -12,7 +12,7 @@ try:
     import imgaug.augmenters as iaa
     from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 except ImportError as _:
-    pass
+    iaa, SegmentationMapsOnImage = None, None
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import torch
@@ -27,16 +27,13 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 # If GPU is available, use GPU
-
-
 device = torch.device("cuda" if (torch.cuda.is_available()) else "cpu")
-# device = torch.device('cpu')
 IDENTIFIER = lib.create_identifier()
 
 
 class ModelMode(Enum):
     """
-    Used to differentiate what the model is currently doing.
+    Used to determine what the model is currently doing.
 
     The following guidelines apply for the semantics of this enum:
 
@@ -44,9 +41,7 @@ class ModelMode(Enum):
     - Eval does not require augmentation and is used for evaluation
     - Usage does not require ground truths
     """
-    Train = "Train"
-    Eval = "Eval"
-    Usage = "Usage"
+    Train, Eval, Usage = "Train", "Eval", "Usage"
 
 
 class InMemoryDataset(data.Dataset):

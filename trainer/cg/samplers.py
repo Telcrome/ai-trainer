@@ -36,7 +36,7 @@ class Sampler(ABC, Generic[V]):
 RandomNumber = NewType('RandomNumber', float)
 
 
-class SamplerFloat(Sampler[RandomNumber]):
+class FloatSampler(Sampler[RandomNumber]):
     def __init__(self):
         super().__init__(name='RFloat', r_type=RandomNumber)
 
@@ -50,7 +50,7 @@ class SamplerFloat(Sampler[RandomNumber]):
         return [float(v) for v in vals]
 
 
-class SamplerEnum(Sampler[V]):
+class EnumSampler(Sampler[V]):
 
     def __init__(self, e: type(Enum)):
         self.e = e

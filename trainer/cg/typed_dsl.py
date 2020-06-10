@@ -29,7 +29,7 @@ from trainer.demo_data.arc import Value, plot_as_heatmap, game_from_subject
 from trainer.cg.dsl_utils import general_transform, ortho_filter, full_filter, diag_filter, colour_converter, zoom_in, \
     objects_from_labels, select_objects, get_lbl_lu
 from trainer.cg.Dsl import Dsl, Context, ProgPool
-from trainer.cg.samplers import SamplerFloat, SamplerEnum, RandomNumber
+from trainer.cg.samplers import FloatSampler, EnumSampler, RandomNumber
 
 BoolFilter = NewType('BoolFilter', np.ndarray)
 
