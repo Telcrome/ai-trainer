@@ -42,13 +42,22 @@ if __name__ == '__main__':
 
     prog_pool: cg.ProgPool = cg.ProgPool(
         r_type=float,
-        fs=[(math_op, 3.), (exec_context.get_start, 5.), (random_number_wrapper, 5.)],
+        fs=[
+            # float
+            (math_op, 3.),
+            (exec_context.get_start, 5.),
+            (random_number_wrapper, 5.)],
         context=exec_context,
         samplers=[cg.FloatSampler(), cg.EnumSampler(MathOperation)]
     )
 
-    N_GRAPHS = 50
+    N_GRAPHS = 10
     prog_pool.sample_words(N_GRAPHS)
     prog_pool.set_init_num(N_GRAPHS)
     prog_pool.initialize_instances()
+
     a, b = prog_pool.compute_features([{'start_value': 0.5}], visualize_after=True, store=True)
+
+    prog_pool.diffusion_move(temperature=1.)
+
+    c, d = prog_pool.compute_features([{'start_value': 0.5}], visualize_after=True, store=True)

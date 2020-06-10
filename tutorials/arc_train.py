@@ -220,7 +220,7 @@ if __name__ == '__main__':
                     feature_pp.revert_last_step()
                     actions_pp.revert_last_step()
 
-                feature_pp.mcmc_step(temperature=temperature)
-                actions_pp.mcmc_step(temperature=temperature)
+                feature_pp.diffusion_move(temperature=temperature)
+                actions_pp.diffusion_move(temperature=temperature)
 
             # feature_pp, actions_pp = load_pps_from_disk(f'{f_path}.xlsx', f'{a_path}.xlsx')

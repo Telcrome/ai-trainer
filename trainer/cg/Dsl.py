@@ -215,7 +215,7 @@ class ProgPool:
     def get_locks(self):
         return len([True for key in self.instances if self.instances[key].is_locked()])
 
-    def mcmc_step(self, temperature: float, dim_factor=3.5):
+    def diffusion_move(self, temperature: float, dim_factor=3.5):
         """
         Resample one node of every program (which is not locked) inside the current instantiations.
         Performs birth and death moves randomly.
