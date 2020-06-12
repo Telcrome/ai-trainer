@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     # unsolved: List[lib.Subject] = sess.query(lib.Subject).filter(lib.Subject.name.in_(prev_solved)).all()
     # unsolved: List[lib.Subject] = sess.query(lib.Subject).filter(lib.Subject.name.in_(interesting_now)).all()
-    unsolved = train_split.sbjts + eval_split.sbjts
+    unsolved = train_split.sbjts
     random.shuffle(unsolved)
     successful = []
     solved_before = []
@@ -140,7 +140,7 @@ if __name__ == '__main__':
 
                 # Record statistics to find leeches that have no or little predictive value
                 for sol in sols:
-                    steps = sol.get_used_fs_a()
+                    steps = sol.get_used_cgs()
                     for step, (a_instance_id, f_instance_ids) in enumerate(steps):
                         actions_pp.instances[a_instance_id].increment_used()
                         for f_instance_id in f_instance_ids:

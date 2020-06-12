@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from typing import List, Generator, Tuple, Optional, Callable
+from typing import List, Generator, Tuple, Optional, Callable, Set
 
 import numpy as np
 import sklearn.tree as tree
@@ -215,10 +215,9 @@ class ArcTransformation:
         self.last_preds: Optional[List[np.ndarray]] = None
 
     def get_node_count(self):
-        node_counts = [step[1].tree_.node_count for step in self.steps]
-        return sum(node_counts)
+        return sum([step[1].tree_.node_count for step in self.steps])
 
-    def get_used_fs_a(self) -> List[Tuple[int, Set[int]]]:
+    def get_used_cgs(self) -> List[Tuple[int, Set[int]]]:
         feedback = []
         for step, (a_i, dt) in enumerate(self.steps):
             used_fs = np.argwhere(dt.feature_importances_ > 0).flatten()
@@ -254,8 +253,19 @@ class ArcTransformation:
                   a_vis: Optional[Callable] = None,
                   folder_appendix='',
                   name='unknown'):
+        """
+        Visualizes the whole sequence including the features and actions that are used by this dt sequence.
+
+        :param parent_path:
+        :param f_vis: A callable that takes a feature id and a disk location and visualizes that feature
+        :param a_vis: A callable that takes an action id and a disk location and visualizes that action
+        :param folder_appendix:
+        :param name:
+        :return:
+        """
         if not parent_path:
             parent_path = lib.logger.get_absolute_run_folder()
+
         old_visualizations = list(filter(lambda x: name in x, os.listdir(parent_path)))
         dir_name = os.path.join(parent_path, f'./{name}_{len(old_visualizations)}_{folder_appendix}/')
         if not os.path.exists(dir_name):
@@ -269,15 +279,11 @@ class ArcTransformation:
                 plt.close(fig)
 
         for step, (a_i, dt) in enumerate(self.steps):
-            # action_prog_i, action_insta_name = self.a_inst[a_i]
-            # a_name = self.a_pp[int(action_prog_i)]['ProgStr']
-            # full_a_name = f'{a_name[:50]}_{action_insta_name}'
-            # f_names = [f"{self.f_pp[int(p_id)]['ProgStr']}___{insta}" for p_id, insta in self.f_inst]
             vis_dec_tree(dt, f'{step}_{self.a_inst[a_i]}', self.f_inst,
                          ['Keep in pool', 'Take Action'], dir_path=dir_name)
 
         if f_vis is not None and a_vis is not None:
-            fb = self.get_used_fs_a()
+            fb = self.get_used_cgs()
             for step, (a_instance_id, f_instance_ids) in enumerate(fb):
                 a_vis(a_instance_id, parent_dir=dir_name, f_name=f'action_{a_instance_id}_step_{step}.png')
                 for f_instance_id in f_instance_ids:

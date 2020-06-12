@@ -28,7 +28,10 @@ from trainer.cg.Dsl import ProgPool
 
 
 def vis_dec_tree(dec_tree: tree.DecisionTreeClassifier, name: str, prog_names: np.ndarray, class_names: List[str],
-                 dir_path='.'):
+                 dir_path=''):
+    if not dir_path:
+        dir_path = lib.logger.get_absolute_run_folder()
+        
     dot_data = tree.export_graphviz(dec_tree, out_file=None,
                                     feature_names=prog_names,
                                     class_names=class_names,

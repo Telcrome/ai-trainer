@@ -1,3 +1,6 @@
+"""
+
+"""
 from typing import Callable, List, Tuple
 
 import cv2
