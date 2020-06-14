@@ -51,8 +51,8 @@ clone the repo locally.
 git clone https://github.com/Telcrome/ai-trainer
 ```
 
-Both vsc and pycharm are used for development with
-their configurations provided in ```.vscode``` and ```.idea```
+Both vsc and pycharm can be used for development with
+their respective configurations provided in ```.vscode``` and ```.idea```.
 
 ## Recommended environments
 
