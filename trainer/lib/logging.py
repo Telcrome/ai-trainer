@@ -3,38 +3,13 @@ from __future__ import annotations
 from typing import Any, List, Optional
 import logging
 import os
+import json
 
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 import trainer.lib as lib
-
-
-class ProgressTracker:
-    """
-    Allows to track solutions over time
-    """
-
-    def __init__(self, run_name='', file_path='./progress.json'):
-        """
-
-
-        :param file_path:
-        :param run_name:
-        """
-        if not run_name:
-
-        self.file_path = file_path
-
-    def add_with_flag(self, entity_name: str, result_name: str) -> None:
-        """
-
-        :param entity_name:
-        :param result_name:
-        :return:
-        """
-        pass
 
 
 class LogWriter:
@@ -122,3 +97,56 @@ class LogWriter:
 
 
 logger = LogWriter()
+
+
+class ProgressTracker:
+    """
+    Allows to track solutions over time
+    """
+
+    def __init__(self, run_desc='', file_path=''):
+        """
+        Creates the storage file if it does not yet exist. Loads it otherwise.
+
+        :param run_desc: Use this name to indicate what has changed
+        :param file_path: Full file path to the storage json
+        """
+        if not file_path:
+            file_path = os.path.join(logger.get_parent_log_folder(), 'progress.json')
+
+        self.run_desc = lib.create_identifier(hint=run_desc)
+        self.file_path = file_path
+
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                self.json_content = json.load(f)
+        else:
+            self.json_content = {}
+        self.json_content[self.run_desc] = {}
+        self._save()
+
+    def _save(self):
+        with open(self.file_path, 'w') as f:
+            json.dump(self.json_content, f)
+
+    def add_result(self, result_name: str, flag='success', save_after=True) -> None:
+        """
+        Add a new result to the current run.
+
+        :param result_name: Value of the result.
+        :param flag: Flag of the result. For example 'success' or 'fail'.
+        :param save_after: Decides if the progress is saved to disk immediately.
+        """
+        if flag not in self.json_content[self.run_desc]:
+            self.json_content[self.run_desc][flag] = []
+
+        if result_name not in self.json_content[self.run_desc][flag]:
+            self.json_content[self.run_desc][flag].append(result_name)
+
+        if save_after:
+            self._save()
+
+    def __repr__(self) -> str:
+        res = f'Progress tracker with {len(self.json_content.keys())} runs\n'
+        res += f'Current run: {json.dumps(self.json_content[self.run_desc])}'
+        return res

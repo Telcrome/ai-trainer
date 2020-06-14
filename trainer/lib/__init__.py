@@ -7,4 +7,4 @@ from trainer.lib.misc import get_img_from_fig, create_identifier, standalone_fol
 from trainer.lib.gen_utils import product, sample_randomly
 from trainer.lib.grammar import Grammar, RULE
 from trainer.lib.DslSemantics import DslSemantics
-from trainer.lib.logging import LogWriter, logger
+from trainer.lib.logging import LogWriter, logger, ProgressTracker
