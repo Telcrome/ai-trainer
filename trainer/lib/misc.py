@@ -14,22 +14,30 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def get_img_from_fig(fig: plt.figure, dpi=180):
+def get_img_from_fig(fig: plt.figure, dpi=180) -> np.ndarray:
+    """
+    Converts a matplotlib figure into a numpy array.
+
+    :param fig: A matplotlib figure
+    :param dpi: image quality, higher is better and takes longer
+    :return: np.ndarray with the image content
+    """
     buf = io.BytesIO()
     fig.savefig(buf, format="png", dpi=dpi)
     buf.seek(0)
     img_arr = np.frombuffer(buf.getvalue(), dtype=np.uint8)
     buf.close()
+
     img = cv2.imdecode(img_arr, 1)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
     return img
 
 
 def create_identifier(hint: str = '') -> str:
     """
-    Can be used to create unique names for files.
-    Follows the form YYYY_MM_DD__hh_mm_ss
+    Can be used to create unique names for files by exploiting the uniqueness of the current date.
+    Be aware that if two identifiers are created during the same second they are equal!
+    Follows the form YYYY_MM_DD__hh_mm_ss.
 
     :return: YYYY_MM_DD__hh_mm_ss_{hint}
     """
@@ -42,6 +50,11 @@ T = TypeVar('T')
 
 
 def pick_from_list(ls: List[T], title='Title', rows=-1, columns=-1) -> T:
+    """
+    Spawns a small gui which allows the user to select from a list.
+
+    Be aware that this works only if a $Display is set
+    """
     if rows == -1:
         rows = len(ls) + 1
     if columns == -1:
@@ -76,6 +89,7 @@ def standalone_foldergrab(
     """
     Uses a simple blocking GUI for prompting the user for a file or folder path.
     Optionally allows to prompt for additional text inputs as well.
+
     :param folder_not_file: if True asks for a folder, if False asks for a file
     :param optional_inputs: A list of (description, key) pairs
     :param optional_choices: A list of (description, key, list of options) pairs
@@ -177,6 +191,7 @@ def download_and_extract(online_url: str, parent_dir='./', dir_name: str = None)
     print(f"Starting downloading from {online_url}")
     temp_file = tempfile.NamedTemporaryFile(mode='w')
     temp_file.close()
+    # noinspection PyUnresolvedReferences
     urllib.request.urlretrieve(online_url, temp_file.name)
 
     # Extract

@@ -11,6 +11,32 @@ import seaborn as sns
 import trainer.lib as lib
 
 
+class ProgressTracker:
+    """
+    Allows to track solutions over time
+    """
+
+    def __init__(self, run_name='', file_path='./progress.json'):
+        """
+
+
+        :param file_path:
+        :param run_name:
+        """
+        if not run_name:
+
+        self.file_path = file_path
+
+    def add_with_flag(self, entity_name: str, result_name: str) -> None:
+        """
+
+        :param entity_name:
+        :param result_name:
+        :return:
+        """
+        pass
+
+
 class LogWriter:
 
     def __init__(self, log_dir: str = './logs', id_hint='log'):
@@ -57,7 +83,7 @@ class LogWriter:
 
     def debug_var(self, o: Any) -> None:
         """
-        Allows to inspect an arbitrary type on disk.
+        Allows to inspect an arbitrary python object on disk.
 
         For saving an array with a description debug a (np.ndarray, str) tuple.
 

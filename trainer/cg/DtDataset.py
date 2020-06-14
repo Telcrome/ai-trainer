@@ -24,7 +24,7 @@ import trainer.lib as lib
 import trainer.ml as ml
 
 from trainer.demo_data.arc import Pair, Game, game_from_subject
-from trainer.cg.Dsl import ProgPool
+from trainer.cg.ProgPool import ProgPool
 
 
 def vis_dec_tree(dec_tree: tree.DecisionTreeClassifier, name: str, prog_names: np.ndarray, class_names: List[str],

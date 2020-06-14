@@ -28,8 +28,7 @@ import trainer.ml as ml
 from trainer.demo_data.arc import Value, plot_as_heatmap, game_from_subject
 from trainer.cg.dsl_utils import general_transform, ortho_filter, full_filter, diag_filter, colour_converter, zoom_in, \
     objects_from_labels, select_objects, get_lbl_lu
-from trainer.cg.Dsl import Dsl, Context, ProgPool
-from trainer.cg.samplers import FloatSampler, EnumSampler, RandomNumber
+from trainer.cg.samplers import RandomInteger
 
 BoolFilter = NewType('BoolFilter', np.ndarray)
 
@@ -44,7 +43,6 @@ IntLine = NewType('IntLine', np.ndarray)
 
 Position = NewType('Position', Tuple[int, int])
 Offset = NewType('Offset', Tuple[int, int])
-PositiveNumber = NewType('PositiveNumber', int)
 NonZeroNumber = NewType('NonZeroNumber', int)
 
 
@@ -81,7 +79,7 @@ def sorted_values(grid: ValueGrid) -> List[Value]:
     return v_res
 
 
-def pick_from_values(values: List[Value], count_index: PositiveNumber, reverted: B) -> Value:
+def pick_from_values(values: List[Value], count_index: RandomInteger, reverted: B) -> Value:
     i = count_index % len(values)
     if reverted == B.F:
         return values[i]
@@ -89,7 +87,7 @@ def pick_from_values(values: List[Value], count_index: PositiveNumber, reverted:
         return values[len(values) - 1 - i]
 
 
-def coord(grid: ValueGrid, modulo: PositiveNumber) -> IntLine:
+def coord(grid: ValueGrid, modulo: RandomInteger) -> IntLine:
     output = np.arange(grid.shape[0])
     if modulo != 0:
         return np.mod(output, modulo)
@@ -199,7 +197,7 @@ def lbl_by_bool(grid: ValueGrid, arr: BoolGrid) -> ObjectLabels:
     return grid, arr.astype(np.uint8)
 
 
-def object_by_ordering(objts: ObjectLabels, prop: RegionProp, count_index: PositiveNumber, reverted: B) -> SingleObject:
+def object_by_ordering(objts: ObjectLabels, prop: RegionProp, count_index: RandomInteger, reverted: B) -> SingleObject:
     res = select_objects(objts, lambda lbl: compute_region_prop(sk_measure.regionprops(lbl)[0], prop), count_index,
                          reverted == B.F)
     return res
@@ -220,7 +218,7 @@ def get_obj_lu(obj: SingleObject) -> Position:
     return tuple(np.min(obj_indices, axis=0))
 
 
-def object_by_spatial(objts: ObjectLabels, count_index: PositiveNumber, reverted: B) -> SingleObject:
+def object_by_spatial(objts: ObjectLabels, count_index: RandomInteger, reverted: B) -> SingleObject:
     def lbl_to_priority(lbl: np.ndarray):
         x, y = get_lbl_lu(lbl)
         return x + y * 30
@@ -246,14 +244,14 @@ def move_to(obj: SingleObject, location: Position) -> SingleObject:
 # Numbers
 ###############################################
 
-def non_zero_num(x: PositiveNumber, b: B) -> NonZeroNumber:
+def non_zero_num(x: RandomInteger, b: B) -> NonZeroNumber:
     if b == B.T:
         return x
     else:
         return -1 * x
 
 
-def measure_grid(grid: ValueGrid, orientation: Orientation) -> PositiveNumber:
+def measure_grid(grid: ValueGrid, orientation: Orientation) -> RandomInteger:
     if len(np.unique(grid)) == 1:
         # return np.random.random(grid.shape)
         return random.randint(0, 30)
@@ -264,7 +262,7 @@ def measure_grid(grid: ValueGrid, orientation: Orientation) -> PositiveNumber:
         return reduced.shape[0]
 
 
-def measure_grid_b(grid: BoolGrid, orientation: Orientation) -> PositiveNumber:
+def measure_grid_b(grid: BoolGrid, orientation: Orientation) -> RandomInteger:
     return measure_grid(grid, orientation)
 
 
@@ -329,11 +327,11 @@ def shift_val_arr(grid: ValueGrid, offset: Offset) -> ValueGrid:
     return np.roll(grid, offset, axis=(0, 1))
 
 
-def zoom_valgrid(grid: ValueGrid, factor: PositiveNumber) -> ValueGrid:
+def zoom_valgrid(grid: ValueGrid, factor: RandomInteger) -> ValueGrid:
     return zoom_in(grid, factor)
 
 
-def zoom_boolgrid(grid: BoolGrid, factor: PositiveNumber) -> BoolGrid:
+def zoom_boolgrid(grid: BoolGrid, factor: RandomInteger) -> BoolGrid:
     return zoom_in(grid, factor)
 
 

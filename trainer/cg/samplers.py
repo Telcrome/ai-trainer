@@ -20,13 +20,27 @@ class Sampler(ABC, Generic[V]):
 
     @abstractmethod
     def resample(self, last_value: Optional[V] = None) -> V:
+        """
+        Randomly samples a new value for this node.
+
+        :param last_value: The current value of the node. None if the node does not yet have a value.
+        :return: The new value that will be assigned to this node
+        """
         raise NotImplementedError()
 
-    def serialize(self, vals: List[V]) -> List[str]:
+    def get_json_repr(self, vals: List[V]) -> List[str]:
+        """
+        Given a list of actual values that this node can hold, compute their string representation.
+
+        The function can be used to store the sampled values on disk.
+        """
         return [str(v) for v in vals]
 
     @abstractmethod
-    def deserialize(self, vals: List[str]) -> List[V]:
+    def from_json_repr(self, vals: List[str]) -> List[V]:
+        """
+        To load the state of a sampler from disk, this method need to be implemented.
+        """
         raise NotImplementedError()
 
     def sample(self, node_id: int) -> V:
@@ -34,6 +48,7 @@ class Sampler(ABC, Generic[V]):
 
 
 RandomNumber = NewType('RandomNumber', float)
+RandomInteger = NewType('RandomInteger', int)
 
 
 class FloatSampler(Sampler[RandomNumber]):
@@ -46,7 +61,7 @@ class FloatSampler(Sampler[RandomNumber]):
         else:
             return (last_value + random.random()) / 2
 
-    def deserialize(self, vals: List[str]) -> List[V]:
+    def from_json_repr(self, vals: List[str]) -> List[V]:
         return [float(v) for v in vals]
 
 
@@ -64,10 +79,10 @@ class EnumSampler(Sampler[V]):
             choices.remove(last_value)
             return random.choice(choices)
 
-    def serialize(self, vals: List[V]) -> List[str]:
+    def get_json_repr(self, vals: List[V]) -> List[str]:
         return [v.value for v in vals]
 
-    def deserialize(self, vals: List[str]) -> List[V]:
+    def from_json_repr(self, vals: List[str]) -> List[V]:
         c = lib.make_converter_dict_for_enum(self.e)
         res = [c[v] for v in vals]
         return res
@@ -75,14 +90,14 @@ class EnumSampler(Sampler[V]):
 
 class NumberSampler(Sampler[int]):
 
-    def __init__(self, start: int, end: int, int_type: Any):
-        self.t = int_type
+    def __init__(self, start: int, end: int):
+        # self.t = int_type
         self.start = start
         self.end = end
-        super().__init__(name='IntSampler', r_type=self.t)
+        super().__init__(name='IntSampler', r_type=RandomInteger)
 
     def resample(self, last_value: Optional[V] = None) -> V:
         return random.randint(self.start, self.end)
 
-    def deserialize(self, vals: List[str]) -> List[V]:
+    def from_json_repr(self, vals: List[str]) -> List[V]:
         return [int(v) for v in vals]

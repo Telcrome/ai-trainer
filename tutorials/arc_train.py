@@ -16,7 +16,6 @@ import trainer.ml as ml
 from trainer.demo_data.arc import plot_as_heatmap, game_from_subject
 
 from trainer.cg.sym_lang import get_pps, load_pps_from_disk
-from trainer.cg.Dsl import ProgPool
 from trainer.cg.DtDataset import DtDataset
 from trainer.cg.dt_seq import ArcTransformation, pred_equal
 

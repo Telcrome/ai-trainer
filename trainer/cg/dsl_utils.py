@@ -1,5 +1,5 @@
 """
-
+Specifies utility functions, aiming to allow rapid developing of domain specific computational graphs.
 """
 from typing import Callable, List, Tuple
 
