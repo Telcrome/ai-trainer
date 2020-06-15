@@ -45,16 +45,11 @@ import numpy as np
 import sqlalchemy as sa
 from sqlalchemy import event
 import sqlalchemy.dialects.postgresql as pg
-from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import relationship
 
+from trainer.db import Base, engine
 import trainer.lib as lib
-
-engine = create_engine(lib.config[lib.DB_CON_KEY])
-Session = sessionmaker(bind=engine)
-
-DataModelBase = declarative_base()
 
 TABLENAME_CLASSDEFINITIONS = 'classdefinitions'
 TABLENAME_SEMSEGCLASS = 'semsegtclasses'
@@ -125,7 +120,7 @@ class ClassType(Enum):
     Ordinal = 'ordinal'
 
 
-class ClassDefinition(DataModelBase):
+class ClassDefinition(Base):
     __tablename__ = TABLENAME_CLASSDEFINITIONS
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -186,7 +181,7 @@ class MaskType(Enum):
     Line = 'line'
 
 
-class SemSegClass(DataModelBase):
+class SemSegClass(Base):
     __tablename__ = TABLENAME_SEMSEGCLASS
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -205,7 +200,7 @@ class SemSegClass(DataModelBase):
         return f'SemSegClass {self.name} of type {self.ss_type}'
 
 
-class SemSegTpl(DataModelBase):
+class SemSegTpl(Base):
     __tablename__ = TABLENAME_SEMSEGTPL
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -222,7 +217,7 @@ class SemSegTpl(DataModelBase):
         return res
 
 
-class SemSegMask(Classifiable, NumpyBinary, DataModelBase):
+class SemSegMask(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_SEM_SEG
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -238,7 +233,7 @@ class SemSegMask(Classifiable, NumpyBinary, DataModelBase):
         return f"Mask for frame {self.for_frame} for template {self.tpl.name}"
 
 
-class ImStack(Classifiable, NumpyBinary, DataModelBase):
+class ImStack(Classifiable, NumpyBinary, Base):
     __tablename__ = TABLENAME_IM_STACKS
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -304,7 +299,7 @@ class ImStack(Classifiable, NumpyBinary, DataModelBase):
         return f'ImageStack with masks:\n{[mask for mask in self.semseg_masks]}\n{super().__repr__()}'
 
 
-class Subject(Classifiable, DataModelBase):
+class Subject(Classifiable, Base):
     """
     In a medical context a subject is concerned with the data of one patient.
     For example, a patient has classes (disease_1, ...), imaging (US video, CT volumetric data, x-ray image, ...),
@@ -337,13 +332,13 @@ class Subject(Classifiable, DataModelBase):
 
 sbjts_splits_association = sa.Table(
     'sbjtsplits_association',
-    DataModelBase.metadata,
+    Base.metadata,
     sa.Column('subject_id', sa.Integer, sa.ForeignKey(f'{TABLENAME_SUBJECTS}.id')),
     sa.Column('split_id', sa.Integer, sa.ForeignKey(f'{TABLENAME_SPLITS}.id'))
 )
 
 
-class Split(DataModelBase):
+class Split(Base):
     __tablename__ = TABLENAME_SPLITS
 
     id = sa.Column(sa.Integer(), primary_key=True)
@@ -361,7 +356,7 @@ class Split(DataModelBase):
         return f'Split {self.name} with {len(self.sbjts)} subjects'
 
 
-class Dataset(DataModelBase):
+class Dataset(Base):
     """
     A dataset is a collection of splits.
     """
@@ -424,5 +419,5 @@ def reset_data_model():
         Subject,
         Split,
         Dataset]
-    # noinspection PyUnresolvedReferences
-    DataModelBase.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])
+
+    Base.metadata.drop_all(bind=engine, tables=[c.__table__ for c in mappers])

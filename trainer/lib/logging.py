@@ -12,7 +12,7 @@ import seaborn as sns
 
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
+from trainer.db import Base
 
 import trainer.lib as lib
 
@@ -106,10 +106,8 @@ class LogWriter:
 
 logger = LogWriter()
 
-LogBase = declarative_base()
 
-
-class ExperimentResult(LogBase):
+class ExperimentResult(Base):
     """
     The semantics of one instance of this class might be: data point #223 was correctly classified.
     """
@@ -127,7 +125,7 @@ class ExperimentResult(LogBase):
         return res
 
 
-class Experiment(LogBase):
+class Experiment(Base):
     """
     Allows to track solutions over time. Uses the database for different types of logs.
     """
@@ -146,13 +144,12 @@ class Experiment(LogBase):
         res.start_date = datetime.datetime.utcnow()
         return res
 
-    def add_result(self, result_name: str, flag='success', save_after=True) -> None:
+    def add_result(self, result_name: str, flag='success') -> None:
         """
         Add a new result to the current run.
 
         :param result_name: Value of the result.
         :param flag: Flag of the result. For example 'success' or 'fail'. It is case-sensitive.
-        :param save_after: Decides if the progress is saved to disk immediately.
         """
         exp_res = ExperimentResult.build_new(result_name, flag)
         self.results.append(exp_res)
@@ -160,23 +157,23 @@ class Experiment(LogBase):
     def is_in(self, result_name: str, flag='success') -> bool:
         raise NotImplementedError()
 
-    def get_results(self, flag='success'):
-        if flag not in self.json_content[self.run_desc]:
-            return []
-        else:
-            return self.json_content[self.run_desc][flag]
+    def get_results(self, flag='success') -> List[str]:
+        return [exp_res.name for exp_res in self.results if exp_res.flag == flag]
 
-    def get_all_with_flag(self, flag='success') -> List[str]:
+    @staticmethod
+    def get_all_with_flag(sess: sa.orm.session.Session, exp_name: str, flag='success') -> List[str]:
         """
         Computes all results with a certain flag from the history i.g. all runs.
         """
-        res = []
-        for run_key in self.json_content:
-            if flag in self.json_content[run_key]:
-                for res_name in self.json_content[run_key][flag]:
-                    if res_name not in res:
-                        res.append(res_name)
-        return res
+        exps = sess.query(Experiment).filter(Experiment.experiment_name == exp_name)
+
+        # res = []
+        # for run_key in self.json_content:
+        #     if flag in self.json_content[run_key]:
+        #         for res_name in self.json_content[run_key][flag]:
+        #             if res_name not in res:
+        #                 res.append(res_name)
+        # return res
 
     def __repr__(self) -> str:
         res = f'Progress tracker with {len(self.results)} runs\n'
