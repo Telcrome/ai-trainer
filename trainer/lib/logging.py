@@ -124,6 +124,9 @@ class ExperimentResult(Base):
         res.name, res.flag = name, flag
         return res
 
+    def __repr__(self):
+        return f'<{self.name}: {self.flag}>'
+
 
 class Experiment(Base):
     """
@@ -165,15 +168,16 @@ class Experiment(Base):
         """
         Computes all results with a certain flag from the history i.g. all runs.
         """
-        exps = sess.query(Experiment).filter(Experiment.experiment_name == exp_name)
+        exp_ress = sess.query(ExperimentResult) \
+            .join(Experiment) \
+            .filter(Experiment.experiment_name == exp_name) \
+            .filter(ExperimentResult.flag == flag).all()
 
-        # res = []
-        # for run_key in self.json_content:
-        #     if flag in self.json_content[run_key]:
-        #         for res_name in self.json_content[run_key][flag]:
-        #             if res_name not in res:
-        #                 res.append(res_name)
-        # return res
+        res = []
+        for exp_res in exp_ress:
+            if exp_res.name not in res:
+                res.append(exp_res.name)
+        return res
 
     def __repr__(self) -> str:
         res = f'Progress tracker with {len(self.results)} runs\n'
