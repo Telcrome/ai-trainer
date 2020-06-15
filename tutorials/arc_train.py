@@ -82,8 +82,8 @@ def data_sanity_check():
 if __name__ == '__main__':
     # regenerate_programs(test_programs=False)
     sess = lib.Session()
-    # TODO write a simple module which dumps the previously solved tasks into a json and loads them here
-    prev_solved = []
+    tracker = lib.Experiment()
+    prev_solved = tracker.get_all_with_flag(flag='success')
 
     train_split: lib.Split = sess.query(lib.Split).filter(lib.Split.name == 'training').first()
     eval_split: lib.Split = sess.query(lib.Split).filter(lib.Split.name == 'evaluation').first()
@@ -103,16 +103,14 @@ if __name__ == '__main__':
     # unsolved: List[lib.Subject] = sess.query(lib.Subject).filter(lib.Subject.name.in_(interesting_now)).all()
     unsolved = train_split.sbjts
     random.shuffle(unsolved)
-    successful = []
-    solved_before = []
 
-    for epoch in itertools.count():
+    for epoch in [0]:  # itertools.count():
         epoch_sol_found, epoch_successes = [], []
         epoch_logdir = prepare_epoch_logging()
         f_path = feature_pp.to_disk(f"features_epoch{epoch}", parent_dir=epoch_logdir)
         a_path = actions_pp.to_disk(f"actions_epoch{epoch}", parent_dir=epoch_logdir)
 
-        unsolved = [s for s in unsolved if s.name not in successful]
+        unsolved = [s for s in unsolved if s.name not in tracker.get_results(flag='success')]
         pbar = tqdm(unsolved)
         for epoch_step, s in enumerate(pbar):
             nodes_current, temperature = NO_SOLUTION_NODE_COUNT, 1.0
@@ -122,16 +120,17 @@ if __name__ == '__main__':
             actions_pp.initialize_instances()
 
             for mcmc_step in range(MAX_MCMC_STEPS):
-                # TODO do not reload game information at every step
+                # TODO do not reload game information at every step?
                 x, y, vals, x_test, y_test, vals_test, fs, acts = load_subject_dataset()
                 data_sanity_check()  # Simple shape check for the dataset
 
                 # Update the progress bar with most relevant information
-                update_s = f"Step: {mcmc_step}; Latest: {successful[-3:]}; temperature: {temperature}; "
+                update_s = f"Step: {mcmc_step}; Latest: {tracker.get_results(flag='success')[-3:]};"
+                update_s += f"temperature: {temperature}; "
                 update_s += f"Consistent: {len(set(epoch_sol_found))}/{epoch_step}, N: {nodes_current}; "
                 update_s += f'F-Locks: {feature_pp.get_locks()} {x.shape}, A-Locks: {actions_pp.get_locks()} {y.shape}'
-                update_s += f'Solved {len(set(successful))}, {len(set(epoch_successes))}; '
-                update_s += f'new: {str([x for x in successful if x not in prev_solved])}'
+                update_s += f'Solved {len(set(tracker.get_results(flag="success")))}, {len(set(epoch_successes))}; '
+                update_s += f'new: {str([x for x in tracker.get_results(flag="success") if x not in prev_solved])}'
                 pbar.set_postfix_str(update_s)
 
                 sols: Optional[List[ArcTransformation]] = ArcTransformation.find_consistent_solutions(x, y, fs, acts,
@@ -184,9 +183,9 @@ if __name__ == '__main__':
                         p = f'{s.name}: {sum(generalizing)} of {len(unique_sols)} generalized'
                         lib.logger.debug_var(p)
                         if True in generalizing[check_out_order]:
-                            if s.name not in successful:
-                                successful.append(s.name)
-                                epoch_successes.append(s.name)
+                            epoch_successes.append(s.name)
+                            if not tracker.is_in(s.name, flag='success'):
+                                tracker.add_result(s.name, flag='success')
 
                                 # Visualize solutions
                                 for i, sol in enumerate(sols[:MAX_VIS]):
@@ -199,7 +198,7 @@ if __name__ == '__main__':
                     else:
                         lib.logger.debug_var(f'No generalizing solution was found for {s.name}')
                         lib.logger.debug_var(f'{s.name} has {len(unique_sols)} solutions which do not generalize')
-                        # return False
+                        tracker.add_result(s.name, flag='nongeneralizing')
                 else:
                     node_counts, check_out_order = np.array([]), np.array([])
 
@@ -219,7 +218,7 @@ if __name__ == '__main__':
                     feature_pp.revert_last_step()
                     actions_pp.revert_last_step()
 
-                feature_pp.diffusion_move(temperature=temperature)
-                actions_pp.diffusion_move(temperature=temperature)
+                feature_pp.optim_move(temperature=temperature)
+                actions_pp.optim_move(temperature=temperature)
 
             # feature_pp, actions_pp = load_pps_from_disk(f'{f_path}.xlsx', f'{a_path}.xlsx')

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 from typing import Any, List, Optional
 import logging
 import os
@@ -9,7 +10,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+import sqlalchemy as sa
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+
 import trainer.lib as lib
+
+TABLENAME_EXPERIMENT_RESULT = 'experimentresults'
+TABLENAME_EXPERIMENT = 'experiments'
 
 
 class LogWriter:
@@ -98,55 +106,80 @@ class LogWriter:
 
 logger = LogWriter()
 
+LogBase = declarative_base()
 
-class ProgressTracker:
+
+class ExperimentResult(LogBase):
     """
-    Allows to track solutions over time
+    The semantics of one instance of this class might be: data point #223 was correctly classified.
     """
+    __tablename__ = TABLENAME_EXPERIMENT_RESULT
 
-    def __init__(self, run_desc='', file_path=''):
-        """
-        Creates the storage file if it does not yet exist. Loads it otherwise.
+    id = sa.Column(sa.Integer, primary_key=True)
+    exp_id = sa.Column(sa.Integer, sa.ForeignKey(f'{TABLENAME_EXPERIMENT}.id'))
+    name = sa.Column(sa.String())
+    flag = sa.Column(sa.String())
 
-        :param run_desc: Use this name to indicate what has changed
-        :param file_path: Full file path to the storage json
-        """
-        if not file_path:
-            file_path = os.path.join(logger.get_parent_log_folder(), 'progress.json')
+    @classmethod
+    def build_new(cls, name: str, flag: str):
+        res = cls()
+        res.name, res.flag = name, flag
+        return res
 
-        self.run_desc = lib.create_identifier(hint=run_desc)
-        self.file_path = file_path
 
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                self.json_content = json.load(f)
-        else:
-            self.json_content = {}
-        self.json_content[self.run_desc] = {}
-        self._save()
+class Experiment(LogBase):
+    """
+    Allows to track solutions over time. Uses the database for different types of logs.
+    """
+    __tablename__ = TABLENAME_EXPERIMENT
 
-    def _save(self):
-        with open(self.file_path, 'w') as f:
-            json.dump(self.json_content, f)
+    id = sa.Column(sa.Integer, primary_key=True)
+    experiment_name = sa.Column(sa.String())
+    start_date = sa.Column(sa.DateTime())
+
+    results: List[ExperimentResult] = relationship(ExperimentResult)
+
+    @classmethod
+    def build_new(cls, experiment_name: str):
+        res = cls()
+        res.experiment_name = experiment_name
+        res.start_date = datetime.datetime.utcnow()
+        return res
 
     def add_result(self, result_name: str, flag='success', save_after=True) -> None:
         """
         Add a new result to the current run.
 
         :param result_name: Value of the result.
-        :param flag: Flag of the result. For example 'success' or 'fail'.
+        :param flag: Flag of the result. For example 'success' or 'fail'. It is case-sensitive.
         :param save_after: Decides if the progress is saved to disk immediately.
         """
+        exp_res = ExperimentResult.build_new(result_name, flag)
+        self.results.append(exp_res)
+
+    def is_in(self, result_name: str, flag='success') -> bool:
+        raise NotImplementedError()
+
+    def get_results(self, flag='success'):
         if flag not in self.json_content[self.run_desc]:
-            self.json_content[self.run_desc][flag] = []
+            return []
+        else:
+            return self.json_content[self.run_desc][flag]
 
-        if result_name not in self.json_content[self.run_desc][flag]:
-            self.json_content[self.run_desc][flag].append(result_name)
-
-        if save_after:
-            self._save()
+    def get_all_with_flag(self, flag='success') -> List[str]:
+        """
+        Computes all results with a certain flag from the history i.g. all runs.
+        """
+        res = []
+        for run_key in self.json_content:
+            if flag in self.json_content[run_key]:
+                for res_name in self.json_content[run_key][flag]:
+                    if res_name not in res:
+                        res.append(res_name)
+        return res
 
     def __repr__(self) -> str:
-        res = f'Progress tracker with {len(self.json_content.keys())} runs\n'
-        res += f'Current run: {json.dumps(self.json_content[self.run_desc])}'
+        res = f'Progress tracker with {len(self.results)} runs\n'
+        for exp_res in self.results:
+            res += f'Current run: {exp_res}'
         return res

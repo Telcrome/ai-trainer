@@ -24,6 +24,7 @@
       <w>crit</w>
       <w>ctype</w>
       <w>cuda</w>
+      <w>databaselogs</w>
       <w>dataloader</w>
       <w>datasets</w>
       <w>denoise</w>

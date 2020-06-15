@@ -1,18 +1,12 @@
 from __future__ import annotations
+from typing import TypeVar, NewType, Union, Callable, Tuple, Any, Dict, get_type_hints, List, Optional, Generic
 import os
-import itertools
 import json
 import random
 import functools
 import copy
 
-from enum import Enum
-from abc import ABC
-from typing import TypeVar, NewType, Union, Callable, Tuple, Any, Dict, get_type_hints, List, Optional, Generic
-
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 
 import trainer.lib as lib
@@ -193,7 +187,7 @@ class ProgPool:
     def get_locks(self):
         return len([True for key in self.instances if self.instances[key].is_locked()])
 
-    def diffusion_move(self, temperature: float, dim_factor=3.5):
+    def optim_move(self, temperature: float, dim_factor=3.5):
         """
         Resample one node of every program (which is not locked) inside the current instantiations.
         Performs birth and death moves randomly.
@@ -205,8 +199,12 @@ class ProgPool:
 
         # Death Moves
         desired_deaths = len(self.instances) - self.init_n if self.init_n < len(self.instances) else 1.
-        num_deaths = min(np.floor((dim_factor * np.random.random()) * (desired_deaths * temperature)),
-                         len(self.instances))
+        rand_deaths = np.floor((dim_factor * np.random.random()) * (desired_deaths * temperature))
+        num_deaths = min(rand_deaths, len(self.instances) - 1)
+
+        if num_deaths == len(self.instances):
+            print('Do not kill all instances')
+
         death_ids = np.random.choice(instance_keys, size=int(num_deaths), replace=False)
         self.last_killed_instances = [self.instances[death_id] for death_id in death_ids]
         for death_id in death_ids:

@@ -36,7 +36,7 @@ def trainer_reset_database():
     """
     Removes all tables from the database and clears the big binary directory if it exists.
     """
-    lib.reset_database()
+    lib.reset_data_model()
 
 
 @trainer.command(name='init-dataset')

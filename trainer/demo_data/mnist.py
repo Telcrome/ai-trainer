@@ -75,6 +75,6 @@ class MnistDataset(dd.DemoDataset):
 
 
 if __name__ == '__main__':
-    lib.reset_database()
+    lib.reset_data_model()
     mnist = MnistDataset('D:\\')
     ds = mnist.build_dataset()
