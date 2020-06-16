@@ -332,6 +332,6 @@ class Game:
 
 
 if __name__ == '__main__':
-    lib.reset_data_model()
+    lib.reset_complete_database()
     arc = ArcDataset('D:\\')
     ds = arc.build_dataset()

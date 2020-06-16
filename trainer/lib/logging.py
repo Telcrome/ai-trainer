@@ -141,24 +141,38 @@ class Experiment(Base):
     results: List[ExperimentResult] = relationship(ExperimentResult)
 
     @classmethod
-    def build_new(cls, experiment_name: str):
+    def build_new(cls, experiment_name: str, sess=None):
         res = cls()
         res.experiment_name = experiment_name
         res.start_date = datetime.datetime.utcnow()
+        if sess is not None:
+            sess.add(res)
+            sess.commit()
         return res
 
-    def add_result(self, result_name: str, flag='success') -> None:
+    def add_result(self, result_name: str, flag='success', sess=None, auto_commit=True) -> None:
         """
         Add a new result to the current run.
 
         :param result_name: Value of the result.
         :param flag: Flag of the result. For example 'success' or 'fail'. It is case-sensitive.
+        :param sess:
+        :param auto_commit:
         """
         exp_res = ExperimentResult.build_new(result_name, flag)
         self.results.append(exp_res)
 
+        if sess is not None and auto_commit:
+            sess.commit()
+
     def is_in(self, result_name: str, flag='success') -> bool:
-        raise NotImplementedError()
+        """
+        Returns if the result was already added to the current experiment.
+        """
+        for exp_res in self.results:
+            if exp_res.name == result_name and flag == exp_res.flag:
+                return True
+        return False
 
     def get_results(self, flag='success') -> List[str]:
         return [exp_res.name for exp_res in self.results if exp_res.flag == flag]

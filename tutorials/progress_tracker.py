@@ -17,3 +17,7 @@ if __name__ == '__main__':
 
     print(tracker.get_results('fail'))
     print(lib.Experiment.get_all_with_flag(sess, 'Experiment Demo', flag='fail'))
+
+    print(tracker.is_in('3baawe', flag='fail'))  # True
+    print(tracker.is_in('3baawe', flag='success'))  # False
+    print(tracker.is_in('3baawe4', flag='fail'))  # False

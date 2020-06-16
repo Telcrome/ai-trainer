@@ -19,6 +19,7 @@ from trainer.cg.sym_lang import get_pps, load_pps_from_disk
 from trainer.cg.DtDataset import DtDataset
 from trainer.cg.dt_seq import ArcTransformation, pred_equal
 
+EXP_NAME = 'cg_with_generalization_cheat'
 LOAD_FROM_DISK = False
 PLOT_PREDICTIONS = False
 MAX_PLOTS = 5
@@ -82,8 +83,8 @@ def data_sanity_check():
 if __name__ == '__main__':
     # regenerate_programs(test_programs=False)
     sess = lib.Session()
-    tracker = lib.Experiment()
-    prev_solved = tracker.get_all_with_flag(flag='success')
+    tracker = lib.Experiment.build_new(EXP_NAME, sess=sess)
+    prev_solved = tracker.get_all_with_flag(sess, EXP_NAME, flag='success')
 
     train_split: lib.Split = sess.query(lib.Split).filter(lib.Split.name == 'training').first()
     eval_split: lib.Split = sess.query(lib.Split).filter(lib.Split.name == 'evaluation').first()
@@ -182,11 +183,13 @@ if __name__ == '__main__':
                     if True in generalizing:  # For testing purposes
                         p = f'{s.name}: {sum(generalizing)} of {len(unique_sols)} generalized'
                         lib.logger.debug_var(p)
+
+                        # If this is a top 3 success solution:
                         if True in generalizing[check_out_order]:
                             epoch_successes.append(s.name)
-                            if not tracker.is_in(s.name, flag='success'):
-                                tracker.add_result(s.name, flag='success')
 
+                            # If this was the first time it was solved, visualize it
+                            if not tracker.is_in(s.name, flag='success'):
                                 # Visualize solutions
                                 for i, sol in enumerate(sols[:MAX_VIS]):
                                     sol.visualize(parent_path=epoch_logdir, f_vis=feature_pp.visualize_instance,
@@ -194,11 +197,12 @@ if __name__ == '__main__':
                                                   folder_appendix=str(all_gen_res[i][0]),
                                                   name=s.name)
 
-                                break  # TODO check if this makes sense
+                            tracker.add_result(s.name, flag='success', sess=sess)
+                            break  # TODO remove usage of test gt for stopping, add heuristic for stopping
                     else:
                         lib.logger.debug_var(f'No generalizing solution was found for {s.name}')
                         lib.logger.debug_var(f'{s.name} has {len(unique_sols)} solutions which do not generalize')
-                        tracker.add_result(s.name, flag='nongeneralizing')
+                        tracker.add_result(s.name, flag='nongeneralizing', sess=sess)
                 else:
                     node_counts, check_out_order = np.array([]), np.array([])
 
