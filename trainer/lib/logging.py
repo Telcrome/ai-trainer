@@ -51,7 +51,7 @@ class LogWriter:
         self._prep()
 
         f_name = f"{lib.slugify(title)}"[:max_file_path_len]
-        if f_name in os.listdir(self._get_run_path()):
+        if f_name in [os.path.splitext(f_path)[0] for f_path in os.listdir(self._get_run_path())]:
             f_name = f'{f_name}_{len(os.listdir(self._get_run_path()))}'
         fig.savefig(os.path.join(self._get_run_path(), f'{f_name}.png'))
         if close:
