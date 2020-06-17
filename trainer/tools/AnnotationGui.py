@@ -312,7 +312,7 @@ class AnnotationGui(TWindow):
                 assert len(masks) == 1
                 self._selected_gt_binary = masks[0]
             elif auto_create:
-                src_b = self._selected_source_binary.get_ndarray()
+                src_b = self._selected_source_binary.values()
                 gt_arr = np.zeros((src_b.shape[1], src_b.shape[2], len(self._selected_semsegtpl.ss_classes)),
                                   dtype=np.bool)
                 new_gt = self._selected_source_binary.add_ss_mask(
@@ -357,7 +357,7 @@ class AnnotationGui(TWindow):
         # self._made_changes = True
 
     def change_frame(self, frame_number: int):
-        if self._selected_source_binary.get_ndarray().shape[0] - 1 >= frame_number >= 0:
+        if self._selected_source_binary.values().shape[0] - 1 >= frame_number >= 0:
             self.frame_number = frame_number
 
             self.select_gt_binary()
@@ -375,12 +375,12 @@ class AnnotationGui(TWindow):
         if self.brush == Brushes.Standard:
             intensity = add * 255
             struct_index = self._selected_gt_binary.tpl.ss_classes.index(self._selected_semseg_cls)
-            tmp = cv2.circle(self._selected_gt_binary.get_ndarray()[:, :, struct_index].astype(np.uint8) * 255,
+            tmp = cv2.circle(self._selected_gt_binary.values()[:, :, struct_index].astype(np.uint8) * 255,
                              pos,
                              self.seg_tool.pen_size, intensity, -1)
 
-            self._selected_gt_binary.get_ndarray()[:, :, struct_index] = tmp.astype(np.bool)
-            self._selected_gt_binary.set_array(self._selected_gt_binary.get_ndarray())
+            self._selected_gt_binary.values()[:, :, struct_index] = tmp.astype(np.bool)
+            self._selected_gt_binary.set_array(self._selected_gt_binary.values())
         # elif self.m.brush == Brushes.AI_Merge:
         #     intensity = add * 255
         #     c = cv2.circle(np.zeros(self.m.foreground.shape, dtype=np.uint8), pos, self.m.brush_size, intensity, -1)
@@ -391,7 +391,7 @@ class AnnotationGui(TWindow):
         self.seg_tool.display_img_stack(frame_number=self.frame_number)
         self.seg_tool.set_mask(self._selected_gt_binary)
         self.seg_tool.display_mask(self._selected_semseg_cls)
-        self.frame_controller.set_frame_number(self.frame_number, self._selected_source_binary.get_ndarray().shape[0])
+        self.frame_controller.set_frame_number(self.frame_number, self._selected_source_binary.values().shape[0])
 
     def find_annotations(self):
         gts = filter(lambda x: x.tpl == self._selected_semsegtpl, self._selected_source_binary.semseg_masks)

@@ -82,6 +82,15 @@ def one_hot_to_cont(x: np.ndarray) -> np.ndarray:
     return np.argmax(x, axis=len(x.shape) - 3)
 
 
+def cont_to_ont_hot(arr: np.ndarray, n_values=-1) -> np.ndarray:
+    if n_values == -1:
+        n_values = np.max(arr) + 1
+    res = np.zeros((n_values,) + arr.shape)
+    for v in np.unique(arr):
+        res[v, :, :][arr == v] = 1
+    return res
+
+
 def reduce_by_attention(arr: np.ndarray, att: np.ndarray):
     """
     Reduce an array by a field of attention, such that the result is a rectangle with the empty borders cropped.

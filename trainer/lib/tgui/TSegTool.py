@@ -202,12 +202,12 @@ class SegToolController:
         self.indicator.draw()
 
     def display_img_stack(self, frame_number: int) -> None:
-        if self._img_stack.get_ndarray().shape[3] == 1:
+        if self._img_stack.values().shape[3] == 1:
             # Assumption: Grayscale
-            image_data = self._img_stack.get_ndarray()[frame_number, :, :, 0]
+            image_data = self._img_stack.values()[frame_number, :, :, 0]
         else:
             # Assumption: RGB
-            image_data = np.dot(self._img_stack.get_ndarray()[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
+            image_data = np.dot(self._img_stack.values()[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
 
         blend_im = image_data.astype(np.uint8)
         res = np.zeros((image_data.shape[0], image_data.shape[1], 3), dtype=np.uint8)
@@ -218,19 +218,19 @@ class SegToolController:
         self._scene.pixmap.setPixmap(arr_to_pixmap(res))
 
     def display_mask(self, semsegclass: lib.SemSegClass):
-        im_arr = self._img_stack.get_ndarray()
+        im_arr = self._img_stack.values()
         res = np.zeros((im_arr.shape[1], im_arr.shape[2], 3), dtype=np.uint8)
         if self._mask is not None:
             struct_index = self._mask.tpl.ss_classes.index(semsegclass)
-            struct_mask = self._mask.get_ndarray()[:, :, struct_index].astype(np.uint8)
+            struct_mask = self._mask.values()[:, :, struct_index].astype(np.uint8)
             res[:, :, 0] = struct_mask * 255
             if semsegclass.ss_type == lib.MaskType.Line:
                 res[:, :, 1] = skeletonize(struct_mask) * 255
             elif semsegclass.ss_type == lib.MaskType.Point:
                 raise NotImplementedError()
-            res[:, :, 2] = np.zeros((self._mask.get_ndarray().shape[0], self._mask.get_ndarray().shape[1]), dtype=np.uint8)
+            res[:, :, 2] = np.zeros((self._mask.values().shape[0], self._mask.values().shape[1]), dtype=np.uint8)
             for i in range(len(self._mask.tpl.ss_classes)):
                 if i != struct_index:
-                    res[:, :, 2] |= (self._mask.get_ndarray()[:, :, i].astype(np.uint8) * 255)
+                    res[:, :, 2] |= (self._mask.values()[:, :, i].astype(np.uint8) * 255)
                 # res[:, :, 2] = self._mask.get_ndarray()[:, :, i].astype(np.uint8) * 255
         self._scene.mask_pixmap.setPixmap(arr_to_pixmap(res))

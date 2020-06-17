@@ -139,7 +139,7 @@ class Pair:
 
 
 def pair_from_imstack(im: lib.ImStack) -> Pair:
-    x, y = im.get_ndarray()[0, :, :, :], im.semseg_masks[0].get_ndarray()[:, :, :]
+    x, y = im.values()[0, :, :, :], im.semseg_masks[0].values()[:, :, :]
     return Pair(np.rollaxis(x, 2, 0), np.rollaxis(y, 2, 0).astype(np.uint8))
 
 
@@ -236,7 +236,7 @@ class Game:
         train_examples, test_examples = extract_train_test(s)
 
         def extract_pair(im: lib.ImStack) -> Pair:
-            x, y = im.get_ndarray()[0, :, :, :], im.semseg_masks[0].get_ndarray()[:, :, :]
+            x, y = im.values()[0, :, :, :], im.semseg_masks[0].values()[:, :, :]
             return Pair(np.rollaxis(x, 2, 0), np.rollaxis(y, 2, 0).astype(np.uint8))
 
         g = cls(

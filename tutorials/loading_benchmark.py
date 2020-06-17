@@ -24,7 +24,7 @@ def benchmark_mnist():
     print(split.name)
 
     mnist_res = bench_mark_dataset(sd.mnist_train, lambda t: (t[0].size, t[1]))
-    trainer_res = bench_mark_dataset(split, lambda s: (s.ims[0].get_ndarray().shape, s.ims[0].get_class('digit')))
+    trainer_res = bench_mark_dataset(split, lambda s: (s.ims[0].values().shape, s.ims[0].get_class('digit')))
 
 
 if __name__ == '__main__':
@@ -37,8 +37,8 @@ if __name__ == '__main__':
     split = ds.get_split_by_name('training')
     aux = []
     for s in tqdm(split):
-        aux.append(s.ims[0].get_ndarray())
+        aux.append(s.ims[0].values())
 
     aux = []
     for s, gt in tqdm(ml.InMemoryDataset('arc', 'training', lambda x, y: (x, y), mode=ml.ModelMode.Train)):
-        aux.append(s.ims[0].get_ndarray())
+        aux.append(s.ims[0].values())

@@ -26,7 +26,7 @@ class MnistNetwork(ml.ModelTrainer):
 def preprocessor(s: lib.Subject, m: ml.ModelMode) -> Tuple[np.ndarray, np.ndarray]:
     # noinspection PyUnresolvedReferences
     im_stack = s.ims[0]
-    x, y = np.rollaxis(im_stack.get_ndarray()[0], 2), np.array(int(im_stack.get_class('digit')))
+    x, y = np.rollaxis(im_stack.values()[0], 2), np.array(int(im_stack.get_class('digit')))
     return x.astype(np.float32) / 127.5 - 1, y
 
 

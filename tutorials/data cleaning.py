@@ -22,9 +22,9 @@ if __name__ == '__main__':
     for s in split.sbjts:
         print(s.name)
         for im_i, im in enumerate(s.ims):
-            im_arr = im.get_ndarray()
+            im_arr = im.values()
             for gt in im.semseg_masks:
-                gt_arr = gt.get_ndarray()
+                gt_arr = gt.values()
                 counter_all += 1
                 for mask_i in range(gt_arr.shape[2]):
                     tmp_mask = gt_arr[:, :, mask_i]

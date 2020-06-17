@@ -101,7 +101,7 @@ class NumpyBinary:
             np.save(self.get_bin_disk_path(), arr)
             self.stored_in_db = False
 
-    def get_ndarray(self) -> np.ndarray:
+    def values(self) -> np.ndarray:
         if self.tmp_arr is None:
             if self.stored_in_db:
                 self.tmp_arr = np.frombuffer(self.binary, dtype=self.dtype).reshape(
@@ -283,8 +283,8 @@ class ImStack(Classifiable, NumpyBinary, Base):
 
         assert (gt_arr.dtype == np.bool), 'wrong type for a semantic segmentation mask'
         assert (len(gt_arr.shape) == 3), 'Wrong shape for a semantic segmentation mask'
-        assert (ignore_shape_mismatch or self.get_ndarray().shape[1:3] == gt_arr.shape[:2]), \
-            f'Shapes of seg mask {gt_arr.shape} and im stack {self.get_ndarray().shape} do not match'
+        assert (ignore_shape_mismatch or self.values().shape[1:3] == gt_arr.shape[:2]), \
+            f'Shapes of seg mask {gt_arr.shape} and im stack {self.values().shape} do not match'
         # noinspection PyTypeChecker
         tpl_classes_num = len(sem_seg_tpl.ss_classes)
         assert (gt_arr.shape[2] == tpl_classes_num), f'{gt_arr.shape[2]} classes but {tpl_classes_num} in template'

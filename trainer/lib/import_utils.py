@@ -168,6 +168,6 @@ def export_to_folder(split: lib.Split, folder_path: str):
         for i, im in enumerate(s.ims):
             imstack_folder = os.path.join(subject_folder, f"{i}")
             os.mkdir(imstack_folder)
-            np.save(os.path.join(imstack_folder, f'im.npy'), im.get_ndarray())
+            np.save(os.path.join(imstack_folder, f'im.npy'), im.values())
             for gt in im.semseg_masks:
-                np.save(os.path.join(imstack_folder, f'{gt.tpl.name}{gt.for_frame}.npy'), gt.get_ndarray())
+                np.save(os.path.join(imstack_folder, f'{gt.tpl.name}{gt.for_frame}.npy'), gt.values())
