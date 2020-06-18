@@ -46,6 +46,13 @@ def dice_loss(logits: torch.FloatTensor, true: torch.LongTensor, eps=1e-7):
 
 
 class FocalLoss(nn.Module):
+    """
+    Loss based on cross entropy that emphasizes those outputs that have a large difference to the targets.
+
+    Focal loss is a simple trick which can be used to train networks when class imbalance is present.
+
+    Focusing parameter gamma: Increase to emphasize hard examples and put less effort into optimizing easy ones.
+    """
     def __init__(self, alpha=1., gamma=2., logits=False, reduce=True):
         super(FocalLoss, self).__init__()
         self.alpha, self.gamma, self.logits, self.reduce = alpha, gamma, logits, reduce
