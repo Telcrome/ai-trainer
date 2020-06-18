@@ -7,6 +7,7 @@ import random
 
 import numpy as np
 from numba import njit
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -65,6 +66,28 @@ class TaskNetwork(nn.Module):
         return self.activation_layer(x)
 
 
+class MultiTaskNetwork(nn.Module):
+
+    def __init__(self):
+        super(MultiTaskNetwork, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_channels=11,
+            out_channels=11,
+            kernel_size=1
+        )
+        self.task_networks: nn.ModuleDict = nn.ModuleDict({})
+
+    def forward(self, x: torch.Tensor, task_name: str, opti):
+        """
+        If a forward call is made for an unknown task, a new tasknetwork is created
+        """
+        if task_name not in self.task_networks:
+            self.task_networks[task_name] = TaskNetwork()
+            opti.add_param_group({'params': self.task_networks[task_name].parameters()})
+
+        return self.task_networks[task_name](x)
+
+
 if __name__ == '__main__':
     BATCH_SIZE = 1
     EPOCHS = 1000
@@ -74,7 +97,7 @@ if __name__ == '__main__':
     train_set = ml.InMemoryDataset('arc', 'training', single_preprocessor, mode=ml.ModelMode.Train)
     test_set = ml.InMemoryDataset('arc', 'evaluation', single_preprocessor, mode=ml.ModelMode.Eval)
 
-    task_network = TaskNetwork()
+    net = MultiTaskNetwork()
     # x = train_set.get_random_batch()
     #
     #
@@ -84,9 +107,10 @@ if __name__ == '__main__':
 
     # train_loader = train_set.get_torch_dataloader(batch_size=BATCH_SIZE)
 
-    criterion = nn.CrossEntropyLoss()
+    # criterion = nn.CrossEntropyLoss()
+    criterion = ml.FocalLoss(alpha=1., gamma=2., logits=False, reduce=True)
     optimizer = optim.Adam(
-        task_network.parameters(),
+        net.parameters(),
         lr=5e-2
     )
     # loop over all training tasks in each epoch
@@ -97,7 +121,10 @@ if __name__ == '__main__':
             train_pairs, test_pairs, s_name = task
             # Try to improve on the task specific network
             # TODO: Do not iterate through all training examples, this favors tasks with bigger datasets
-            for _ in range(EPOCHS):
+            running_loss = 0.
+
+            p_bar = tqdm(range(EPOCHS))
+            for j in p_bar:
                 for situation, target in train_pairs:
                     situation = torch.from_numpy(situation).float().unsqueeze(0)
                     target = torch.from_numpy(target).long().unsqueeze(0)
@@ -106,10 +133,15 @@ if __name__ == '__main__':
                     optimizer.zero_grad()
 
                     # forward + backward + optimize
-                    outputs = task_network(situation)
+                    outputs = net(situation, s_name, optimizer)
                     loss = criterion(outputs, target)
                     loss.backward()
                     optimizer.step()
+
+                    running_loss = running_loss + loss.item()
+                    if j > 0:
+                        p_bar.set_description(f'Loss: {running_loss / j}')
+                        p_bar.set_postfix_str(f'Optimizing task {s_name}')
 
             # Temporary check to visualize the last training example
             pred_img = ml.one_hot_to_cont(outputs.detach().squeeze().numpy())
@@ -122,7 +154,7 @@ if __name__ == '__main__':
                 target = torch.from_numpy(target).long().unsqueeze(0)
 
                 with torch.no_grad():
-                    prediction = task_network(situation)
+                    prediction = net(situation, s_name, optimizer)
 
                 pred_img = ml.one_hot_to_cont(prediction.squeeze().numpy())
                 lib.logger.debug_var(pred_img)

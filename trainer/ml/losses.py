@@ -48,26 +48,22 @@ def dice_loss(logits: torch.FloatTensor, true: torch.LongTensor, eps=1e-7):
 class FocalLoss(nn.Module):
     def __init__(self, alpha=1., gamma=2., logits=False, reduce=True):
         super(FocalLoss, self).__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-        self.logits = logits
-        self.reduce = reduce
+        self.alpha, self.gamma, self.logits, self.reduce = alpha, gamma, logits, reduce
         self.ce_loss = nn.CrossEntropyLoss(reduction='none')
 
-    def forward(self, inputs, targets):
+    def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
         # targets = targets.long()
         if self.logits:
-            BCE_loss = self.ce_loss(inputs, targets.long())
+            bce_loss = self.ce_loss(inputs, targets.long())
         else:
-            raise NotImplementedError()
-            # BCE_loss = F.binary_cross_entropy(inputs, targets, reduce=None)
-        pt = torch.exp(-BCE_loss)
-        F_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
+            bce_loss = F.cross_entropy(inputs, targets, reduce=None)
+        pt = torch.exp(-bce_loss)
+        f_loss = self.alpha * (1 - pt) ** self.gamma * bce_loss
 
         if self.reduce:
-            return torch.mean(F_loss)
+            return torch.mean(f_loss)
         else:
-            return F_loss
+            return f_loss
 
 
 class SegCrit(nn.Module):
