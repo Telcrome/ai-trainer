@@ -230,6 +230,11 @@ class ArcTransformation:
         return ArcTransformation(self.f_inst, self.a_inst, new_steps)
 
     def predict(self, x_test: np.ndarray, values: np.ndarray) -> List[np.ndarray]:
+        """
+        Given a tabular decision tree dataset, returns the predictions made by this dt_seq as images.
+
+        If there are multiple test examples, multiple images will be in the results list.
+        """
         assert x_test.shape[0] % 900 == 0 and values.shape[0] % 900 == 0
         num_states = values.shape[0] // 900
         reshaped_values = values.transpose().reshape((values.shape[1], num_states, 30, 30))

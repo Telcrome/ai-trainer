@@ -5,15 +5,16 @@ Meant as entry code that glues the other components together.
 import os
 import itertools
 import random
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple
 
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 import numpy as np
 
 import trainer.lib as lib
 import trainer.ml as ml
 
-from trainer.demo_data.arc import plot_as_heatmap, game_from_subject
+from trainer.demo_data.arc import plot_as_heatmap, game_from_subject, Game
 
 from trainer.cg.sym_lang import get_pps, load_pps_from_disk
 from trainer.cg.DtDataset import DtDataset
@@ -53,9 +54,8 @@ def arc_sanity_check(prediction: np.ndarray) -> bool:
     return non_empty and correct_grid_shape
 
 
-def load_subject_dataset():
-    game = game_from_subject(s)
-    train_set, test_set = dt_set.get_data(game)
+def load_subject_dataset(g: Game):
+    train_set, test_set = dt_set.get_data(g)
     x_train, f_insts, y_train, a_insts, vals_train = train_set
     x_test, _, y_test, _, vals_test = test_set
     return x_train, y_train, vals_train, x_test, y_test, vals_test, f_insts, a_insts
@@ -105,8 +105,10 @@ if __name__ == '__main__':
     unsolved = train_split.sbjts
     random.shuffle(unsolved)
 
+    solutions: Dict[str, List[np.ndarray]] = {}
+
     for epoch in [0]:  # itertools.count():
-        epoch_sol_found, epoch_successes = [], []
+        epoch_sol_found, epoch_successes, epoch_fails = [], [], []
         epoch_logdir = prepare_epoch_logging()
         f_path = feature_pp.to_disk(f"features_epoch{epoch}", parent_dir=epoch_logdir)
         a_path = actions_pp.to_disk(f"actions_epoch{epoch}", parent_dir=epoch_logdir)
@@ -114,15 +116,19 @@ if __name__ == '__main__':
         unsolved = [s for s in unsolved if s.name not in tracker.get_results(flag='success')]
         pbar = tqdm(unsolved)
         for epoch_step, s in enumerate(pbar):
-            nodes_current, temperature = NO_SOLUTION_NODE_COUNT, 1.0
+            nodes_current, temperature, all_preds = NO_SOLUTION_NODE_COUNT, 1.0, []
             feature_pp.instances = {}
             actions_pp.instances = {}
             feature_pp.initialize_instances()
             actions_pp.initialize_instances()
 
+            # A list for each time solutions were found
+            prediction_history: List[Tuple] = []
+            g: Game = game_from_subject(s)
+
             for mcmc_step in range(MAX_MCMC_STEPS):
                 # TODO do not reload game information at every step?
-                x, y, vals, x_test, y_test, vals_test, fs, acts = load_subject_dataset()
+                x, y, vals, x_test, y_test, vals_test, fs, acts = load_subject_dataset(g)
                 data_sanity_check()  # Simple shape check for the dataset
 
                 # Update the progress bar with most relevant information
@@ -163,53 +169,57 @@ if __name__ == '__main__':
                         already_exists = [pred_equal(preds, preds_old) for preds_old in unique_predictions]
                         sanity_checks = [arc_sanity_check(pred) for pred in preds]
                         if not (True in already_exists) and not (False in sanity_checks):
-                            unique_predictions.append(preds)
+                            # unique_predictions.append(preds)
                             unique_sols.append(sols[i])
+                            prediction_history.append((preds, sols[i]))
 
                     node_counts = np.array([sol.get_node_count() for sol in unique_sols])
 
                     # Simple heuristic for picking the best three approaches: Pick those using least number of nodes
-                    check_out_order = np.argsort(node_counts)[:3]
+                    # check_out_order = np.argsort(node_counts)[:3]
+                    # Store for submission
+                    # unique_predictions.append((all_preds, node_counts))
 
-                    unique_gen_result = [sol.test_generalization(x_test, y_test) for sol in unique_sols]
-                    generalizing = np.array([t[0] for t in unique_gen_result])
+                    # unique_gen_result = [sol.test_generalization(x_test, y_test) for sol in unique_sols]
+                    # generalizing = np.array([t[0] for t in unique_gen_result])
 
                     # Train the program pools
-                    all_gen_res = [sol.test_generalization(x_test, y_test) for sol in sols]
+                    # all_gen_res = [sol.test_generalization(x_test, y_test) for sol in sols]
 
-                    all_gen = [t[0] for t in all_gen_res]
-                    all_fb = [t[1] for t in all_gen_res]
+                    # Even without a sane and unique prediction, all_gen_res can be used to update the program pool
+                    # As long as a consistent solution exists
+                    # all_gen = [t[0] for t in all_gen_res]
+                    # all_fb = [t[1] for t in all_gen_res]  # all_feedback
 
-                    if True in generalizing:  # For testing purposes
-                        p = f'{s.name}: {sum(generalizing)} of {len(unique_sols)} generalized'
-                        lib.logger.debug_var(p)
-
-                        # If this is a top 3 success solution:
-                        if True in generalizing[check_out_order]:
-                            epoch_successes.append(s.name)
-
-                            # If this was the first time it was solved, visualize it
-                            if not tracker.is_in(s.name, flag='success'):
-                                # Visualize solutions
-                                for i, sol in enumerate(sols[:MAX_VIS]):
-                                    sol.visualize(parent_path=epoch_logdir, f_vis=feature_pp.visualize_instance,
-                                                  a_vis=actions_pp.visualize_instance,
-                                                  folder_appendix=str(all_gen_res[i][0]),
-                                                  name=s.name)
-
-                            tracker.add_result(s.name, flag='success', sess=sess)
-                            break  # TODO remove usage of test gt for stopping, add heuristic for stopping
-                    else:
-                        lib.logger.debug_var(f'No generalizing solution was found for {s.name}')
-                        lib.logger.debug_var(f'{s.name} has {len(unique_sols)} solutions which do not generalize')
-                        tracker.add_result(s.name, flag='nongeneralizing', sess=sess)
+                    # if True in generalizing:  # For testing purposes
+                    #     p = f'{s.name}: {sum(generalizing)} of {len(unique_sols)} generalized'
+                    #     lib.logger.debug_var(p)
+                    #
+                    #     # If this is a top 3 success solution:
+                    #     if True in generalizing[check_out_order]:
+                    #         epoch_successes.append(s.name)
+                    #
+                    #         # If this was the first time it was solved, visualize it
+                    #         if not tracker.is_in(s.name, flag='success'):
+                    #             # Visualize solutions
+                    #             for i, sol in enumerate(sols[:MAX_VIS]):
+                    #                 sol.visualize(parent_path=epoch_logdir, f_vis=feature_pp.visualize_instance,
+                    #                               a_vis=actions_pp.visualize_instance,
+                    #                               folder_appendix=str(all_gen_res[i][0]),
+                    #                               name=s.name)
+                    #
+                    #         tracker.add_result(s.name, flag='success', sess=sess)
+                    # else:
+                    #     lib.logger.debug_var(f'No generalizing solution was found for {s.name}')
+                    #     lib.logger.debug_var(f'{s.name} has {len(unique_sols)} solutions which do not generalize')
+                    #     tracker.add_result(s.name, flag='nongeneralizing', sess=sess)
                 else:
                     node_counts, check_out_order = np.array([]), np.array([])
 
                 # Diffusion Move
                 # If the sanity check rules out all predictions, node_counts will be empty
                 if node_counts.shape[0] > 0:
-                    nodes_proposal = np.mean(node_counts[check_out_order])
+                    nodes_proposal = np.mean(node_counts)
                     temperature *= COOLING_RATE
                 else:
                     nodes_proposal = NO_SOLUTION_NODE_COUNT
@@ -225,4 +235,52 @@ if __name__ == '__main__':
                 feature_pp.optim_move(temperature=temperature)
                 actions_pp.optim_move(temperature=temperature)
 
+            node_counts_candidates = [sol.get_node_count() for _, sol in prediction_history]
+            pred_history = [preds for preds, _ in prediction_history]
+            indices = np.argsort(node_counts_candidates)
+
+            # Use 'least node count' heuristic to find the solution to submit for each test pair
+            submission = {test_i: [] for test_i in range(len(g.test_pairs))}
+            for test_i, test_pair in enumerate(g.test_pairs):
+                for sol_index in indices:  # Add prediction in the order given by the heuristic
+                    if len(submission[test_i]) >= 3:
+                        break
+                    arr = pred_history[sol_index][test_i]
+                    equal_old_preds = [np.array_equal(arr, candidate) for candidate, _ in submission[test_i]]
+                    if not (True in equal_old_preds):
+                        submission[test_i].append((arr, prediction_history[sol_index][1]))
+
+            dir_name = os.path.join(epoch_logdir, f'{s.name}')
+            if not os.path.exists(dir_name):
+                os.mkdir(dir_name)
+            for test_key in submission:
+                one_generalized = False
+                for pred_i, (arr, sol) in enumerate(submission[test_key]):
+                    generalized = np.array_equal(arr, g.test_pairs[test_key].get_target())
+                    one_generalized = one_generalized or generalized
+                    fig, ax = plt.subplots()
+                    plot_as_heatmap(arr, ax=ax, title=f'{s.name}: {sol.get_node_count()}')
+                    fig.savefig(os.path.join(dir_name, f'{test_key}_{pred_i}_{generalized}.png'))
+                    plt.close(fig)
+                if one_generalized:
+                    if s.name not in epoch_successes:
+                        tracker.add_result(s.name, flag='success', sess=sess)
+                        epoch_successes.append(s.name)
+                else:
+                    if s.name not in epoch_fails:
+                        tracker.add_result(s.name, flag='fail', sess=sess)
+                        epoch_fails.append(s.name)
+
+            # candidates = []
+            # for test_i in range(len(node_counts_candidates)):
+            #     indices = np.argsort(node_counts_candidates[test_i])
+            #     candidates_i: List[np.ndarray] = []
+            #     for pred, node_n in unique_predictions[test_i]:
+            #         if len(candidates_i) >= 3:
+            #             break
+            #         equal_old_preds = [np.array_equal(pred, candidate) for candidate, _ in candidates_i]
+            #         if not (True in equal_old_preds):
+            #             candidates_i.append((pred, node_n))
+            #     candidates.append(candidates_i)
+            # solutions[s.name] = candidates
             # feature_pp, actions_pp = load_pps_from_disk(f'{f_path}.xlsx', f'{a_path}.xlsx')

@@ -173,6 +173,8 @@ def plot_as_heatmap(arc_field: np.ndarray, ax=None, title='title') -> None:
     if ax is None:
         plt.title(title)
         plt.show()
+    else:
+        ax.set_title(title)
 
 
 PAIR_STATE = Dict[str, Any]
