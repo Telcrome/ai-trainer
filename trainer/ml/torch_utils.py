@@ -3,7 +3,7 @@ import random
 from abc import ABC, abstractmethod
 from enum import Enum
 from functools import partial
-from typing import Tuple, Union, Callable, List, Iterator, Any, Dict
+from typing import Tuple, Union, Callable, List, Iterator, Any, Dict, TypeVar
 
 import numpy as np
 import cv2
@@ -43,6 +43,9 @@ class ModelMode(Enum):
     Train, Eval, Usage = "Train", "Eval", "Usage"
 
 
+V = TypeVar('V')
+
+
 class InMemoryDataset(data.Dataset):
     """
     Wrapper around one dataset split to work with the torch.utils.data.Dataloader.
@@ -52,7 +55,7 @@ class InMemoryDataset(data.Dataset):
     def __init__(self,
                  ds_name: str,
                  split_name: str,
-                 f: Union[Callable[[lib.Subject, ModelMode], Any], partial],
+                 f: Union[Callable[[lib.Subject, ModelMode], V], partial],
                  mode: ModelMode = ModelMode.Train,
                  subject_filter: Union[Callable[[lib.Subject], bool], None] = None):
         super().__init__()
@@ -83,7 +86,7 @@ class InMemoryDataset(data.Dataset):
     def get_random_batch(self):
         return self.__getitem__(random.randint(0, self.__len__() - 1))
 
-    def __getitem__(self, item) -> Tuple[np.ndarray, np.ndarray]:
+    def __getitem__(self, item) -> V:
         """
         Uses the preprocessor that converts a subject to a training example.
 
@@ -95,7 +98,7 @@ class InMemoryDataset(data.Dataset):
         t = self.preprocessor(s, self.mode)
 
         # Cannot transformed to cuda tensors at this point,
-        # because they do not seem to work in shared memory. Return numpy arrays instead.
+        # because they do not seem to work in shared memory. For many cases return numpy arrays.
         return t
 
     def __len__(self):
@@ -338,7 +341,6 @@ def plot_grad_flow(named_parameters: Iterator[Tuple[str, torch.nn.Parameter]]) -
                Line2D([0], [0], color="b", lw=4),
                Line2D([0], [0], color="k", lw=4)], ['max-gradient', 'mean-gradient', 'zero-gradient'])
     return fig
-
 
 # class ModelTrainer:
 #     """

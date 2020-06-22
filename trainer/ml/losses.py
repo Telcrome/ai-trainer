@@ -77,8 +77,8 @@ class SegCrit(nn.Module):
     """
     Criterion which is optimized for semantic segmentation tasks.
 
-    Expects targets in the range between 0 and #C [#B, W, H]
-    The logits of the predictions for each class [#B, #C, W, H].
+    Expects targets in the range between 0 and #C with shape [#B, W, H]
+    The logits of the predictions for each class: [#B, #C, W, H].
 
     >>> import trainer.ml as ml
     >>> import trainer.lib as lib
