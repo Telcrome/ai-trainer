@@ -130,7 +130,6 @@ class MultiTaskNetwork(nn.Module):
         self.action_network = ActionNet(out_channels=11, hidden_depth=hidden_depth, network_depth=action_depth)
         self.activation_layer = nn.Softmax(dim=1)
 
-
     def forward(self, x: torch.Tensor, task_name: str, opti):
         """
         If a forward call is made for an unknown task, a new task network is created
@@ -151,7 +150,7 @@ class MultiTaskNetwork(nn.Module):
 if __name__ == '__main__':
     BATCH_SIZE = 1
     EPOCHS = 50
-    EACH_TASK_EPOCHS = 50
+    STEPS_PER_TASK = 5
 
     sess = lib.Session()
     # Prepare data
@@ -177,12 +176,14 @@ if __name__ == '__main__':
     # loop over all training tasks in each epoch
     for epoch in range(EPOCHS):
 
+        viss = []
         for _ in range(2):
             # task = random.choice(train_set)
             task0 = train_set[1]
             train_pairs, test_pairs, s_name = task0
 
-            situation, target = random.choice(train_pairs)
+            train_pred = random.choice([True, False])
+            situation, target = random.choice(train_pairs) if train_pred else random.choice(test_pairs)
             situation = torch.from_numpy(situation).float().unsqueeze(0).to(ml.torch_device)
             target = torch.from_numpy(target).long().unsqueeze(0)
 
@@ -190,8 +191,13 @@ if __name__ == '__main__':
                 prediction = net(situation, s_name, optimizer)
 
             pred_img = ml.one_hot_to_cont(prediction.squeeze().cpu().numpy())
-            lib.logger.debug_var((pred_img, f'Pred: {s_name}'))
-            lib.logger.debug_var((target[0].numpy(), f'Target: {s_name}'))
+            viss.append(
+                (pred_img, f'Pred: {s_name}, Train: {train_pred}')
+            )
+            viss.append(
+                (target[0].numpy(), f'Target: {s_name}, Train: {train_pred}')
+            )
+        lib.logger.debug_var(viss)
 
         running_loss = 0.
 
@@ -205,14 +211,11 @@ if __name__ == '__main__':
 
             loss = torch.zeros(1, requires_grad=True).to(ml.torch_device)
             optimizer.zero_grad()
+
+            # Task specific training, accumulate gradients
             for situation, target in train_pairs:
                 situation = torch.from_numpy(situation).float().unsqueeze(0).to(ml.torch_device)
                 target = torch.from_numpy(target).long().unsqueeze(0).to(ml.torch_device)
-
-                # zero the parameter gradients
-
-
-                # forward + backward + optimize
                 outputs = net(situation, s_name, optimizer)
                 loss += criterion(outputs, target)
 

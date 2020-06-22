@@ -68,7 +68,8 @@ class LogWriter:
         """
         Allows to inspect an arbitrary python object on disk.
 
-        For saving an array with a description debug a (np.ndarray, str) tuple.
+        For visualizing an array with a description debug a (np.ndarray, str) tuple.
+        For visualizing multiple arrays with one description each debug a (np.ndarray, str) list.
 
         :param o: Any variable
         """
@@ -85,6 +86,19 @@ class LogWriter:
             self._save_fig(fig)
         elif isinstance(o, str):
             self._log_str(f'\n{o}\n')
+        elif isinstance(o, list):
+            correct_form = [isinstance(x, tuple) and isinstance(x[0], np.ndarray) and isinstance(x[1], str) for x in o]
+            if not False in correct_form:
+                rows = len(o) // 2 + (len(o) % 2)
+                fig, axes = plt.subplots(rows, 2)
+                for ax_i, ax in enumerate(axes.flatten()):
+                    ax.set_title(o[ax_i][1])
+                    sns.heatmap(o[ax_i][0], ax=ax, xticklabels=False)
+
+
+                    # sns.heatmap(t[0])
+
+                self._save_fig(fig)
         else:
             self._log_str(str(o))
 

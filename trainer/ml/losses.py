@@ -61,7 +61,7 @@ class FocalLoss(nn.Module):
     def forward(self, inputs: torch.Tensor, targets: torch.Tensor):
         # targets = targets.long()
         if self.logits:
-            bce_loss = self.ce_loss(inputs, targets.long())
+            bce_loss = self.ce_loss(inputs, targets)
         else:
             bce_loss = F.cross_entropy(inputs, targets, reduce=None)
         pt = torch.exp(-bce_loss)
