@@ -11,6 +11,6 @@ dependencies:
     - opencv-python
     - PySimpleGui
     - pydicom
-    - psycopg2
+    - psycopg2-binary
     - PySimpleGUI
     - flexx
