@@ -75,7 +75,9 @@ class InMemoryDataset(data.Dataset):
 
         self.mode = mode
         self.subject_filter = subject_filter
-        self.subjects = self.split.sbjts
+        self.subjects: List[lib.Subject] = self.split.sbjts
+
+        self.lookup: Dict[str, lib.Subject] = {}
 
         if self.subject_filter is not None:
             self.subjects = list(filter(self.subject_filter, self.subjects))
@@ -85,6 +87,18 @@ class InMemoryDataset(data.Dataset):
 
     def get_random_batch(self):
         return self.__getitem__(random.randint(0, self.__len__() - 1))
+
+    def get_by_subject_name(self, s_name: str) -> V:
+        """
+        Searches for the subject with a given name in the preloaded data using a loop.
+
+        Applies the preprocessor function.
+        """
+        if s_name not in self.lookup:
+            for s in self.subjects:
+                self.lookup[s.name] = s
+        t = self.preprocessor(self.lookup[s_name], self.mode)
+        return t
 
     def __getitem__(self, item) -> V:
         """

@@ -10,15 +10,23 @@ First, install postgresql (From conda or from `here: <https://www.enterprisedb.c
 Follow some guide from google to setup an empty database.
 We recommend to test the connection using ``psql`` or ``pgadmin4`` now.
 
-3) Create a config json of the following form:
+Execute some code that tries to use the database:
+
+.. code-block:: bash
+
+    python ./tutorials/db.py
+
+In your user directory a new folder ``.trainer`` should pop up. Update the connection string ``db_con``.
 
 .. code-block:: json
 
     {
-       "db_con": "postgresql+psycopg2://postgres:password@127.0.0.1:5432/db_name"
+       "big_bin_dir": "C:\\Users\\rapha\\.trainer\\big_bin",
+       "db_con": "postgresql+psycopg2://postgres:admin@127.0.0.1:5432/trainer"
     }
+    
 
-Import data using the CLI tools.
+Now, Import data using the CLI tools.
 Data might be exported earlier from someone else or imported using several file formats from disk.
 Here we assume you do not already have a dataset which was exported using trainer.
 

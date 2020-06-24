@@ -12,6 +12,7 @@ import cv2
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
+import PySimpleGUI as sg
 
 
 def get_img_from_fig(fig: plt.figure, dpi=180) -> np.ndarray:

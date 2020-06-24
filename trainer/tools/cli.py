@@ -36,7 +36,7 @@ def trainer_reset_database():
     """
     Removes all tables from the database and clears the big binary directory if it exists.
     """
-    lib.reset_data_model()
+    lib.reset_complete_database()
 
 
 @trainer.command(name='init-dataset')
@@ -46,6 +46,27 @@ def trainer_init_dataset(dataset_name: str):
     d = lib.Dataset.build_new(dataset_name)
     session.add(d)
     session.commit()
+
+
+@trainer.command(name='add-folder')
+@click.option('--dataset-name', '-n', prompt='Dataset Name')
+@click.option('--split-name', '-sn', prompt='Which split to append the data?')
+@click.option('--folder-path', '-p', type=click.Path(exists=True), prompt='Folder path')
+def trainer_add_folder(dataset_name: str, split_name: str, folder_path: str) -> None:
+    """
+    Adds a folder with raw data from disk. Entry point for users who don't already have a dataset in the correct format.
+
+    :param dataset_name: Name of the dataset
+    :param split_name: Name of the split that will be created if it does not yet exist.
+    :param folder_path: Local path to copy the data from.
+    """
+    sess = lib.Session()
+    d: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == dataset_name).first()
+
+    # Create the new split
+    new_split: lib.Split = d.add_split(split_name)
+    lib.add_image_folder(new_split, folder_path=folder_path, sess=sess)
+    sess.commit()
 
 
 @trainer.command(name='print-summary')
@@ -183,7 +204,10 @@ def trainer_annotate(dataset_name: str, subject_name: str):
         print('There is no such dataset')
     if not subject_name:
         # Subject name needs to be picked
-        s = d.splits[0].sbjts[0]  # Just pick the first subject
+        if d.splits and d.splits[0].sbjts:
+            s = d.splits[0].sbjts[0]  # Just pick the first subject
+        else:
+            s = None
     else:
         raise NotImplementedError()
     run_window(AnnotationGui, d, s, sess)

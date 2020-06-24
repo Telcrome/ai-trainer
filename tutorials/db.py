@@ -4,7 +4,7 @@ import skimage
 import trainer.lib as lib
 
 if __name__ == '__main__':
-    lib.reset_data_model()
+    lib.reset_complete_database()
     session = lib.Session()
 
     ss_tpl = lib.SemSegTpl.build_new(

@@ -4,4 +4,4 @@ import trainer.lib
 import trainer.ml
 import trainer.tools
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"

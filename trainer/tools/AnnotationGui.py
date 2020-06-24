@@ -269,17 +269,18 @@ class AnnotationGui(TWindow):
             self.update_segtool()
 
     def set_current_subject(self, s: lib.Subject):
-        self.current_subject = s
-        self.frame_number = 0
+        if s is not None:
+            self.current_subject = s
+            self.frame_number = 0
 
-        # Handle GUI elements concerned with classes
-        self.class_selector.set_subject(self.current_subject)
+            # Handle GUI elements concerned with classes
+            self.class_selector.set_subject(self.current_subject)
 
-        # Load the list of source binaries into GUI
-        self.update_imstacks_list()
-        self.select_source_binary(s.ims[0])
-        self.update_segtool()
-        self.console.push_to_ipython({"current_subject": s})
+            # Load the list of source binaries into GUI
+            self.update_imstacks_list()
+            self.select_source_binary(s.ims[0])
+            self.update_segtool()
+            self.console.push_to_ipython({"current_subject": s})
 
     def update_imstacks_list(self):
         self.lst_source_binaries.clear()

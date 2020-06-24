@@ -83,7 +83,7 @@ def add_imagestack(s: lib.Subject, file_path: str, binary_id='') -> None:
 
 def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib.Session()) -> None:
     """
-    Iterates through a folder and adds its contents to a dataset.
+    Iterates through a folder and adds its contents to a split.
 
     If a file is found, a new subject is created with only that file.
     If a directory is found, a new subject is created with all files that live within that directory.
@@ -94,8 +94,8 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
     - Standard image files
     - B8 files (.b8)
 
+    :param split: The dataset split this data is appended to. The split knows its dataset.
     :param folder_path: Top level folder path
-    :param split: The dataset split this data is appended to.
     :param progress: If true, displays a progress bar
     :param sess: database session, defaults to a new session
     """
@@ -136,6 +136,9 @@ def add_image_folder(split: lib.Split, folder_path: str, progress=True, sess=lib
 
 
 def import_subject(split: lib.Split, subject_path: str, semsegtpl: lib.SemSegTpl):
+    """
+    Imports a subject from the format created when exporting datasets
+    """
     s_name = os.path.split(subject_path)[-1]
     s = lib.Subject.build_new(s_name)
     split.sbjts.append(s)
