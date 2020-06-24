@@ -8,10 +8,16 @@ Docs
 Currently, https://readthedocs.org/ is used for CI of the docs.
 Before submitting changes, test the make command in a separate environment:
 
+.. include:: rebuild_docs.sh
+   :code: bash
+
 .. code-block:: bash
 
     conda env create -f environment.yml
     conda activate trainer_env
+
+    # Remove the old auto-generated docs
+    rm -rf ./documentation_source/modules
 
     # Generating docs from code
     sphinx-apidoc.exe ./trainer/ -o ./documentation_source/modules

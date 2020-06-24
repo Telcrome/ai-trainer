@@ -5,7 +5,6 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 4
 
    trainer.lib.tgui
 
@@ -60,6 +59,14 @@ trainer.lib.import\_utils module
    :undoc-members:
    :show-inheritance:
 
+trainer.lib.logging module
+--------------------------
+
+.. automodule:: trainer.lib.logging
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 trainer.lib.misc module
 -----------------------
 
@@ -72,14 +79,6 @@ trainer.lib.syn module
 ----------------------
 
 .. automodule:: trainer.lib.syn
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-trainer.lib.visualization module
---------------------------------
-
-.. automodule:: trainer.lib.visualization
    :members:
    :undoc-members:
    :show-inheritance:

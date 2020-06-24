@@ -28,6 +28,14 @@ trainer.cg.DtDataset module
    :undoc-members:
    :show-inheritance:
 
+trainer.cg.ProgPool module
+--------------------------
+
+.. automodule:: trainer.cg.ProgPool
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 trainer.cg.dsl\_utils module
 ----------------------------
 
@@ -44,6 +52,14 @@ trainer.cg.dt\_seq module
    :undoc-members:
    :show-inheritance:
 
+trainer.cg.grid\_dsl module
+---------------------------
+
+.. automodule:: trainer.cg.grid_dsl
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 trainer.cg.samplers module
 --------------------------
 
@@ -56,14 +72,6 @@ trainer.cg.sym\_lang module
 ---------------------------
 
 .. automodule:: trainer.cg.sym_lang
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-trainer.cg.typed\_dsl module
-----------------------------
-
-.. automodule:: trainer.cg.typed_dsl
    :members:
    :undoc-members:
    :show-inheritance:

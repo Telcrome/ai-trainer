@@ -1,12 +1,15 @@
-===============
-Getting Started
-===============
+===============================
+Getting Started With Annotation
+===============================
 
 Trainer currently supports annotating images and videos.
-To store data in the database:
+First we need to setup the database.
+Using a database instead of simply storing files helps working with complex, structured data.
 
-1) Install postgresql (From conda or from `here: <https://www.enterprisedb.com/downloads/postgres-postgresql-downloads>`_)
-2) Import data (either exported from trainer or from directories with raw image data)
+First, install postgresql (From conda or from `here: <https://www.enterprisedb.com/downloads/postgres-postgresql-downloads>`_).
+Follow some guide from google to setup an empty database.
+We recommend to test the connection using ``psql`` or ``pgadmin4`` now.
+
 3) Create a config json of the following form:
 
 .. code-block:: json
@@ -14,9 +17,16 @@ To store data in the database:
     {
        "db_con": "postgresql+psycopg2://postgres:password@127.0.0.1:5432/db_name"
     }
-4) Happy annotating and training
 
+Import data using the CLI tools.
+Data might be exported earlier from someone else or imported using several file formats from disk.
+Here we assume you do not already have a dataset which was exported using trainer.
 
+At this point, start the GUI to start annotating:
+
+.. code-block:: bash
+
+    trainer annotate -n testset
 
 Generator Usage Workflow
 ------------------------

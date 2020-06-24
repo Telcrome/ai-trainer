@@ -19,21 +19,7 @@ AI-Trainer helps with building a data generator and it relies on imgaug for it:
 conda install imgaug -c conda-forge
 ```
 
-For PostgreSQL connection trainer expects an environment variable "DB_CON" of the form:
-
-```shell script
-DB_PASS@127.0.0.1:5432/DB_NAME
-```
-
-# Getting started with training models
-
-Trainer currently supports annotating images and videos.
-First, create a dataset using
-
-```shell script
-trainer init-ds
-cd YOUR_DATASET
-```
+[Next steps for getting started](https://ai-trainer.readthedocs.io/en/latest/getting_started.html)
 
 # Getting started with using trainer in python
 
@@ -62,15 +48,6 @@ This allows for easier experimentation and the IDE expects it this way.
 ```shell script
 conda env create --prefix ./envs -f environment.yml
 conda activate .\envs\.
-```
-
-Now install a deep learning backend.
-PyTorch provides well-working [conda install commands](https://pytorch.org/get-started/locally/).
-
-For Tensorflow with GPU:
-```shell script
-conda install cudatoolkit=10.0 cudnn=7.6.0=cuda10.0_0
-pip install tensorflow-gpu
 ```
 
 ### Testing Development for pip and cli tools

@@ -5,7 +5,6 @@ Subpackages
 -----------
 
 .. toctree::
-   :maxdepth: 4
 
    trainer.cg
    trainer.demo_data
@@ -13,6 +12,18 @@ Subpackages
    trainer.lib
    trainer.ml
    trainer.tools
+
+Submodules
+----------
+
+trainer.db module
+-----------------
+
+.. automodule:: trainer.db
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------

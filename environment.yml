@@ -13,3 +13,4 @@ dependencies:
     - pydicom
     - psycopg2
     - PySimpleGUI
+    - flexx
