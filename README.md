@@ -19,15 +19,7 @@ AI-Trainer helps with building a data generator and it relies on imgaug for it:
 conda install imgaug -c conda-forge
 ```
 
-# Getting started with training models
-
-Trainer currently supports annotating images and videos.
-First, create a dataset using
-
-```shell script
-trainer init-ds
-cd YOUR_DATASET
-```
+[Next steps for getting started](https://ai-trainer.readthedocs.io/en/latest/getting_started.html)
 
 # Getting started with using trainer in python
 
@@ -45,8 +37,8 @@ clone the repo locally.
 git clone https://github.com/Telcrome/ai-trainer
 ```
 
-Both vsc and pycharm are used for development with
-their configurations provided in ```.vscode``` and ```.idea```
+Both vsc and pycharm can be used for development with
+their respective configurations provided in ```.vscode``` and ```.idea```.
 
 ## Recommended environments
 
@@ -58,15 +50,6 @@ conda env create --prefix ./envs -f environment.yml
 conda activate .\envs\.
 ```
 
-Now install a deep learning backend.
-PyTorch provides well-working [conda install commands](https://pytorch.org/get-started/locally/).
-
-For Tensorflow with GPU:
-```shell script
-conda install cudatoolkit=10.0 cudnn=7.6.0=cuda10.0_0
-pip install tensorflow-gpu
-```
-
 ### Testing Development for pip and cli tools
 
 Installing the folder directly using pip does not work due to the large amount of files inside the local development folder,
@@ -75,33 +58,7 @@ especially because in the local development setup the environment is expected to
 pip install -e .
 ```
 
-### Uploading to PyPi by hand
-
-```shell script
-python setup.py sdist bdist_wheel
-twine upload dist/* # The asterisk is important
-```
-
 # Using Docker
 
 Docker and the provided DOCKERFILE support is currently experimental as it proved to slow down the annotation GUI too much.
 When the transition to a web GUI is completed docker will be supported again.
-
-# Contribution
-
-### Docs
-
-Currently, [Read the Docs](https://readthedocs.org/) is used
-for CI of the docs.
-Before submitting changes, test the make command in the environment:
-```shell script
-conda env create -f environment.yml
-conda activate trainer_env
-make html
-```
-If this throws warnings or errors, `Read the Docs` won`t publish them.
-
-### Tutorials inside the repo
-
-- Do not use jupyter notebooks
-- Should be testable without preparing data by hand where possible.

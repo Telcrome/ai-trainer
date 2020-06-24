@@ -2,43 +2,133 @@
   <dictionary name="rapha">
     <words>
       <w>annos</w>
+      <w>arrs</w>
       <w>artefact</w>
+      <w>asso</w>
+      <w>astype</w>
+      <w>autocompletion</w>
       <w>autodoc</w>
+      <w>binstorage</w>
+      <w>bmost</w>
+      <w>booleanizer</w>
+      <w>boolf</w>
+      <w>bytea</w>
+      <w>cacher</w>
       <w>childclass</w>
+      <w>classdefinitions</w>
+      <w>classvalues</w>
+      <w>clss</w>
       <w>conv</w>
       <w>convolutional</w>
       <w>convrelu</w>
       <w>crit</w>
+      <w>ctype</w>
       <w>cuda</w>
+      <w>databaselogs</w>
+      <w>dataloader</w>
       <w>datasets</w>
+      <w>denoise</w>
+      <w>depthmap</w>
       <w>dicom</w>
+      <w>dota</w>
+      <w>downsample</w>
+      <w>dtype</w>
       <w>fgsm</w>
+      <w>filt</w>
       <w>foldergrab</w>
+      <w>graphviz</w>
+      <w>heatmap</w>
+      <w>imagemasks</w>
       <w>imagestack</w>
       <w>imagestacks</w>
       <w>imgstack</w>
+      <w>imstack</w>
+      <w>imstacks</w>
+      <w>inps</w>
+      <w>insta</w>
+      <w>insts</w>
+      <w>iters</w>
+      <w>jsonclass</w>
       <w>kaggle</w>
+      <w>learnable</w>
+      <w>lmost</w>
+      <w>locs</w>
       <w>logdir</w>
       <w>logits</w>
+      <w>logwriter</w>
+      <w>magicnumber</w>
       <w>matplot</w>
       <w>matplotlib</w>
+      <w>mcmc</w>
       <w>minibatch</w>
       <w>mnist</w>
+      <w>mtype</w>
+      <w>ndarray</w>
+      <w>ndimage</w>
+      <w>nodecount</w>
+      <w>nongene</w>
+      <w>objectness</w>
+      <w>objts</w>
+      <w>oldstates</w>
       <w>oneshot</w>
       <w>opti</w>
       <w>optim</w>
+      <w>ortho</w>
+      <w>outputsize</w>
+      <w>pbar</w>
+      <w>postgre</w>
+      <w>postgresql</w>
+      <w>preds</w>
       <w>preprocessing</w>
       <w>pretrain</w>
+      <w>prio</w>
+      <w>prios</w>
+      <w>probas</w>
+      <w>prog</w>
+      <w>progs</w>
+      <w>progtree</w>
       <w>pyplot</w>
+      <w>reducedatt</w>
+      <w>relu</w>
+      <w>resample</w>
+      <w>rmost</w>
+      <w>sbjt</w>
+      <w>sbjts</w>
+      <w>sbjtsplits</w>
       <w>segmap</w>
       <w>segmentations</w>
+      <w>segs</w>
+      <w>segsegclass</w>
+      <w>segtool</w>
+      <w>semseg</w>
+      <w>semsegclass</w>
+      <w>semsegcls</w>
+      <w>semsegclss</w>
+      <w>semsegmasks</w>
+      <w>semsegtpl</w>
+      <w>semsegtpls</w>
+      <w>skdata</w>
+      <w>sklearn</w>
+      <w>socketio</w>
+      <w>softmax</w>
+      <w>ssmask</w>
       <w>statedict</w>
+      <w>strs</w>
+      <w>subgrid</w>
+      <w>subgrids</w>
+      <w>tablename</w>
       <w>tensorboard</w>
       <w>testcode</w>
       <w>testoutput</w>
       <w>testset</w>
       <w>thresholding</w>
+      <w>tmost</w>
       <w>torchset</w>
+      <w>tpls</w>
+      <w>tqdm</w>
+      <w>trgt</w>
+      <w>unflagged</w>
+      <w>vals</w>
       <w>visboard</w>
     </words>
   </dictionary>

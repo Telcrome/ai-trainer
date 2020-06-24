@@ -1,9 +1,16 @@
 name: trainer_env
 dependencies:
-  - python=3.7
+  - python=3.8
   - anaconda
   - pip
+  - pytorch::pytorch
+  - pytorch::torchvision
+  - cudatoolkit=10.2
+  - conda-forge::python-graphviz
   - pip:
     - opencv-python
     - PySimpleGui
     - pydicom
+    - psycopg2-binary
+    - PySimpleGUI
+    - flexx

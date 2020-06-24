@@ -10,7 +10,7 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from skimage.data import astronaut
 from skimage.morphology import skeletonize
 
-from trainer.lib import MaskType
+import trainer.lib as lib
 
 
 def pos_from_event(e):
@@ -25,35 +25,6 @@ def arr_to_pixmap(arr: np.ndarray) -> QtGui.QPixmap:
 class Brushes(Enum):
     Standard = 1
     AI_Merge = 2
-
-
-def get_rgb_repr(image_data: np.ndarray,
-                 mask: np.ndarray = None,
-                 indicator_pos: Tuple[int, int] = None,
-                 brush_size=15,
-                 frame_number=0) -> np.ndarray:
-    if image_data.shape[3] == 1:
-        # Assumption: Grayscale
-        image_data = image_data[frame_number, :, :, 0]
-    else:
-        # Assumption: RGB
-        image_data = np.dot(image_data[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
-
-    # if indicator_pos is not None:
-    #     indicated = cv2.circle(np.copy(image_data), indicator_pos, brush_size, (255, 0, 0), 1)
-    # else:
-    #     indicated = image_data
-    blend_im = 0.8 * image_data.astype(np.uint8)
-    res = np.zeros((image_data.shape[0], image_data.shape[1], 3), dtype=np.uint8)
-    if mask is None:
-        res[:, :, 0] = blend_im
-        res[:, :, 1] = blend_im
-        res[:, :, 2] = blend_im
-    else:
-        res[:, :, 0] = blend_im + 0.2 * (mask.astype(np.uint8) * 255)
-        res[:, :, 1] = blend_im
-        res[:, :, 2] = blend_im
-    return res
 
 
 class IndicatorSceneItem(QtWidgets.QGraphicsEllipseItem):
@@ -182,9 +153,11 @@ class SegToolController:
         self._graphics_view.set_scene(self._scene)
         self.selection_event_handler = selection_event_handler
 
-        self.pen_size, self._img_stack, self._mask, self._mask_meta = 15, None, None, None
-        self.set_img_stack(astronaut().reshape([1, astronaut().shape[0], astronaut().shape[1], 3]))
-        self.display_img_stack(frame_number=0)
+        self._img_stack: lib.ImStack = None
+        self._mask: lib.SemSegMask = None
+        self.pen_size = 15
+        # self.set_img_stack(astronaut().reshape([1, astronaut().shape[0], astronaut().shape[1], 3]))
+        # self.display_img_stack(frame_number=0)
         self.indicator = IndicatorSceneItem(size=self.pen_size)
         self._scene.addItem(self.indicator)
 
@@ -216,25 +189,25 @@ class SegToolController:
     def get_graphics_scene(self):
         return self._graphics_view
 
-    def set_img_stack(self, img_stack: np.ndarray) -> None:
+    def set_img_stack(self, img_stack: lib.ImStack) -> None:
         self._img_stack = img_stack
         # self._graphics_view.center_image()
 
-    def set_mask(self, mask: np.ndarray, struct_meta: Dict):
+    def set_mask(self, mask: lib.SemSegMask):
         self._mask = mask
-        if mask is not None:
-            self._mask_meta = struct_meta['meta_data']['structures']
+        # if mask is not None:
+        #     self._mask_meta = struct_meta['meta_data']['structures']
 
     def display_indicator(self):
         self.indicator.draw()
 
     def display_img_stack(self, frame_number: int) -> None:
-        if self._img_stack.shape[3] == 1:
+        if self._img_stack.values().shape[3] == 1:
             # Assumption: Grayscale
-            image_data = self._img_stack[frame_number, :, :, 0]
+            image_data = self._img_stack.values()[frame_number, :, :, 0]
         else:
             # Assumption: RGB
-            image_data = np.dot(self._img_stack[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
+            image_data = np.dot(self._img_stack.values()[frame_number, :, :, :], [0.2989, 0.5870, 0.1140])
 
         blend_im = image_data.astype(np.uint8)
         res = np.zeros((image_data.shape[0], image_data.shape[1], 3), dtype=np.uint8)
@@ -244,19 +217,20 @@ class SegToolController:
 
         self._scene.pixmap.setPixmap(arr_to_pixmap(res))
 
-    def display_mask(self, structure_name: str):
-        res = np.zeros((self._img_stack.shape[1], self._img_stack.shape[2], 3), dtype=np.uint8)
+    def display_mask(self, semsegclass: lib.SemSegClass):
+        im_arr = self._img_stack.values()
+        res = np.zeros((im_arr.shape[1], im_arr.shape[2], 3), dtype=np.uint8)
         if self._mask is not None:
-            struct_index = list(self._mask_meta.keys()).index(structure_name)
-            struct_mask = self._mask[:, :, struct_index].astype(np.uint8)
+            struct_index = self._mask.tpl.ss_classes.index(semsegclass)
+            struct_mask = self._mask.values()[:, :, struct_index].astype(np.uint8)
             res[:, :, 0] = struct_mask * 255
-            if self._mask_meta[structure_name] == MaskType.Line.value:
+            if semsegclass.ss_type == lib.MaskType.Line:
                 res[:, :, 1] = skeletonize(struct_mask) * 255
-            elif self._mask_meta[structure_name] == MaskType.Point.value:
+            elif semsegclass.ss_type == lib.MaskType.Point:
                 raise NotImplementedError()
-            res[:, :, 2] = np.zeros((self._mask.shape[0], self._mask.shape[1]), dtype=np.uint8)
-            for i in range(len(self._mask_meta.keys())):
+            res[:, :, 2] = np.zeros((self._mask.values().shape[0], self._mask.values().shape[1]), dtype=np.uint8)
+            for i in range(len(self._mask.tpl.ss_classes)):
                 if i != struct_index:
-                    res[:, :, 2] |= (self._mask[:, :, i].astype(np.uint8) * 255)
-            # res[:, :, 2] = self._mask[:, :, i].astype(np.uint8) * 255
+                    res[:, :, 2] |= (self._mask.values()[:, :, i].astype(np.uint8) * 255)
+                # res[:, :, 2] = self._mask.get_ndarray()[:, :, i].astype(np.uint8) * 255
         self._scene.mask_pixmap.setPixmap(arr_to_pixmap(res))

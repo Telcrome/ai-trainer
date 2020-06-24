@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\rapha\\Desktop\\ai-trainer\\envs\\python.exe",
+    "python.pythonPath": "C:\\Users\\rapha\\anaconda3\\envs\\ai-trainer\\python.exe",
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
