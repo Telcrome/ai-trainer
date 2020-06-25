@@ -3,6 +3,7 @@ Alternates between optimizing feature & action network
 and task networks.
 """
 from typing import Tuple, List
+import itertools
 import random
 
 import numpy as np
@@ -121,12 +122,12 @@ class ActionNet(nn.Module):
 
 class MultiTaskNetwork(nn.Module):
 
-    def __init__(self, hidden_depth=10, feature_depth=3, action_depth=3):
+    def __init__(self, hidden_depth=20, feature_depth=3, action_depth=3):
         super(MultiTaskNetwork, self).__init__()
         self.hidden_depth = hidden_depth
         self.feature_network = FeatureNet(in_channels=11, hidden_depth=hidden_depth, network_depth=feature_depth)
-        # self.task_networks: nn.ModuleDict = nn.ModuleDict({})
-        self.task_network: nn.Module = TaskNetwork(hidden_depth=hidden_depth)
+        self.task_networks: nn.ModuleDict = nn.ModuleDict({})
+        # self.task_network: nn.Module = TaskNetwork(hidden_depth=hidden_depth)
         self.action_network = ActionNet(out_channels=11, hidden_depth=hidden_depth, network_depth=action_depth)
         self.activation_layer = nn.Softmax(dim=1)
 
@@ -134,30 +135,56 @@ class MultiTaskNetwork(nn.Module):
         """
         If a forward call is made for an unknown task, a new task network is created
         """
-        # if task_name not in self.task_networks:
-        #     self.task_networks[task_name] = TaskNetwork(hidden_depth=self.hidden_depth).to(ml.torch_device)
-        #     opti.add_param_group({'params': self.task_networks[task_name].parameters()})
+        if task_name not in self.task_networks:
+            self.task_networks[task_name] = TaskNetwork(hidden_depth=self.hidden_depth).to(ml.torch_device)
+            opti.add_param_group({'params': self.task_networks[task_name].parameters()})
 
         x = self.feature_network(x)
-        # x = self.task_networks[task_name](x)
-        x = self.task_network(x)
+        x = self.task_networks[task_name](x)
+        # x = self.task_network(x)
         x = self.action_network(x)
         # x = self.activation_layer(x)
         x = F.log_softmax(x, dim=1)
         return x
 
 
+def visualize_performance(task_name=''):
+    viss = []
+    for train_pred in [True, False]:
+        if not task_name:
+            task = random.choice(train_set)
+        else:
+            task = train_set.get_by_subject_name(task_name)
+        train_pairs, test_pairs, s_name = task
+
+        situation, target = random.choice(train_pairs) if train_pred else random.choice(test_pairs)
+        situation = torch.from_numpy(situation).float().unsqueeze(0).to(ml.torch_device)
+        target = torch.from_numpy(target).long().unsqueeze(0)
+
+        with torch.no_grad():
+            prediction = net(situation, s_name, optimizer)
+
+        pred_img = ml.one_hot_to_cont(prediction.squeeze().cpu().numpy())
+        viss.append(
+            (pred_img, f'Pred: {s_name}, Train: {train_pred}')
+        )
+        viss.append(
+            (target[0].numpy(), f'Target: {s_name}, Train: {train_pred}')
+        )
+    lib.logger.debug_var(viss)
+
+
 if __name__ == '__main__':
     BATCH_SIZE = 1
     EPOCHS = 50
-    STEPS_PER_TASK = 5
+    MIN_TASK_STEPS, MAX_TASK_STEPS = 50, 200
 
     sess = lib.Session()
     # Prepare data
     train_set = ml.InMemoryDataset('arc', 'training', single_preprocessor, mode=ml.ModelMode.Train)
     test_set = ml.InMemoryDataset('arc', 'evaluation', single_preprocessor, mode=ml.ModelMode.Eval)
 
-    net = MultiTaskNetwork().to(ml.torch_device)
+    net = MultiTaskNetwork(hidden_depth=20, feature_depth=5, action_depth=5).to(ml.torch_device)
     # x = train_set.get_random_batch()
     #
     #
@@ -175,57 +202,40 @@ if __name__ == '__main__':
     )
     # loop over all training tasks in each epoch
     for epoch in range(EPOCHS):
-
-        viss = []
-        for _ in range(2):
-            # task = random.choice(train_set)
-            task0 = train_set[1]
-            train_pairs, test_pairs, s_name = task0
-
-            train_pred = random.choice([True, False])
-            situation, target = random.choice(train_pairs) if train_pred else random.choice(test_pairs)
-            situation = torch.from_numpy(situation).float().unsqueeze(0).to(ml.torch_device)
-            target = torch.from_numpy(target).long().unsqueeze(0)
-
-            with torch.no_grad():
-                prediction = net(situation, s_name, optimizer)
-
-            pred_img = ml.one_hot_to_cont(prediction.squeeze().cpu().numpy())
-            viss.append(
-                (pred_img, f'Pred: {s_name}, Train: {train_pred}')
-            )
-            viss.append(
-                (target[0].numpy(), f'Target: {s_name}, Train: {train_pred}')
-            )
-        lib.logger.debug_var(viss)
-
         running_loss = 0.
 
         # Looping over all training tasks
         p_bar = tqdm(enumerate(train_set, 0), total=len(train_set))
         for i, task in p_bar:
-            task0 = train_set[1]
-            train_pairs, test_pairs, s_name = task0
-            # Try to improve on the task specific network
-            # TODO: Do not iterate through all training examples, this favors tasks with bigger datasets
+            train_pairs, test_pairs, s_name = task
 
-            loss = torch.zeros(1, requires_grad=True).to(ml.torch_device)
-            optimizer.zero_grad()
+            # task_best_loss = 1000.  # Just pick a really bad first value
 
-            # Task specific training, accumulate gradients
-            for situation, target in train_pairs:
-                situation = torch.from_numpy(situation).float().unsqueeze(0).to(ml.torch_device)
-                target = torch.from_numpy(target).long().unsqueeze(0).to(ml.torch_device)
-                outputs = net(situation, s_name, optimizer)
-                loss += criterion(outputs, target)
+            for task_step in range(MAX_TASK_STEPS):
+                # loss = torch.zeros(1, requires_grad=True).to(ml.torch_device)
 
-            running_loss = running_loss + (loss.item() / len(train_pairs))
-            loss.backward()
-            optimizer.step()
+                # Task specific training, accumulate gradients
+                for situation, target in train_pairs:
+                    optimizer.zero_grad()
+                    # situation, target = random.choice(train_pairs)
+
+                    situation = torch.from_numpy(situation).float().unsqueeze(0).to(ml.torch_device)
+                    target = torch.from_numpy(target).long().unsqueeze(0).to(ml.torch_device)
+                    outputs = net(situation, s_name, optimizer)
+                    loss = criterion(outputs, target)
+
+                    running_loss = running_loss + (loss.item() / len(train_pairs))
+                    loss.backward()
+                    optimizer.step()
+
+            # if task_step > MIN_TASK_STEPS and loss.item() < 0.01:
+            #     break
 
             if i > 0:
                 p_bar.set_description(f'Loss: {running_loss / i}')
                 p_bar.set_postfix_str(f'Optimizing task {s_name}')
+
+            visualize_performance(task_name=s_name)
 
             # # Temporary check to visualize the last training example
             # pred_img = ml.one_hot_to_cont(outputs.detach().squeeze().numpy())

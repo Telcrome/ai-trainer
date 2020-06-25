@@ -20,8 +20,6 @@ class ConvGRUCell(nn.Module):
             Size of the convolutional kernel.
         :param bias: bool
             Whether or not to add the bias.
-        :param dtype: torch.cuda.FloatTensor or torch.FloatTensor
-            Whether or not to use cuda.
         """
         super(ConvGRUCell, self).__init__()
         self.padding = kernel_size[0] // 2, kernel_size[1] // 2
