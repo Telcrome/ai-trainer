@@ -52,9 +52,6 @@ class ConvGRUCell(nn.Module):
             device=input_batch.device)
 
     def forward(self, input_tensor: torch.Tensor):
-        """
-
-        """
         if self.h is None:
             self.init_hidden(input_tensor)
 
