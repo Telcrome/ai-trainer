@@ -11,12 +11,12 @@ import trainer.lib as lib
 
 class MnistDataset(dd.DemoDataset):
     """
-    
+    The popular MNIST dataset.
 
-    >>> import tempfile
-    >>> import trainer.demo_data as dd
+    >>> import tempfile; import trainer.demo_data as dd
     >>> dir_path = tempfile.gettempdir()
-    >>> mnist_dataset = dd.MnistDataset(dir_path)
+    >>> mnist_dataset = dd.MnistDataset(dir_path) # doctest:+ELLIPSIS
+    'Constructing MNIST dataset'...
     >>> x, y = mnist_dataset.sample_digit(digit=2)
     >>> y
     2
@@ -29,6 +29,7 @@ class MnistDataset(dd.DemoDataset):
         Builds two splits: mnist train and mnist test
         """
         super().__init__(data_path, 'mnist')
+        print('Constructing MNIST dataset')
         self.mnist_train = datasets.MNIST(os.path.join(self.data_path, 'mnist_train'), train=True, download=True)
         self.mnist_test = datasets.MNIST(os.path.join(self.data_path, 'mnist_test'), train=False, download=True)
         self.refill_mnist_indices()
