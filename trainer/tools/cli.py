@@ -19,6 +19,7 @@ import torch.optim as optim
 
 import trainer.lib as lib
 import trainer.ml as ml
+import trainer.demo_data as dd
 from trainer.tools.AnnotationGui import AnnotationGui, run_window
 
 
@@ -45,6 +46,17 @@ def trainer_init_dataset(dataset_name: str):
     d = lib.Dataset.build_new(dataset_name)
     session.add(d)
     session.commit()
+
+
+@trainer.command(name='init-mockup-data')
+def trainer_init_mockup_data():
+    session = lib.Session()
+    lib.reset_complete_database()
+    mnist = dd.MnistDataset('D:\\')
+    ds_mnist = mnist.build_dataset(sess=session)
+
+    arc = dd.ArcDataset('D:\\')
+    ds_arc = arc.build_dataset(sess=session)
 
 
 @trainer.command(name='add-folder')

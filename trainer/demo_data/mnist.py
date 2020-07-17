@@ -52,9 +52,9 @@ class MnistDataset(dd.DemoDataset):
         return x, y
 
     def build_dataset(self, sess=None) -> lib.Dataset:
-        d, sess = super().build_dataset(sess)
+        d = super().build_dataset(sess)
 
-        def append_mnist_split(torch_dataset, split_name='train'):
+        def append_mnist_split(torch_dataset, split_name='train') -> None:
             d.add_split(split_name=split_name)
             train_n = len(torch_dataset) if self.n_train == -1 or split_name != 'train' else self.n_train
 
@@ -65,7 +65,6 @@ class MnistDataset(dd.DemoDataset):
                 im_stack.set_class('digit', str(y))
                 s.ims.append(im_stack)
 
-                d.sbjts.append(s)
                 d.get_split_by_name(split_name).sbjts.append(s)
 
         append_mnist_split(self.mnist_train, split_name='train')
@@ -73,9 +72,3 @@ class MnistDataset(dd.DemoDataset):
         sess.add(d)
         sess.commit()
         return d
-
-
-if __name__ == '__main__':
-    lib.reset_complete_database()
-    mnist = MnistDataset('D:\\')
-    ds = mnist.build_dataset()

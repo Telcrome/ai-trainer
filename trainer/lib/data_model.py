@@ -379,7 +379,7 @@ class Dataset(Base):
         self.splits.append(split)
         return split
 
-    def get_split_by_name(self, split_name: str):
+    def get_split_by_name(self, split_name: str) -> Split:
         for split in self.splits:
             if split.name == split_name:
                 return split
@@ -391,11 +391,8 @@ class Dataset(Base):
             split_summary += f'{split}\n'
         return split_summary
 
-    def __iter__(self):
-        raise NotImplementedError()
-
     def __len__(self):
-        # TODO: Handle the case of the same subject being in different splits
+        # TODO: Handle the case of the same subject being in different splits, return the len of the concatenated set
         return sum([len(split.sbjts) for split in self.splits])
 
     def __repr__(self):
