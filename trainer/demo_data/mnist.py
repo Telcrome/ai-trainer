@@ -32,7 +32,7 @@ class MnistDataset(dd.DemoDataset):
         self.mnist_train = datasets.MNIST(os.path.join(self.data_path, 'mnist_train'), train=True, download=True)
         self.mnist_test = datasets.MNIST(os.path.join(self.data_path, 'mnist_test'), train=False, download=True)
         self.refill_mnist_indices()
-        self.mnist_indices = {}
+        self.mnist_indices = {i: [] for i in range(10)}
         self.n_train = max_training_examples
 
     def refill_mnist_indices(self):
@@ -75,6 +75,6 @@ class MnistDataset(dd.DemoDataset):
 
 
 if __name__ == '__main__':
-    lib.reset_data_model()
+    lib.reset_complete_database()
     mnist = MnistDataset('D:\\')
     ds = mnist.build_dataset()
