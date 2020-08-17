@@ -11,7 +11,7 @@ import cv2
 try:
     import imgaug.augmenters as iaa
     from imgaug.augmentables.segmaps import SegmentationMapsOnImage
-except ImportError as _:
+except ImportError:
     iaa, SegmentationMapsOnImage = None, None
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
