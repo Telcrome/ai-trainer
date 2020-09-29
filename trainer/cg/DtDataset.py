@@ -3,10 +3,6 @@ A module which contains glue code.
 
 Loads two program pools from disk. One for computing features, one for exploring actions.
 Then the pure output of the sampled programs is computed for a given game.
-
-
-Actions are scored by the number of cells that can be explained by that specific action.
-
 """
 from typing import List, Tuple, Generator, Any, Iterable, Dict, Callable, Union, Optional
 import os
@@ -31,7 +27,7 @@ def vis_dec_tree(dec_tree: tree.DecisionTreeClassifier, name: str, prog_names: n
                  dir_path=''):
     if not dir_path:
         dir_path = lib.logger.get_absolute_run_folder()
-        
+
     dot_data = tree.export_graphviz(dec_tree, out_file=None,
                                     feature_names=prog_names,
                                     class_names=class_names,

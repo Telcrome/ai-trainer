@@ -326,13 +326,3 @@ class ArcTransformation:
                 return True, feedback
         lib.logger.debug_var(f'Solving did not work because not everything was solved')
         return False, feedback
-
-
-class DtSeq:
-    """
-    Encapsulates a DtSeq model, public methods inspired from sklearn.
-    """
-
-    def fit(self, train_x: np.ndarray, train_y: np.ndarray, train_vals: np.ndarray) -> None:
-        assert train_x.shape[0] == train_y.shape[0] == train_vals.shape[0]
-        assert train_y.shape[1] == train_vals.shape[1]
