@@ -79,12 +79,18 @@ class FeatureNet(nn.Module):
             kernel_size=3,
             padding=1
         )
+        # self.cells = nn.ModuleList(
+        #     [nn.Conv2d(
+        #         in_channels=hidden_depth,
+        #         out_channels=hidden_depth,
+        #         kernel_size=3,
+        #         padding=1) for _ in range(network_depth)]
+        # )
         self.cells = nn.ModuleList(
-            [nn.Conv2d(
-                in_channels=hidden_depth,
-                out_channels=hidden_depth,
-                kernel_size=3,
-                padding=1) for _ in range(network_depth)]
+            [
+                ml.layers.ResidualBlock(in_channels=hidden_depth, out_channels=hidden_depth)
+                for _ in range(network_depth)
+            ]
         )
 
     def forward(self, x):
@@ -98,13 +104,19 @@ class ActionNet(nn.Module):
 
     def __init__(self, network_depth=1, out_channels=11, hidden_depth=20):
         super(ActionNet, self).__init__()
+        # self.cells = nn.ModuleList(
+        #     [nn.Conv2d(
+        #         in_channels=hidden_depth,
+        #         out_channels=hidden_depth,
+        #         kernel_size=3,
+        #         padding=1
+        #     ) for _ in range(network_depth)]
+        # )
         self.cells = nn.ModuleList(
-            [nn.Conv2d(
-                in_channels=hidden_depth,
-                out_channels=hidden_depth,
-                kernel_size=3,
-                padding=1
-            ) for _ in range(network_depth)]
+            [
+                ml.layers.ResidualBlock(in_channels=hidden_depth, out_channels=hidden_depth)
+                for _ in range(network_depth)
+            ]
         )
         self.end_cell = nn.Conv2d(
             in_channels=hidden_depth,
@@ -184,7 +196,7 @@ if __name__ == '__main__':
     train_set = ml.InMemoryDataset('arc', 'training', single_preprocessor, mode=ml.ModelMode.Train)
     test_set = ml.InMemoryDataset('arc', 'evaluation', single_preprocessor, mode=ml.ModelMode.Eval)
 
-    net = MultiTaskNetwork(hidden_depth=20, feature_depth=5, action_depth=5).to(ml.torch_device)
+    net = MultiTaskNetwork(hidden_depth=20, feature_depth=15, action_depth=15).to(ml.torch_device)
     # x = train_set.get_random_batch()
     #
     #
@@ -207,7 +219,7 @@ if __name__ == '__main__':
         # Looping over all training tasks
         p_bar = tqdm(enumerate(train_set, 0), total=len(train_set))
         for i, task in p_bar:
-            train_pairs, test_pairs, s_name = task
+            train_pairs, test_pairs, s_name = train_set[0]
 
             # task_best_loss = 1000.  # Just pick a really bad first value
 
