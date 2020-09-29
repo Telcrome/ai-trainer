@@ -86,8 +86,10 @@ if __name__ == '__main__':
     tracker = lib.Experiment.build_new(EXP_NAME, sess=sess)
     prev_solved = tracker.get_all_with_flag(sess, EXP_NAME, flag='success')
 
-    train_split: lib.Split = sess.query(lib.Split).filter(lib.Split.name == 'training').first()
-    eval_split: lib.Split = sess.query(lib.Split).filter(lib.Split.name == 'evaluation').first()
+    arc_ds: lib.Dataset = sess.query(lib.Dataset).filter(lib.Dataset.name == 'arc').first()
+
+    train_split: lib.Split = arc_ds.get_split_by_name('training')
+    eval_split: lib.Split = arc_ds.get_split_by_name('evaluation')
     interesting_now = ['de493100']
 
     if LOAD_FROM_DISK:
@@ -102,6 +104,7 @@ if __name__ == '__main__':
 
     # unsolved: List[lib.Subject] = sess.query(lib.Subject).filter(lib.Subject.name.in_(prev_solved)).all()
     # unsolved: List[lib.Subject] = sess.query(lib.Subject).filter(lib.Subject.name.in_(interesting_now)).all()
+    # unsolved = train_split.sbjts
     unsolved = train_split.sbjts
     random.shuffle(unsolved)
 
@@ -176,43 +179,44 @@ if __name__ == '__main__':
                     node_counts = np.array([sol.get_node_count() for sol in unique_sols])
 
                     # Simple heuristic for picking the best three approaches: Pick those using least number of nodes
-                    # check_out_order = np.argsort(node_counts)[:3]
+                    check_out_order = np.argsort(node_counts)[:3]
                     # Store for submission
                     # unique_predictions.append((all_preds, node_counts))
 
-                    # unique_gen_result = [sol.test_generalization(x_test, y_test) for sol in unique_sols]
-                    # generalizing = np.array([t[0] for t in unique_gen_result])
+                    unique_gen_result = [sol.test_generalization(x_test, y_test) for sol in unique_sols]
+                    generalizing = np.array([t[0] for t in unique_gen_result])
 
                     # Train the program pools
-                    # all_gen_res = [sol.test_generalization(x_test, y_test) for sol in sols]
+                    all_gen_res = [sol.test_generalization(x_test, y_test) for sol in sols]
 
                     # Even without a sane and unique prediction, all_gen_res can be used to update the program pool
                     # As long as a consistent solution exists
                     # all_gen = [t[0] for t in all_gen_res]
                     # all_fb = [t[1] for t in all_gen_res]  # all_feedback
 
-                    # if True in generalizing:  # For testing purposes
-                    #     p = f'{s.name}: {sum(generalizing)} of {len(unique_sols)} generalized'
-                    #     lib.logger.debug_var(p)
-                    #
-                    #     # If this is a top 3 success solution:
-                    #     if True in generalizing[check_out_order]:
-                    #         epoch_successes.append(s.name)
-                    #
-                    #         # If this was the first time it was solved, visualize it
-                    #         if not tracker.is_in(s.name, flag='success'):
-                    #             # Visualize solutions
-                    #             for i, sol in enumerate(sols[:MAX_VIS]):
-                    #                 sol.visualize(parent_path=epoch_logdir, f_vis=feature_pp.visualize_instance,
-                    #                               a_vis=actions_pp.visualize_instance,
-                    #                               folder_appendix=str(all_gen_res[i][0]),
-                    #                               name=s.name)
-                    #
-                    #         tracker.add_result(s.name, flag='success', sess=sess)
-                    # else:
-                    #     lib.logger.debug_var(f'No generalizing solution was found for {s.name}')
-                    #     lib.logger.debug_var(f'{s.name} has {len(unique_sols)} solutions which do not generalize')
-                    #     tracker.add_result(s.name, flag='nongeneralizing', sess=sess)
+                    if True in generalizing:  # For testing purposes
+                        p = f'{s.name}: {sum(generalizing)} of {len(unique_sols)} generalized'
+                        lib.logger.debug_var(p)
+
+                        # If this is a top 3 success solution:
+                        if True in generalizing[check_out_order]:
+                            epoch_successes.append(s.name)
+
+                            # If this was the first time it was solved, visualize it
+                            if not tracker.is_in(s.name, flag='success'):
+                                # Visualize solutions
+                                for i, sol in enumerate(sols[:MAX_VIS]):
+                                    sol.visualize(parent_path=epoch_logdir, f_vis=feature_pp.visualize_instance,
+                                                  a_vis=actions_pp.visualize_instance,
+                                                  folder_appendix=str(all_gen_res[i][0]),
+                                                  name=s.name)
+
+                            tracker.add_result(s.name, flag='success', sess=sess)
+                            break
+                    else:
+                        lib.logger.debug_var(f'No generalizing solution was found for {s.name}')
+                        lib.logger.debug_var(f'{s.name} has {len(unique_sols)} solutions which do not generalize')
+                        tracker.add_result(s.name, flag='nongeneralizing', sess=sess)
                 else:
                     node_counts, check_out_order = np.array([]), np.array([])
 
