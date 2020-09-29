@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\rapha\\anaconda3\\envs\\ai-trainer\\python.exe",
+    "python.pythonPath": "envs\\python.exe",
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
@@ -8,5 +8,6 @@
         "**/.DS_Store": true,
         "**/__pycache__/": true
     },
-    "restructuredtext.confPath": "${workspaceFolder}\\documentation_source"
+    "restructuredtext.confPath": "${workspaceFolder}\\documentation_source",
+    "workbench.colorTheme": "Darcula Pycharm with Dark GUI"
 }
