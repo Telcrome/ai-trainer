@@ -128,14 +128,14 @@ class DslFunc:
         self.n_nodes = id
 
     def visualize(self, f_name='', dir_path='', delete_dot_after=True, instance_id=None) -> str:
-        res = 'digraph Tree {'
-        res += 'node [shape=box, style="filled, rounded", color="black", fontname=helvetica] ;'
-        res += 'edge [fontname=helvetica] ;'
-        res += f'-1 [label=<{self.root.last_res}<br/>Instance ID:{instance_id}>, fillcolor="#e5833c"] ;'
         node_res, _ = self.root.get_dot(0)
-        res += node_res
-        res += f'0 -> -1[labeldistance = 2.5, labelangle = 45, headlabel = "Output"];'
-        res += '}'
+        res = ''.join(['digraph Tree {',
+                       'node [shape=box, style="filled, rounded", color="black", fontname=helvetica] ;',
+                       'edge [fontname=helvetica] ;',
+                       f'-1 [label=<{self.root.last_res}<br/>Instance ID:{instance_id}>, fillcolor="#e5833c"] ;',
+                       node_res,
+                       f'0 -> -1[labeldistance = 2.5, labelangle = 45, headlabel = "Output"];',
+                       '}'])
 
         if not dir_path:
             dir_path = lib.logger.get_absolute_run_folder()

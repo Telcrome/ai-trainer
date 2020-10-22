@@ -55,5 +55,3 @@ class Dsl:
     def sample_n_words(self, r_type: Any, max_n=10):
         res = [word for word in itertools.islice(self.grammar.sample_prog_strings(r_type), max_n)]
         return res
-
-

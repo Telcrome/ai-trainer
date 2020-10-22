@@ -33,7 +33,7 @@ MAX_MCMC_STEPS = 100
 
 # If only a substep generalizes but not the whole solution, this is the probability for a birth move
 COOLING_RATE = 0.98
-STEP_GENERALIZE_PROBABILITY = 0.2
+# STEP_GENERALIZE_PROBABILITY = 0.2
 DEATH_ON_FAIL_PROBABILITY = 0.9
 BIRTH_PRIOR = 0.5
 DEATH_PRIOR = 0.5
@@ -237,6 +237,7 @@ if __name__ == '__main__':
                     actions_pp.revert_last_step()
 
                 feature_pp.optim_move(temperature=temperature)
+                feature_pp.visualize_instance(0)
                 actions_pp.optim_move(temperature=temperature)
 
             node_counts_candidates = [sol.get_node_count() for _, sol in prediction_history]
